@@ -155,9 +155,17 @@ public sealed class TraceExportTests
                 new TimeOffRequest(TestWorld.VacationTypeId, new DateOnly(2026, 8, 26), new DateOnly(2026, 8, 26), string.Empty));
             provider.ForceFlush();
 
-            var traced = exported.Select(a => a.GetTagItem(AgentDiagnostics.Attributes.ToolName) as string).ToHashSet();
+            // A span with no tool name would be a bug in the decorator, so drop
+            // nulls rather than comparing a nullable set — and assert the count
+            // separately, so "one span lost its name" fails here instead of
+            // quietly shrinking the set.
+            var traced = exported
+                .Select(a => a.GetTagItem(AgentDiagnostics.Attributes.ToolName) as string)
+                .OfType<string>()
+                .ToHashSet(StringComparer.Ordinal);
 
-            Assert.Equal(WorkforceToolCatalog.Names.ToHashSet(), traced);
+            Assert.Equal(WorkforceToolCatalog.Names.Count, exported.Count);
+            Assert.Equal(WorkforceToolCatalog.Names.ToHashSet(StringComparer.Ordinal), traced);
         }
     }
 }

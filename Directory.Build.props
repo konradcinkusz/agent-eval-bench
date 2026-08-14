@@ -102,7 +102,13 @@
   -->
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <IsTestProject>true</IsTestProject>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!--
+      GenerateDocumentationFile stays ON for test projects too, despite the
+      documentation being of no interest: IDE0005 (unnecessary usings) only runs
+      on build when it is set, and an unused using in a test file is worth
+      catching in exactly the same way as in a production one. CS1591 is already
+      suppressed globally, so this costs nothing.
+    -->
     <!--
       Test projects keep the compiler's rules and warnings-as-errors. What they
       drop are the library-design rules, which are aimed at a public API surface
