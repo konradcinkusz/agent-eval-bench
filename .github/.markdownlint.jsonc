@@ -1,0 +1,10 @@
+{
+  // Overrides for GitHub's own templates.
+  //
+  // MD041 (first line must be a top-level heading) is right for documents and
+  // wrong for these files. A pull request template's content is dropped into a
+  // textarea, where an H1 would render as a giant heading above every PR body;
+  // the convention is to open at H2. The rule stays on everywhere else.
+  "extends": "../.markdownlint.jsonc",
+  "MD041": false
+}

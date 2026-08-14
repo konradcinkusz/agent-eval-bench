@@ -1,0 +1,78 @@
+name: Feature request
+description: Propose a capability, a standard amendment, or a change of scope.
+title: "feat: "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This repository has deliberately narrow scope: it is the estate's worked
+        example of agent evaluation, not a product. Before filing, check the
+        non-goals in the README — a request that lands on one of them will be closed
+        with a pointer, which is the non-goal doing its job rather than a rejection.
+
+  - type: dropdown
+    id: kind
+    attributes:
+      label: What kind of change is this?
+      options:
+        - Agent behaviour — the Absence Concierge should do something it does not
+        - Eval harness — Layer 1 assertions, Layer 2 judge, or the runner
+        - CI gate — what blocks a merge and what merely reports
+        - Documentation — spec, findings, calibration, ADR
+        - Standards amendment — this repo demonstrates something the guides should adopt
+        - Infrastructure — deployment, cost, observability
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: >-
+        What is not possible, or what goes wrong, today. Describe the situation, not
+        the solution — the solution field is next, and separating them is what makes
+        alternatives visible.
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered, and why they lose
+      description: >-
+        "We considered X and rejected it because Y" is worth more than a list of
+        commands (P14). If this is accepted, this field becomes the body of an ADR.
+    validations:
+      required: true
+
+  - type: textarea
+    id: evals
+    attributes:
+      label: How would this be evaluated?
+      description: >-
+        Which scenarios prove it works, and which hard constraint (if any) does it
+        introduce? A behaviour with no scenario is a behaviour nobody can defend
+        after the next prompt edit.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: scope
+    attributes:
+      label: Scope check
+      description: The README's non-goals. Tick anything this request touches.
+      options:
+        - label: Frontend beyond the single showcase page
+        - label: Multi-agent orchestration
+        - label: A payments, quota, or identity service
+        - label: Forking or restating the architecture standards
+        - label: Real personal data in fixtures
+        - label: None of these

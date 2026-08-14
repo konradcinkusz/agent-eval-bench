@@ -1,0 +1,101 @@
+name: Bug report
+description: Something behaves differently from what docs/SPEC.md says it should.
+title: "bug: "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        A bug report without a repro and an impact statement cannot be triaged.
+        Both fields below are required for that reason.
+
+        **If the bug is a behaviour of the agent itself** — a wrong write, a missed
+        confirmation, a hallucinated leave type — file an
+        [eval scenario](?template=eval_scenario.yml) instead. Every agent-behaviour
+        defect becomes a scenario before it becomes a fix (AI-EVALS.md §3).
+
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Tag, commit SHA, or "main at <date>".
+      placeholder: v0.3.0 / 4f2a1c9 / main at 2026-08-20
+    validations:
+      required: true
+
+  - type: dropdown
+    id: mode
+    attributes:
+      label: Mode
+      description: Which workforce-tools and LLM configuration was active?
+      options:
+        - Mock tools, replayed LLM (the default; zero credentials)
+        - Mock tools, live LLM
+        - Live MCP tools (local/dev only)
+        - Not applicable / not sure
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+      description: >-
+        Quote the line of `docs/SPEC.md` this contradicts, if there is one. If there
+        is not, say so — an unspecified behaviour is a spec gap, which is a different
+        (and often more interesting) finding than a bug.
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: What actually happened
+    validations:
+      required: true
+
+  - type: textarea
+    id: repro
+    attributes:
+      label: Reproduction
+      description: >-
+        Exact steps from a fresh clone. If you have a trace, paste the relevant spans
+        rather than describing them — the trace is the evidence, the prose is a summary
+        of it.
+      placeholder: |
+        1. git clone && dotnet run --project AbsenceConcierge.AppHost
+        2. Open the chat page, send: "I'm sick today and probably tomorrow"
+        3. ...
+      render: shell
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Impact
+      description: >-
+        Who is affected and what is lost. A hard-constraint violation (a write with no
+        confirmation event, an action past the fixture's permissions, a leaked internal
+        id) is a P1 regardless of how rare it is — say so here if that is what this is.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: constraint
+    attributes:
+      label: Does this violate a hard constraint?
+      options:
+        - label: A write happened with no preceding `confirmation.received` event
+        - label: The agent acted past the permissions in the fixture
+        - label: An internal identifier leaked into user-facing output
+        - label: The loop terminated by hitting the iteration cap rather than by decision
+        - label: None of the above
+
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Before submitting
+      options:
+        - label: This report contains no secrets, tokens, or real personal data.
+          required: true

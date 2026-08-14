@@ -1,0 +1,108 @@
+name: Eval scenario
+description: Propose a new scenario, or convert an observed failure into one.
+title: "eval: "
+labels: ["eval-scenario", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Every incident becomes a scenario before it becomes a fix.**
+        (AI-EVALS.md §3, applying the P13 characterisation-test rule to agent behaviour.)
+
+        The scenario reproduces the failure, the fix makes it pass, and the regression
+        net grows the only way regression nets honestly grow. Filing this issue is the
+        first half of that; the scenario file is the second.
+
+  - type: dropdown
+    id: class
+    attributes:
+      label: Scenario class
+      description: >-
+        The five classes every agent suite carries. If a scenario does not fit one of
+        them, that is worth saying — it may mean the class list needs a sixth entry.
+      options:
+        - Happy path — a behaviour the spec promises
+        - Ambiguity — underspecified date, name matching two people; expect a question, not a guess
+        - Denied path — no permission, unknown leave type, out-of-scope request
+        - Adversarial — injection via user input
+        - Adversarial — injection via tool results
+        - Degradation — tool timeout, 5xx, partial data
+    validations:
+      required: true
+
+  - type: textarea
+    id: origin
+    attributes:
+      label: Where this came from
+      description: >-
+        A production trace, a manual session, a code review, or "designed". Scenarios
+        that came from a real failure are worth more than invented ones — say which
+        this is.
+    validations:
+      required: true
+
+  - type: textarea
+    id: conversation
+    attributes:
+      label: Conversation
+      description: The user turns, verbatim. Redact nothing except real personal data — and there should be none.
+      render: yaml
+      placeholder: |
+        - role: user
+          content: "I'm sick today and probably tomorrow"
+    validations:
+      required: true
+
+  - type: textarea
+    id: fixture
+    attributes:
+      label: Fixture state
+      description: >-
+        What the agent sees: available leave types, existing leaves, permissions, the
+        clock and timezone. Dates must be relative or pinned — a scenario that passes
+        only in August is not a scenario.
+      render: yaml
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected trace properties
+      description: >-
+        Assert over the trace, not the output text. State both halves for a denied
+        path: the refusal **and** the absence of the attempted call — two assertions,
+        not one (E2E-ACCEPTANCE-TESTING.md §2).
+      placeholder: |
+        - no span with tool.name = "request_time_off" before event confirmation.received
+        - span request_time_off called once, with start_date = 2026-08-14 (Europe/Madrid)
+        - loop terminated by decision, not by iteration cap
+      render: yaml
+    validations:
+      required: true
+
+  - type: input
+    id: rubrics
+    attributes:
+      label: Applicable rubric ids
+      description: Which Layer-2 criteria apply, if any. Leave blank for pure constraint scenarios.
+      placeholder: grounding, refusal-clarity
+
+  - type: checkboxes
+    id: gate
+    attributes:
+      label: Gating
+      options:
+        - label: >-
+            This is a CONSTRAINT scenario — it must pass at 100% and hard-blocks the
+            merge when it fails.
+        - label: >-
+            This is a BEHAVIOUR scenario — it is measured against the recorded baseline.
+
+  - type: checkboxes
+    id: hygiene
+    attributes:
+      label: Before submitting
+      options:
+        - label: The fixture data is fictional. No real employee, company, or customer appears in it.
+          required: true

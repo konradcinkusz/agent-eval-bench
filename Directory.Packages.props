@@ -1,0 +1,38 @@
+<Project>
+
+  <!--
+    Directory.Packages.props — central package management.
+
+    Every NuGet version used anywhere in this repository is declared exactly once,
+    here. A project references a package by name only:
+
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+
+    with no Version attribute. That is what makes "upgrade this library" a one-line
+    diff instead of ten, and what makes version skew inside one solution impossible
+    rather than merely unlikely (REPO-BASELINE.md §1).
+
+    Dependabot (.github/dependabot.yml, nuget ecosystem) opens PRs against this file.
+
+    The list is empty on purpose: Phase 0 is the repository baseline and there is no
+    project yet. Versions get added in the phase that first needs them, so that every
+    entry here is a package something actually references.
+  -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+  </PropertyGroup>
+
+  <ItemGroup Label="Aspire — added in Phase 2 (skeleton)">
+  </ItemGroup>
+
+  <ItemGroup Label="OpenTelemetry — added in Phase 2 (skeleton)">
+  </ItemGroup>
+
+  <ItemGroup Label="Agent runtime: MCP client and LLM provider — added in Phase 3">
+  </ItemGroup>
+
+  <ItemGroup Label="Eval harness and tests — added in Phase 4">
+  </ItemGroup>
+
+</Project>
