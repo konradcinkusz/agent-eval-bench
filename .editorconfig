@@ -228,6 +228,13 @@ dotnet_diagnostic.CA1305.severity = warning
 dotnet_diagnostic.CA1310.severity = warning
 # IDE0005: unnecessary usings — warning so the build stays clean.
 dotnet_diagnostic.IDE0005.severity = warning
+# CA1000: do not declare static members on generic types — off, deliberately.
+# The rule exists because `Foo<T>.Create()` forces callers to name T even when it
+# could be inferred. That is a real annoyance for factory types; it is not one for
+# a result type, where `ToolResult<T>.Ok(value)` reads better than the alternative
+# and T is fixed by the method's own return type. Turned off with the reason
+# written down rather than suppressed at eight call sites.
+dotnet_diagnostic.CA1000.severity = none
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Generated and vendored files are not held to the above

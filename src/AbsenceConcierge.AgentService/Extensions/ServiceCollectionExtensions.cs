@@ -5,7 +5,6 @@ using AbsenceConcierge.AgentService.Workforce.Fixtures;
 using AbsenceConcierge.AgentService.Workforce.Mock;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
-using OpenTelemetry.Trace;
 
 namespace AbsenceConcierge.AgentService.Extensions;
 
