@@ -45,7 +45,12 @@ on:
   pull_request:
     branches: [main]
   push:
-    branches: [main]
+    # Feature branches are included deliberately. This repository is built phase
+    # by phase on `claude/**` branches, and lint feedback that only arrives when a
+    # pull request is opened is feedback that arrives after the work is finished.
+    # It is also what makes this workflow's own definition of done checkable:
+    # a workflow that has never executed is a claim, not a control.
+    branches: [main, 'claude/**']
   workflow_dispatch:
 
 permissions:
