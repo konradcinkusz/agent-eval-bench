@@ -20,19 +20,22 @@ The agent is the excuse. **The eval bench is the deliverable.**
 
 ## Status
 
-> **Phase 0 of 10 complete — repository baseline. There is no runnable agent yet.**
+> **Phases 0–1 of 10 complete — the contract exists; the agent does not.**
 >
-> This README describes what is built and what is planned, and says which is which
-> on every line. A README that describes a system that does not exist is worse than
-> no README (P14's corollary), so the phase table below is the honest answer to
-> "what can I actually run today?" — and today the answer is: the linters and the
-> secret scanner.
+> `docs/SPEC.md` and 32 scenarios are written and validated in CI. No agent code
+> has been written, deliberately: the specification is the thing an implementation
+> is measured against, and writing it second would make it a description instead.
+>
+> This README says which lines are built and which are planned. A README that
+> describes a system that does not exist is worse than no README (P14's
+> corollary), so the phase table is the honest answer to "what can I run today?" —
+> and today that is the linters, the secret scanner, and the scenario validator.
 
 | Phase | What it delivers | Status |
 |---|---|---|
 | 0 | Repository baseline: hygiene files, secret scanning, CI that lints a repo with no code | **Done** |
-| 1 | `docs/SPEC.md` and 25–40 scenarios as data — the contract, before any agent code | Next |
-| 2 | Skeleton: AppHost, agent service, ServiceDefaults, OpenTelemetry end to end, mock tools | Planned |
+| 1 | `docs/SPEC.md` and 32 scenarios as data — the contract, before any agent code | **Done** |
+| 2 | Skeleton: AppHost, agent service, ServiceDefaults, OpenTelemetry end to end, mock tools | Next |
 | 3 | The agent loop: intent → dates → leave types → conflicts → draft → **confirmation gate** → execute | Planned |
 | 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | Planned |
 | 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | Planned |
@@ -82,7 +85,7 @@ both read.
 
 | What this repository demonstrates | Where it is demonstrated |
 |---|---|
-| **Spec Driven Development** — define expected behaviours, constraints and success criteria before shipping, and use them to guide implementation, iteration and evaluation | `docs/SPEC.md` lands in Phase 1, before any agent code exists. Phase 2 cannot start until the contract is written |
+| **Spec Driven Development** — define expected behaviours, constraints and success criteria before shipping, and use them to guide implementation, iteration and evaluation | [`docs/SPEC.md`](docs/SPEC.md) exists and no agent code does. 16 behaviours, 7 hard constraints, 5 rubrics and 7 refusals, each citing the scenarios that prove it |
 | **AI Skills** — reusable, well-scoped capabilities that automate and take actions *safely* | One capability, scoped narrowly: request time off. "Safely" is the confirmation gate, and it is a hard constraint with a trace event, not a prompt instruction |
 | **Evals** — measure quality, correctness and reliability with automated and human-in-the-loop evaluation | The two-layer harness, the CI gate, and a calibration protocol that records judge/human agreement before the judge is allowed to block anything |
 | **RAG and grounding** — ground responses in trusted, up-to-date company data, balancing probabilistic models with deterministic sources of truth | Leave types, balances and existing bookings come from tool results, never from the model. Grounding is a judged criterion, and the judge reads the trace so it grades grounding rather than fluency |
@@ -117,10 +120,19 @@ Everything interesting is in the second half of that paragraph.
 Today, from a fresh clone:
 
 ```bash
-./scripts/setup.sh          # prerequisites, git hooks, .env — takes about a minute
-./scripts/scan-secrets.sh   # the CI secret scan, run locally
-npm install && npm run lint # the CI documentation lint, run locally
+./scripts/setup.sh                # prerequisites, git hooks, .env — about a minute
+./scripts/scan-secrets.sh         # the CI secret scan, run locally
+npm install && npm run lint       # docs lint, link check, and scenario validation
+npm run validate:scenarios        # just the eval corpus: 32 scenarios, 5 classes
 ```
+
+Reading order for a visitor with ten minutes: [`docs/SPEC.md`](docs/SPEC.md) §1
+and §4, then
+[`hap-001`](evals/scenarios/happy/hap-001-sick-today-and-tomorrow.yaml) (the
+reference path) and
+[`adv-003`](evals/scenarios/adversarial/adv-003-injection-via-leave-type-name.yaml)
+(an injection arriving inside data the agent asked for). The spec's hard
+constraints plus those two scenarios are the whole idea.
 
 From Phase 2 onward, the same fresh clone will run the whole thing:
 
@@ -144,17 +156,20 @@ Directories that exist today, and those the phase plan will add.
 ```text
 .github/            CI, secret scanning, PR and issue templates, CODEOWNERS
 docs/
+  SPEC.md           the behaviour contract — behaviours, constraints, rubrics
   adr/              architecture decision records
   DEVIATIONS.md     where this repo departs from the standards — dated and reasoned
-scripts/            setup, hooks, and local mirrors of the CI jobs
-                    ────────── planned ──────────
-docs/SPEC.md        the behaviour contract                        (Phase 1)
-docs/FINDINGS.md    what the evals actually caught, in numbers    (Phase 8)
-docs/CALIBRATION.md how judge scores are checked against humans   (Phase 5)
 evals/
-  scenarios/        the dataset, as YAML                          (Phase 1)
+  schema/           the scenario contract, as strict JSON Schema
+  fixtures/         shared fictional worlds; scenarios write only the delta
+  scenarios/        32 scenarios across five classes
+scripts/            setup, hooks, validators, and local mirrors of the CI jobs
+                    ────────── planned ──────────
+docs/CALIBRATION.md how judge scores are checked against humans   (Phase 5)
+docs/FINDINGS.md    what the evals actually caught, in numbers    (Phase 8)
+evals/
   rubrics/          versioned judge prompts, pinned model         (Phase 5)
-  baselines/        recorded pass state a regression is measured against
+  baselines/        recorded pass state a regression is measured against (Phase 4)
 agents/
   absence-concierge/definition.json    the agent as code          (Phase 2)
 ```

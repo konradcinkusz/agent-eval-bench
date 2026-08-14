@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: amb-001-next-friday-said-on-a-friday
+class: ambiguity
+gate: constraint
+
+title: '"Next Friday", asked on a Friday, with two defensible readings'
+
+why: >-
+  The flagship of this class, and the sharpest sentence in the suite. Asked on a
+  Friday, "next Friday" means either the Friday seven days out (2026-08-21) or
+  the Friday of the week after (2026-08-28), and a competent English speaker
+  will defend either reading — so an agent that picks one is not resolving a
+  date, it is flipping a coin and reporting the outcome as fact. The defect this
+  catches is the confident guess: a draft that is well-formed, well-worded and
+  wrong half the time, which no reply-text assertion and no judge reliably
+  notices, because nothing about it looks like a failure.
+
+  It carries `gate: constraint` rather than `behaviour` because the failure is
+  not a quality that may drift against a baseline — it is a request for the
+  wrong week reaching a human as if it were the right one. Note also that one of
+  the two readings, 2026-08-21, falls inside the actor's existing booking, so
+  guessing is not even harmless in this fixture.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Friday, mid-morning. The day of the week IS the scenario: the same sentence
+  # on the Tuesday of hap-001 has one ordinary reading, and on this Friday it
+  # has two. A clock read from the host instead of from here would make this
+  # test pass or fail depending on which day CI happened to run (B-1).
+  clock: '2026-08-14T10:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  # One turn. There is deliberately no confirmation turn: the scenario is
+  # decided the moment the agent either asks or picks a Friday.
+  - role: user
+    content: Can I take next Friday off?
+
+expect:
+  # --- the ask, not a guess (B-12) ---
+  - assert: event_emitted
+    event: clarification.requested
+    times: 1
+  - assert: outcome
+    turn: last
+    value: clarification_requested
+
+  # --- the two-assertion rule for an underspecified request: the question AND
+  #     the absence of the write it stands in for. Either half alone passes an
+  #     agent that asks a question and books something anyway. ---
+  - assert: tool_not_called
+    tool: request_time_off
+  - assert: event_not_emitted
+    event: confirmation.received
+
+  # --- and no draft either. A draft here is a guess with a question mark after
+  #     it: the date has already been chosen and the human is being invited to
+  #     rubber-stamp the choice rather than make it. `confirmation_pending` is
+  #     the wrong outcome for this turn, and this assertion is what says so. ---
+  - assert: event_not_emitted
+    event: confirmation.shown
+
+  # --- termination and hygiene ---
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - tone

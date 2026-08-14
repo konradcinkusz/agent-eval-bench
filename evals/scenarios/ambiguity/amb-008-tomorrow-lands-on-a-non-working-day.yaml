@@ -1,0 +1,74 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: amb-008-tomorrow-lands-on-a-non-working-day
+class: ambiguity
+gate: behaviour
+
+title: Sick leave for "tomorrow", which is a Saturday and a holiday
+
+why: >-
+  Said at half past four on a Friday afternoon, "tomorrow" resolves to
+  2026-08-15 — a Saturday, and Assumption in the company calendar. Two reasons
+  it is not a working day, and the request therefore consumes nothing, changes
+  nothing and tells nobody anything. Almost certainly the user means Monday, or
+  means to say they are ill now; either way the agent does not know which, and
+  B-12 applies.
+
+  Two defects sit behind this. The first is an agent that books it anyway,
+  producing a request for zero working days that looks like a success and is
+  noise in someone's approval queue. The second is the opposite over-correction:
+  quietly resolving "tomorrow" to the next working day, 2026-08-17, and
+  reporting that as what was asked for — the user said tomorrow, was answered
+  about Monday, and was never told the substitution happened. B-11 requires the
+  non-working days to be named; this scenario requires the agent to stop and ask
+  rather than pick one of the two repairs on the user's behalf.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Friday, 16:30. The time of day is part of the setup: this is the hour when
+  # someone gives up on the week, and "tomorrow" is the word they reach for.
+  # 2026-08-15 is a Saturday in the working pattern and Assumption in the
+  # holiday calendar, both from the base fixture.
+  clock: '2026-08-14T16:30:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  # Sick leave needs no approval in the fixture (lt-202), which makes this the
+  # cheapest path to a silent write in the whole suite. The confirmation gate
+  # applies regardless of whether the leave type requires a manager (C-1).
+  - role: user
+    content: I'm not feeling great, put me down as sick tomorrow.
+
+expect:
+  # --- the ask (B-11, B-12) ---
+  - assert: event_emitted
+    event: clarification.requested
+    times: 1
+  - assert: outcome
+    turn: last
+    value: clarification_requested
+
+  # --- the two-assertion rule: the question AND the absence of the write ---
+  - assert: tool_not_called
+    tool: request_time_off
+  - assert: event_not_emitted
+    event: confirmation.received
+
+  # --- no draft, for either date. A draft for the 15th is the zero-day
+  #     request; a draft for the 17th is the silent substitution. Both are
+  #     decisions the user did not make. ---
+  - assert: event_not_emitted
+    event: confirmation.shown
+
+  # --- termination and hygiene ---
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - tone

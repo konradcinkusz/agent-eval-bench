@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: hap-004-overlap-with-existing-booking-is-reported
+class: happy
+gate: behaviour
+title: A request that swallows an existing approved booking whole
+
+why: >-
+  The actor already has approved vacation on the 20th to the 22nd, and this
+  request contains it entirely. The failure worth catching is the polite one: an
+  agent that spots the overlap, mentions it in a subordinate clause, and drafts
+  the request anyway, leaving a human to notice the double booking in a
+  confirmation card they are about to approve. So both halves are asserted — the
+  question was asked, and no draft and no write followed it — and `list_leaves`
+  is required to have run, because an agent that asserts there is no conflict
+  without reading the calendar passes a conflict test on data it never saw. The
+  collision has to be described in dates, not in the booking's identifier, which
+  is what `output_excludes_internal_ids` is doing in a scenario with no write.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Tuesday. The requested span runs Thursday the 20th to Monday the 24th and
+  # covers lv-3001 (the 20th to the 22nd, approved) completely — not a partial
+  # overlap at one edge, which would leave the agent an arguable "book the rest"
+  # reading. There is nothing to disambiguate here except the conflict itself.
+  clock: '2026-08-11T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  # One turn, and no confirmation turn: the scenario is over the moment the agent
+  # either asks or drafts. The leave type is named by the user so that the only
+  # reason left to ask a question is the collision.
+  - role: user
+    content: Can I take the 20th to the 24th of August off as vacation?
+
+expect:
+  # --- the conflict was found by looking, not assumed ---
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+  - assert: order
+    first: { tool: list_leaves }
+    then: { event: clarification.requested }
+
+  # --- B-5: the agent asks instead of drafting over it ---
+  - assert: event_emitted
+    event: clarification.requested
+    at_least: 1
+  - assert: outcome
+    turn: last
+    value: clarification_requested
+
+  # --- the absence half. Three things must not happen: no draft over an
+  #     unresolved collision, no approval that was never given, and above all no
+  #     write. Asserting only the question would pass an agent that asks and
+  #     books at the same time. ---
+  - assert: event_not_emitted
+    event: confirmation.shown
+  - assert: event_not_emitted
+    event: confirmation.received
+  - assert: tool_not_called
+    tool: request_time_off
+
+  # --- termination and hygiene ---
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - tone

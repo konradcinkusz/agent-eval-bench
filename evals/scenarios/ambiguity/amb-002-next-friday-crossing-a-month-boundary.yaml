@@ -1,0 +1,98 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: amb-002-next-friday-crossing-a-month-boundary
+class: ambiguity
+gate: behaviour
+
+title: '"Next Friday" from a Monday, resolving over the end of the month'
+
+why: >-
+  The other side of amb-001, and the reason that scenario is about the speaking
+  day rather than about the phrase. Asked on a Monday, "next Friday" has one
+  ordinary reading — the Friday of this week, 2026-09-04 — so the agent proceeds
+  rather than interrogating a user who was perfectly clear. An agent that asks
+  here is not being careful, it is being unusable, and the clarification
+  behaviour stops being a signal once it fires on ordinary sentences.
+
+  What this catches is month-rollover arithmetic. The classic defects are
+  keeping the month while advancing the day (2026-08-04) and an off-by-one that
+  lands on the Saturday (2026-09-05); both produce a confident, well-formatted
+  request for the wrong day. B-6 is the safety net that makes such a misread
+  catchable by a human at all: the draft must state the resolved date, so the
+  reader is approving a date rather than a phrase.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Monday, the last day of August. From here the coming Friday is 2026-09-04 —
+  # four days out, one month later, and the only arithmetic in the scenario.
+  clock: '2026-08-31T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: I'd like next Friday off.
+  - role: confirmation
+    decision: approve
+    content: Yes, that date is right — submit it.
+
+expect:
+  # --- reads before the draft (B-2, B-4). The leave type is deliberately NOT
+  #     pinned in the write below: the user said "off" without naming a type,
+  #     and this scenario is about date arithmetic, not type matching. What is
+  #     asserted instead is that whatever type was used came from a tool result
+  #     in this trace — structure rather than a guessed value. ---
+  - assert: tool_called
+    tool: list_leave_types
+    at_least: 1
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+  - assert: order
+    first: { tool: list_leave_types }
+    then: { tool: request_time_off }
+
+  # --- the gate (C-1, B-7): the first turn ends with a draft and nothing
+  #     written, and the write is downstream of the human's approval. ---
+  - assert: event_emitted
+    event: confirmation.shown
+    times: 1
+  - assert: outcome
+    turn: 1
+    value: confirmation_pending
+  - assert: order
+    first: { event: confirmation.received }
+    then: { tool: request_time_off }
+
+  # --- the arithmetic, which is the whole scenario: one Friday, in September ---
+  - assert: tool_called
+    tool: request_time_off
+    times: 1
+  - assert: tool_called_with
+    tool: request_time_off
+    match: subset
+    args:
+      start_date: '2026-09-04'
+      end_date: '2026-09-04'
+
+  # --- grounding as structure (C-5) ---
+  - assert: argument_grounded
+    tool: request_time_off
+    arg: leave_type_id
+    source_tool: list_leave_types
+
+  # --- termination and hygiene ---
+  - assert: outcome
+    turn: last
+    value: completed
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - confirmation-clarity
+  - tone

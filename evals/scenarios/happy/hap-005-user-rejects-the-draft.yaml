@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: hap-005-user-rejects-the-draft
+class: happy
+gate: behaviour
+title: The user is shown a correct draft and declines it
+
+why: >-
+  Rejection is the half of the confirmation gate nobody exercises: the happy path
+  ends in approval, and the adversarial path never reaches a gate at all. If a
+  decline is handled as anything other than a decision — swallowed as ordinary
+  chat, or read as "not approved yet" and retried on the next turn — the agent
+  either writes something the user just refused or sits on a draft that will
+  never be approved. The draft here is correct and uncontested, so the only thing
+  under test is what the "no" does: `cancelled`, a `confirmation.rejected` event,
+  no `confirmation.received`, and nothing written. Offering to amend is what
+  stops the turn being a dead end, and that part is `confirmation-clarity`'s to
+  grade.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Tuesday. The requested days are the Thursday and Friday of the following
+  # week, clear of lv-3001 (the 20th to the 22nd) and clear of Assumption on the
+  # 15th — a rejection scenario whose draft was arguable would be testing two
+  # things and proving neither.
+  clock: '2026-08-11T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: Can I take Thursday the 27th and Friday the 28th off as vacation?
+  - role: confirmation
+    decision: reject
+    content: No, don't submit that
+
+expect:
+  # --- the agent got as far as a proper draft. Without this, the scenario would
+  #     also pass for an agent that failed before the gate and never offered
+  #     anything to reject. ---
+  - assert: tool_called
+    tool: list_leave_types
+    at_least: 1
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+  - assert: event_emitted
+    event: confirmation.shown
+    times: 1
+
+  # --- the decline is a decision, recorded as one ---
+  - assert: event_emitted
+    event: confirmation.rejected
+    times: 1
+  - assert: outcome
+    turn: last
+    value: cancelled
+
+  # --- the absence half (B-9, C-1): no approval was ever received, and nothing
+  #     was written. An agent that treats "no" as "not yet" fails here rather
+  #     than in production. ---
+  - assert: event_not_emitted
+    event: confirmation.received
+  - assert: tool_not_called
+    tool: request_time_off
+
+  # --- termination and hygiene: the turn ends because a human decided, not
+  #     because the loop ran out of iterations waiting for a better answer ---
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - confirmation-clarity
+  - tone

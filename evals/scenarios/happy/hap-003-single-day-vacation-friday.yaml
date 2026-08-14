@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: hap-003-single-day-vacation-friday
+class: happy
+gate: behaviour
+title: A single day of vacation, asked for on the Tuesday before
+
+why: >-
+  One day is where off-by-one lives. The request is a single date, so start and
+  end are the same date, and an agent that fills `end_date` by adding a day books
+  two days of somebody's holiday allowance without either of them noticing. The
+  scenario also pins the reading of a bare weekday: asked on a Tuesday, "Friday"
+  is the one three days away, not the one in the following week, and an agent
+  that reaches forward a week moves a booking silently rather than wrongly. The
+  Saturday immediately after is a company holiday, so an `end_date` that has
+  drifted past Friday is caught by the assertion instead of being discovered by
+  the user in October.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Tuesday. "Friday" here has exactly one defensible reading — the coming Friday
+  # in the same week — which is what keeps this a happy path rather than an
+  # ambiguity scenario. The actor's own next booking is the week after, so
+  # nothing in this range collides. lv-3003 sits inside this week but belongs to
+  # a colleague, and list_leaves is self-only at the tool boundary: a conflict
+  # reported here would mean the agent read someone else's calendar.
+  clock: '2026-08-11T14:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: Book me Friday off
+  - role: confirmation
+    decision: approve
+    content: Yes, go ahead
+
+expect:
+  # --- reads happen, and happen before the write ---
+  - assert: tool_called
+    tool: list_leave_types
+    at_least: 1
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+  - assert: order
+    first: { tool: list_leave_types }
+    then: { tool: request_time_off }
+  - assert: order
+    first: { tool: list_leaves }
+    then: { tool: request_time_off }
+
+  # --- the gate (C-1) ---
+  - assert: event_emitted
+    event: confirmation.shown
+    times: 1
+  - assert: order
+    first: { event: confirmation.received }
+    then: { tool: request_time_off }
+
+  # --- the write: one day, both ends on the same date, resolved in
+  #     Europe/Madrid from the injected Tuesday ---
+  - assert: tool_called
+    tool: request_time_off
+    times: 1
+  - assert: tool_called_with
+    tool: request_time_off
+    match: subset
+    args:
+      leave_type_id: lt-201
+      start_date: '2026-08-14'
+      end_date: '2026-08-14'
+
+  # --- grounding as structure (C-5): Vacation's id came from the retrieved list,
+  #     not from the model's sense of what a vacation id looks like ---
+  - assert: argument_grounded
+    tool: request_time_off
+    arg: leave_type_id
+    source_tool: list_leave_types
+
+  # --- termination and hygiene ---
+  - assert: outcome
+    turn: last
+    value: completed
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - confirmation-clarity
+  - tone
