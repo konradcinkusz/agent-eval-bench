@@ -14,25 +14,46 @@
 
     Dependabot (.github/dependabot.yml, nuget ecosystem) opens PRs against this file.
 
-    The list is empty on purpose: Phase 0 is the repository baseline and there is no
-    project yet. Versions get added in the phase that first needs them, so that every
-    entry here is a package something actually references.
+    Every version below was verified to exist on nuget.org before being pinned, and
+    Aspire 13.4.6 was verified to ship a net10.0 target.
   -->
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <AspireVersion>13.4.6</AspireVersion>
+    <OpenTelemetryVersion>1.17.0</OpenTelemetryVersion>
+    <ExtensionsVersion>10.9.0</ExtensionsVersion>
   </PropertyGroup>
 
-  <ItemGroup Label="Aspire — added in Phase 2 (skeleton)">
+  <ItemGroup Label="Aspire — the composition root (P1), development-time only">
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />
   </ItemGroup>
 
-  <ItemGroup Label="OpenTelemetry — added in Phase 2 (skeleton)">
+  <ItemGroup Label="The shared kernel: telemetry, health, discovery, resilience (P2)">
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(ExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(ExtensionsVersion)" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
   </ItemGroup>
 
-  <ItemGroup Label="Agent runtime: MCP client and LLM provider — added in Phase 3">
+  <ItemGroup Label="Agent service">
+    <!--
+      The mock workforce tools read the same fixture file the eval scenarios name,
+      so there is one source of truth for the world rather than two that drift.
+    -->
+    <PackageVersion Include="YamlDotNet" Version="18.1.0" />
   </ItemGroup>
 
-  <ItemGroup Label="Eval harness and tests — added in Phase 4">
+  <ItemGroup Label="Tests">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Captures spans in-process so a test can assert that one was exported. -->
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="$(OpenTelemetryVersion)" />
   </ItemGroup>
 
 </Project>

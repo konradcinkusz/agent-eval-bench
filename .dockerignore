@@ -53,5 +53,13 @@ README.md
 LICENSE
 *.md
 
+# …except the fixtures, which ARE the world the mock workforce tools serve. The
+# service links them from evals/fixtures/ rather than keeping a second copy, so
+# that the world the scenarios describe and the world the service loads cannot
+# drift apart. Re-included after the blanket exclusion above, which is why order
+# matters in this file.
+!evals/fixtures/
+!evals/fixtures/**
+
 # ─── Aspire AppHost: a development-time composition root (P1), never containerized ──
-AbsenceConcierge.AppHost/
+src/AbsenceConcierge.AppHost/

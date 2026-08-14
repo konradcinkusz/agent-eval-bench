@@ -3,15 +3,16 @@ name: CI
 # ─────────────────────────────────────────────────────────────────────────────
 #  CI — what must be true before anything merges.
 #
-#      ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-#      │ lint-docs    │  │ lint-actions │  │ lint-shell   │      (parallel)
-#      │ markdownlint │  │ actionlint   │  │ shellcheck   │
-#      └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
-#             └─────────────────┴─────────────────┘
+#   ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌──────────────┐
+#   │ lint-docs  │ │lint-actions│ │ lint-shell │ │ architecture │  (parallel)
+#   │markdownlint│ │ actionlint │ │ shellcheck │ │ kernel size  │
+#   │ links      │ │            │ │ exec bits  │ │ no domain in │
+#   │ scenarios  │ │            │ │            │ │ the kernel   │
+#   └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └──────┬───────┘
+#         └──────────────┴──────────────┴───────────────┘
 #                               ↓
 #                       ┌───────────────┐
 #                       │ build-test    │   dotnet build + dotnet test
-#                       │ (Phase 2+)    │   honest SKIP while no solution exists
 #                       └───────┬───────┘
 #                               ↓
 #                       ┌───────────────┐
@@ -177,6 +178,89 @@ jobs:
           exit "$FAILED"
 
   # ===========================================================================
+  # Architecture checks
+  #
+  # P2's kernel ceiling is "mechanical, not advisory" — and the estate says so
+  # because stating it in prose has already failed twice. The worked example this
+  # repository copies its shape from declared a ~700-line ceiling and is now at
+  # 1,365, of which 607 are seeded domain prompts.
+  #
+  # A number in a document does not stop that. A failing build does.
+  # ===========================================================================
+  architecture:
+    name: Architecture checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shared kernel size ceiling
+        run: |
+          set -euo pipefail
+          CEILING=800
+          KERNEL_DIR="src/AbsenceConcierge.ServiceDefaults"
+
+          if [ ! -d "$KERNEL_DIR" ]; then
+            echo "::error::$KERNEL_DIR does not exist. The check is pointing at the wrong path."
+            exit 1
+          fi
+
+          LINES=$(find "$KERNEL_DIR" -name '*.cs' -not -path '*/obj/*' -not -path '*/bin/*' -print0 \
+            | xargs -0 cat | wc -l)
+
+          echo "Shared kernel: $LINES lines (ceiling $CEILING)"
+          {
+            echo "### Shared kernel size"
+            echo
+            echo "\`$KERNEL_DIR\` — **$LINES** lines of C#, ceiling **$CEILING**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$LINES" -gt "$CEILING" ]; then
+            echo "::error::Shared kernel is $LINES lines, over the $CEILING ceiling (P2)."
+            echo "The question to ask is not 'can we raise the ceiling' but 'what domain concept moved in'."
+            exit 1
+          fi
+
+      - name: The kernel holds no domain
+        run: |
+          set -euo pipefail
+          KERNEL_DIR="src/AbsenceConcierge.ServiceDefaults"
+
+          # The kernel is plumbing. If the agent's vocabulary appears in its CODE, a
+          # domain concept has moved into shared code — which is how the estate's
+          # previous kernels became domain libraries, one reasonable-sounding commit
+          # at a time.
+          #
+          # Comments are stripped before matching. The rule is about what the kernel
+          # *holds*, not about what its documentation is allowed to mention: a comment
+          # explaining why confirmation events live elsewhere is the rule being
+          # followed, and failing on it would teach the next author to delete the
+          # explanation rather than to keep the boundary.
+          FORBIDDEN='confirmation|leave|absence|workforce|employee|scenario|rubric'
+          FOUND=0
+
+          while IFS= read -r file; do
+            MATCHES=$(sed -E 's://.*::' "$file" \
+              | grep -vE '^\s*(/\*|\*)' \
+              | grep -niE "$FORBIDDEN" || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::error file=$file::Domain vocabulary in kernel code (P2)"
+              while IFS= read -r match; do
+                echo "  $file:$match"
+              done <<< "$MATCHES"
+              FOUND=1
+            fi
+          done < <(find "$KERNEL_DIR" -name '*.cs' -not -path '*/obj/*' -not -path '*/bin/*')
+
+          if [ "$FOUND" -ne 0 ]; then
+            echo "Domain concepts belong in the service that owns them. A second service must be"
+            echo "able to take this kernel and share none of the agent's vocabulary."
+            exit 1
+          fi
+
+          echo "Kernel code is free of domain vocabulary."
+
+  # ===========================================================================
   # Build and test
   #
   # There is no solution in the repository until Phase 2. This job says so out
@@ -188,7 +272,7 @@ jobs:
     name: Build and test
     runs-on: ubuntu-latest
     timeout-minutes: 20
-    needs: [lint-docs, lint-actions, lint-shell]
+    needs: [lint-docs, lint-actions, lint-shell, architecture]
     steps:
       - uses: actions/checkout@v4
 
