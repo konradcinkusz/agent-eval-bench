@@ -1,0 +1,12 @@
+{
+  // File selection only. Rule configuration lives in .markdownlint.jsonc so it
+  // can be inherited and selectively overridden by nested config files.
+  "globs": [
+    "**/*.md"
+  ],
+  "ignores": [
+    "node_modules/**",
+    "**/bin/**",
+    "**/obj/**"
+  ]
+}

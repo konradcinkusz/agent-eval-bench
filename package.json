@@ -1,0 +1,19 @@
+{
+  "name": "agent-eval-bench-tooling",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Repository tooling only — documentation lint and link checking. This is a .NET repository; nothing here ships in any container or is referenced by any project. It exists so the lint tool has a pinned version that Dependabot tracks, instead of an npx invocation nobody updates.",
+  "license": "MIT",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "lint": "npm run lint:md && npm run lint:links",
+    "lint:md": "markdownlint-cli2",
+    "lint:links": "node scripts/check-links.mjs"
+  },
+  "devDependencies": {
+    "markdownlint-cli2": "0.23.2"
+  }
+}

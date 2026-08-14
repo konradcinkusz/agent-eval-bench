@@ -1,0 +1,234 @@
+name: CI
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CI — what must be true before anything merges.
+#
+#      ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+#      │ lint-docs    │  │ lint-actions │  │ lint-shell   │      (parallel)
+#      │ markdownlint │  │ actionlint   │  │ shellcheck   │
+#      └──────┬───────┘  └──────┬───────┘  └──────┬───────┘
+#             └─────────────────┴─────────────────┘
+#                               ↓
+#                       ┌───────────────┐
+#                       │ build-test    │   dotnet build + dotnet test
+#                       │ (Phase 2+)    │   honest SKIP while no solution exists
+#                       └───────┬───────┘
+#                               ↓
+#                       ┌───────────────┐
+#                       │ evals         │   Phase 6 — NOT YET PRESENT
+#                       └───────────────┘
+#
+#  ── The rule that will govern the eval job, stated here before it exists ──
+#
+#  Change detection for the eval job includes `prompts/`, `agents/` and `evals/`
+#  alongside the source paths. A prompt edit is a behaviour change with no code
+#  diff; a tool-description edit is a behaviour change with no code diff. If the
+#  eval job watched code paths only, the single most common way to regress an
+#  agent would be the one way that never triggers its tests
+#  (AI-EVALS.md §6 and §9, "Prompt edit ships with no eval run").
+#
+#  Its gates, when it lands:
+#      constraint scenarios  → 100%, hard block
+#      behaviour scenarios   → at or above the recorded baseline
+#      judge criteria        → per-criterion threshold; no key ⇒ SKIPPED, not green
+#      output                → one sticky PR comment carrying the diff vs baseline
+#
+#  ── Skips are explicit, never silent ──
+#
+#  Every job below either does its work or writes to the step summary why it did
+#  not. A green check that stands for "there was nothing to check" is the failure
+#  mode E2E-ACCEPTANCE-TESTING.md §2 exists to prevent, and it is worse than a red
+#  one because it is trusted.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+
+jobs:
+  # ===========================================================================
+  # Documentation lint
+  #
+  # This repository is mostly documentation and data by design — the spec, the
+  # scenarios, the rubrics and the findings ARE the deliverable. Linting them is
+  # not housekeeping.
+  # ===========================================================================
+  lint-docs:
+    name: Lint documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install lint tooling
+        run: npm ci
+
+      - name: markdownlint
+        run: npm run lint:md
+
+      - name: Check for broken relative links
+        run: npm run lint:links
+
+  # ===========================================================================
+  # Workflow lint
+  #
+  # actionlint catches the class of error that otherwise surfaces only as a
+  # failed run on main: a typo'd context expression, an undefined `needs`, a
+  # shell bug inside a `run:` block (it embeds shellcheck for exactly that).
+  # ===========================================================================
+  lint-actions:
+    name: Lint workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: actionlint
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/repo" \
+            -w /repo \
+            rhysd/actionlint:latest \
+              -color \
+              -verbose
+
+  # ===========================================================================
+  # Shell lint
+  #
+  # The setup script, the CI mirror and the pre-commit hook are the parts of this
+  # repository most likely to be run by a stranger, on a machine we have never
+  # seen. shellcheck is preinstalled on the runner.
+  # ===========================================================================
+  lint-shell:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        run: |
+          set -euo pipefail
+          # Hooks have no extension, so they are listed explicitly rather than globbed.
+          mapfile -t FILES < <(git ls-files '*.sh' 'scripts/hooks/*')
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "::error::No shell scripts found — this repository ships several, so the glob is wrong, not the repository."
+            exit 1
+          fi
+          echo "Checking:"
+          printf '  %s\n' "${FILES[@]}"
+          # --severity=style is the strictest setting: it reports everything down to
+          # style-level findings. These scripts are the part of this repository most
+          # likely to be run by a stranger on a machine we have never seen.
+          shellcheck --severity=style --shell=bash "${FILES[@]}"
+
+      - name: Executable bits
+        run: |
+          set -euo pipefail
+          # A script committed without +x fails for every new contributor with
+          # "permission denied", and the mode change is invisible in a diff.
+          mapfile -t FILES < <(git ls-files '*.sh' 'scripts/hooks/*')
+          FAILED=0
+          for f in "${FILES[@]}"; do
+            MODE=$(git ls-files --stage -- "$f" | awk '{print $1}')
+            if [ "$MODE" != "100755" ]; then
+              echo "::error file=$f::Committed without the executable bit (mode $MODE). Fix with: git update-index --chmod=+x $f"
+              FAILED=1
+            fi
+          done
+          exit "$FAILED"
+
+  # ===========================================================================
+  # Build and test
+  #
+  # There is no solution in the repository until Phase 2. This job says so out
+  # loud rather than passing quietly: the detect step writes the reason to the
+  # run summary, and the moment a .sln appears the same job starts building it
+  # with no edit here.
+  # ===========================================================================
+  build-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [lint-docs, lint-actions, lint-shell]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Is there anything to build?
+        id: detect
+        run: |
+          set -euo pipefail
+          if compgen -G "*.sln" > /dev/null || compgen -G "*.slnx" > /dev/null; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report the skip
+        if: steps.detect.outputs.found != 'true'
+        run: |
+          {
+            echo "## Build and test: SKIPPED"
+            echo
+            echo "No \`.sln\` or \`.slnx\` in the repository root."
+            echo
+            echo "This is the expected state through **Phase 1**: the repository baseline"
+            echo "and the behaviour spec land before any agent code does — spec first is"
+            echo "the whole method (AI-EVALS.md §2), not a preference about ordering."
+            echo
+            echo "This step exists so the skip is visible. A job that passes because it"
+            echo "found nothing to do, and says nothing about it, is indistinguishable"
+            echo "from a job that verified something — which is the failure mode"
+            echo "E2E-ACCEPTANCE-TESTING.md §2 is written against."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::No solution yet — build and test skipped (expected through Phase 1)."
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.detect.outputs.found == 'true'
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        if: steps.detect.outputs.found == 'true'
+        run: dotnet restore
+
+      - name: Build
+        if: steps.detect.outputs.found == 'true'
+        # Warnings are errors (Directory.Build.props), so --no-warn-as-error is
+        # deliberately absent: a warning that only breaks the build locally is a
+        # warning that gets pushed.
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        if: steps.detect.outputs.found == 'true'
+        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
+
+      - name: Upload test results
+        if: steps.detect.outputs.found == 'true' && (success() || failure())
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults
+          retention-days: 14
+          if-no-files-found: error

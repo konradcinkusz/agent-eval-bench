@@ -1,0 +1,69 @@
+{
+  // Markdown rule configuration for this repository.
+  //
+  // Kept separate from .markdownlint-cli2.jsonc (which only selects files) so
+  // that a nested config — .github/.markdownlint.jsonc — can `extends` these
+  // rules and override a single one, instead of silently resetting to defaults.
+  "default": true,
+
+  // MD013 line-length: off. These documents are prose with tables and long
+  // reference URLs; a hard wrap enforced by a linter produces diffs that
+  // re-flow whole paragraphs for a one-word edit.
+  "MD013": false,
+
+  // MD033 inline HTML: allowed, narrowly. Badge rows, theme-aware images and
+  // collapsible sections have no Markdown equivalent that renders on GitHub.
+  "MD033": {
+    "allowed_elements": [
+      "a",
+      "img",
+      "picture",
+      "source",
+      "p",
+      "br",
+      "details",
+      "summary",
+      "kbd",
+      "sub",
+      "sup"
+    ]
+  },
+
+  // MD024 duplicate headings: allowed across sections, not within one. ADRs
+  // legitimately repeat "Context" / "Decision" / "Consequences".
+  "MD024": {
+    "siblings_only": true
+  },
+
+  // MD029 ordered lists: always "1." so inserting a step is a one-line diff.
+  "MD029": {
+    "style": "one"
+  },
+
+  // MD046 code blocks: fenced, always. Indented blocks lose their language tag.
+  "MD046": {
+    "style": "fenced"
+  },
+
+  // MD040 fenced code language: required. An unlabelled block gets no
+  // highlighting and, more importantly, hides whether it is shell or output.
+  "MD040": true,
+
+  // MD041 first line should be a top-level heading: on. A document whose first
+  // line is not its title reads as a fragment.
+  "MD041": true,
+
+  // MD036 emphasis-as-heading: off. Bold lead-ins inside a list item are an
+  // idiom here ("**Rule:** …"), not a mis-levelled heading.
+  "MD036": false,
+
+  // MD034 bare URLs: on — a bare URL is a URL nobody gave a name to.
+  "MD034": true,
+
+  // MD060 table pipe spacing: off. This repository writes tables the way the
+  // standards repository does — padded content rows over a compact `|---|`
+  // delimiter — which the rule reads as two styles mixed. Consistency across
+  // the estate's documents is worth more than internal pipe alignment, and
+  // GitHub renders both identically.
+  "MD060": false
+}
