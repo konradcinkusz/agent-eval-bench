@@ -60,12 +60,15 @@ public sealed class FixtureLoader(ILogger<FixtureLoader> logger, string fixtureD
                 + "requested is almost certainly a mis-parsed file rather than a deliberate one.");
         }
 
-        logger.LogInformation(
-            "Loaded workforce fixture {Fixture}: {LeaveTypes} leave types, {Employees} colleagues, {Leaves} existing bookings",
-            world.Name,
-            world.LeaveTypes.Count,
-            world.Employees.Count,
-            world.ExistingLeaves.Count);
+        if (logger.IsEnabled(LogLevel.Information))
+        {
+            logger.LogInformation(
+                "Loaded workforce fixture {Fixture}: {LeaveTypes} leave types, {Employees} colleagues, {Leaves} existing bookings",
+                world.Name,
+                world.LeaveTypes.Count,
+                world.Employees.Count,
+                world.ExistingLeaves.Count);
+        }
 
         return world;
     }

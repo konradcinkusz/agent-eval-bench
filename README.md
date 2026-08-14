@@ -20,23 +20,26 @@ The agent is the excuse. **The eval bench is the deliverable.**
 
 ## Status
 
-> **Phases 0–1 of 10 complete — the contract exists; the agent does not.**
+> **Phases 0–2 of 10 complete — the contract, and the skeleton that will satisfy it.**
 >
-> `docs/SPEC.md` and 32 scenarios are written and validated in CI. No agent code
-> has been written, deliberately: the specification is the thing an implementation
-> is measured against, and writing it second would make it a description instead.
+> `docs/SPEC.md` and 32 scenarios came first and are validated in CI. The service
+> now exists: composition root, shared kernel, mock workforce tools, and
+> OpenTelemetry end to end. **The agent loop itself does not** — that is Phase 3,
+> written against a contract fixed before it.
+>
+> The confirmation gate, however, is already real. `request_time_off` refuses any
+> write without an approved, draft-bound, single-use token, enforced at the tool
+> boundary rather than by a prompt. Eight tests cover it.
 >
 > This README says which lines are built and which are planned. A README that
-> describes a system that does not exist is worse than no README (P14's
-> corollary), so the phase table is the honest answer to "what can I run today?" —
-> and today that is the linters, the secret scanner, and the scenario validator.
+> describes a system that does not exist is worse than no README (P14's corollary).
 
 | Phase | What it delivers | Status |
 |---|---|---|
 | 0 | Repository baseline: hygiene files, secret scanning, CI that lints a repo with no code | **Done** |
 | 1 | `docs/SPEC.md` and 32 scenarios as data — the contract, before any agent code | **Done** |
-| 2 | Skeleton: AppHost, agent service, ServiceDefaults, OpenTelemetry end to end, mock tools | Next |
-| 3 | The agent loop: intent → dates → leave types → conflicts → draft → **confirmation gate** → execute | Planned |
+| 2 | Skeleton: AppHost, agent service, ServiceDefaults, OpenTelemetry end to end, mock tools | **Done** |
+| 3 | The agent loop: intent → dates → leave types → conflicts → draft → **confirmation gate** → execute | Next |
 | 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | Planned |
 | 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | Planned |
 | 6 | CI gates: constraints hard-block, behaviours vs baseline, one sticky PR comment with the diff | Planned |
@@ -85,7 +88,7 @@ both read.
 
 | What this repository demonstrates | Where it is demonstrated |
 |---|---|
-| **Spec Driven Development** — define expected behaviours, constraints and success criteria before shipping, and use them to guide implementation, iteration and evaluation | [`docs/SPEC.md`](docs/SPEC.md) exists and no agent code does. 16 behaviours, 7 hard constraints, 5 rubrics and 7 refusals, each citing the scenarios that prove it |
+| **Spec Driven Development** — define expected behaviours, constraints and success criteria before shipping, and use them to guide implementation, iteration and evaluation | [`docs/SPEC.md`](docs/SPEC.md) was written and accepted before any agent code: 16 behaviours, 7 hard constraints, 5 rubrics, 7 refusals, each citing the scenarios that prove it. Writing the scenarios then found six defects **in the spec**, fixed before implementation began |
 | **AI Skills** — reusable, well-scoped capabilities that automate and take actions *safely* | One capability, scoped narrowly: request time off. "Safely" is the confirmation gate, and it is a hard constraint with a trace event, not a prompt instruction |
 | **Evals** — measure quality, correctness and reliability with automated and human-in-the-loop evaluation | The two-layer harness, the CI gate, and a calibration protocol that records judge/human agreement before the judge is allowed to block anything |
 | **RAG and grounding** — ground responses in trusted, up-to-date company data, balancing probabilistic models with deterministic sources of truth | Leave types, balances and existing bookings come from tool results, never from the model. Grounding is a judged criterion, and the judge reads the trace so it grades grounding rather than fluency |
@@ -120,11 +123,17 @@ Everything interesting is in the second half of that paragraph.
 Today, from a fresh clone:
 
 ```bash
-./scripts/setup.sh                # prerequisites, git hooks, .env — about a minute
-./scripts/scan-secrets.sh         # the CI secret scan, run locally
-npm install && npm run lint       # docs lint, link check, and scenario validation
-npm run validate:scenarios        # just the eval corpus: 32 scenarios, 5 classes
+./scripts/setup.sh                              # prerequisites, hooks, .env — a minute
+dotnet run --project src/AbsenceConcierge.AppHost   # the system, zero credentials
+dotnet test                                     # unit tests and the trace contract
+npm install && npm run lint                     # docs, links, and 32 eval scenarios
 ```
+
+With the service running, `GET /workforce/leave-types` returns the world the mock
+serves — the same file the scenarios name. There is deliberately **no** HTTP route
+that submits a request: the write is reachable only through the agent loop and its
+confirmation gate, and a convenience endpoint would hand every adversarial scenario
+a way around the thing it tests.
 
 Reading order for a visitor with ten minutes: [`docs/SPEC.md`](docs/SPEC.md) §1
 and §4, then
@@ -133,12 +142,6 @@ reference path) and
 [`adv-003`](evals/scenarios/adversarial/adv-003-injection-via-leave-type-name.yaml)
 (an injection arriving inside data the agent asked for). The spec's hard
 constraints plus those two scenarios are the whole idea.
-
-From Phase 2 onward, the same fresh clone will run the whole thing:
-
-```bash
-dotnet run --project AbsenceConcierge.AppHost
-```
 
 **With zero credentials.** That is a designed property, not a temporary state:
 mock workforce tools with fictional fixtures, replayed model responses, and a full
@@ -155,6 +158,13 @@ Directories that exist today, and those the phase plan will add.
 
 ```text
 .github/            CI, secret scanning, PR and issue templates, CODEOWNERS
+src/
+  AbsenceConcierge.AppHost          composition root — dev only, never containerised
+  AbsenceConcierge.ServiceDefaults  the kernel: OTel, health, discovery, resilience
+  AbsenceConcierge.AgentService     the service — tools, telemetry, the gate
+tests/              unit tests, and the trace-contract tests
+agents/
+  absence-concierge/definition.json the agent as code, with the MCP tool extension
 docs/
   SPEC.md           the behaviour contract — behaviours, constraints, rubrics
   adr/              architecture decision records
@@ -170,8 +180,6 @@ docs/FINDINGS.md    what the evals actually caught, in numbers    (Phase 8)
 evals/
   rubrics/          versioned judge prompts, pinned model         (Phase 5)
   baselines/        recorded pass state a regression is measured against (Phase 4)
-agents/
-  absence-concierge/definition.json    the agent as code          (Phase 2)
 ```
 
 ## How this repository relates to the standards
