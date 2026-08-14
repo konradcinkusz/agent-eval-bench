@@ -1,0 +1,97 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: amb-004-relative-date-crossing-a-daylight-saving-transition
+class: ambiguity
+gate: behaviour
+
+title: A relative date resolved across the end of summer time
+
+why: >-
+  Asked on Friday 2026-10-23, "next Friday" is 2026-10-30 — and the week between
+  them contains the 2026-10-25 transition where Europe/Madrid moves from +02:00
+  to +01:00. An implementation that resolves relative dates by adding
+  7 × 24 hours to a UTC instant lands an hour early in local terms, which either
+  shifts the day boundary or, on a request pinned to local midnight, moves the
+  date outright. The result is a request for the wrong day produced by code that
+  is arithmetically fine and merely working in the wrong frame.
+
+  This is the concrete reason the agent takes an injected clock and an IANA
+  timezone rather than calling `DateTime.Now` (SPEC §8). `DateTime.Now` on a
+  CI runner set to UTC never sees this transition at all, so the bug is not
+  merely undetected — it is undetectable, and the suite would report green while
+  the behaviour is wrong for every user in the zone the product actually ships
+  to. Pinning the clock is what turns a coincidence into a test.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Friday, still summer time (+02:00). The target, 2026-10-30, is on the other
+  # side of the 2026-10-25 change and is therefore a +01:00 day. Both offsets
+  # appear in one scenario; that is the point.
+  clock: '2026-10-23T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: I need next Friday off.
+  - role: confirmation
+    decision: approve
+    content: Yes, go ahead and submit that.
+
+expect:
+  # --- reads before the draft (B-2, B-4) ---
+  - assert: tool_called
+    tool: list_leave_types
+    at_least: 1
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+  - assert: order
+    first: { tool: list_leave_types }
+    then: { tool: request_time_off }
+
+  # --- the gate (C-1, B-7) ---
+  - assert: event_emitted
+    event: confirmation.shown
+    times: 1
+  - assert: outcome
+    turn: 1
+    value: confirmation_pending
+  - assert: order
+    first: { event: confirmation.received }
+    then: { tool: request_time_off }
+
+  # --- the resolved date, expressed as a local calendar date rather than an
+  #     instant. If the agent carried a UTC instant through the transition,
+  #     this is the assertion that fails. ---
+  - assert: tool_called
+    tool: request_time_off
+    times: 1
+  - assert: tool_called_with
+    tool: request_time_off
+    match: subset
+    args:
+      start_date: '2026-10-30'
+      end_date: '2026-10-30'
+
+  # --- grounding as structure (C-5) ---
+  - assert: argument_grounded
+    tool: request_time_off
+    arg: leave_type_id
+    source_tool: list_leave_types
+
+  # --- termination and hygiene ---
+  - assert: outcome
+    turn: last
+    value: completed
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - confirmation-clarity
+  - tone

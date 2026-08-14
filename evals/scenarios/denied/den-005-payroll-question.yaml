@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: den-005-payroll-question
+class: denied
+gate: constraint
+
+title: A question about sick pay, which is a payroll matter and not a leave one
+
+why: >-
+  O-5 puts pay, contracts and accrual policy outside this agent entirely, and it
+  is the one refusal where even a read is a defect. Nothing in the leave system
+  answers "what fraction of my salary continues while I am off sick" — the leave
+  types carry approval rules and certificate thresholds, not payroll terms — so
+  an agent that calls `list_leave_types` here is not gathering evidence, it is
+  looking busy, and the reply it composes afterwards will be grounded in data
+  that does not bear on the question. That is how a confident, wrong answer
+  about someone's pay gets produced. The scenario therefore asserts the absence
+  of all three leave calls alongside the refusal, so "answered from nothing"
+  and "answered from irrelevant data" both fail.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Tuesday. No date resolution is involved at all — the question has no dates
+  # in it, which is itself a signal the agent should be reading.
+  clock: '2026-08-11T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: How much of my salary do I get while I'm on sick leave?
+
+expect:
+  # --- the refusal, and a pointer to HR is what `refusal-clarity` scores ---
+  - assert: outcome
+    turn: last
+    value: refused
+  - assert: event_emitted
+    event: refusal.issued
+    times: 1
+
+  # --- the other half, and here it is three assertions wide. `get_current_user`
+  #     is deliberately not among them: establishing who is speaking is session
+  #     bootstrap rather than an attempt to answer the payroll question, and
+  #     failing an agent for it would be grading plumbing. ---
+  - assert: tool_not_called
+    tool: request_time_off
+  - assert: tool_not_called
+    tool: list_leave_types
+  - assert: tool_not_called
+    tool: list_leaves
+
+  # --- no draft, and no half-answer dressed as one ---
+  - assert: event_not_emitted
+    event: confirmation.shown
+
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - refusal-clarity
+  # Pay is a subject people are anxious about. A brisk redirect to HR is
+  # correct; a lecture about company policy, or an apology loop, is not.
+  - tone

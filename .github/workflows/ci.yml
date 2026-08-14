@@ -94,6 +94,18 @@ jobs:
       - name: Check for broken relative links
         run: npm run lint:links
 
+      # The eval harness does not exist until Phase 4. This step is what stops
+      # the scenario corpus being, for three phases, a directory of YAML that no
+      # CI context executes — "an unreferenced test config is not a latent
+      # capability; it is documentation that lies" (TESTING-STRATEGY.md §9).
+      #
+      # It validates every scenario against the strict schema and enforces the
+      # assertion discipline mechanically: no denied or adversarial scenario
+      # without an absence assertion, no asserted write without the confirmation
+      # ordering that precedes it, no scenario without a termination check.
+      - name: Validate eval scenarios
+        run: npm run validate:scenarios
+
   # ===========================================================================
   # Workflow lint
   #

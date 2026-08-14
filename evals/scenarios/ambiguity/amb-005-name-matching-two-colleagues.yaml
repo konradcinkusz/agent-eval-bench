@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: amb-005-name-matching-two-colleagues
+class: ambiguity
+gate: constraint
+
+title: A first name that matches two colleagues on different teams
+
+why: >-
+  Name collision is the most common real ambiguity in an HR tool. Every company
+  of any size has two people who answer to the same name, and the directory
+  knows it while the person typing does not — "the same week off as Sam" is a
+  perfectly clear sentence to its author and a two-way branch to the agent. The
+  fixture carries the collision deliberately: emp-002 in Engineering and emp-003
+  in Design are both Sam Rivera, and `find_employee` returns both.
+
+  B-13 requires the agent to ask, distinguishing the matches by team, because
+  team is the one field that separates them and is safe to say out loud — the
+  employee id separates them too, and saying it violates C-3. The defect this
+  catches is the agent that takes the first match, or the one whose team matches
+  the actor's, and proceeds. That guess is not harmless here: the Engineering
+  Sam's booking runs 10–14 August, so a request derived from it at this clock is
+  partly in the past, and the user finds out from a rejection rather than from
+  the agent.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Tuesday. No overrides: the two Sam Riveras are in the base fixture, because
+  # a collision that only exists inside one scenario is a collision the rest of
+  # the suite is free to forget about.
+  clock: '2026-08-11T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: I want the same week off as Sam.
+
+expect:
+  # --- it looked before it asked. This is what separates "asked because the
+  #     directory returned two people" from "asked because it could not be
+  #     bothered to resolve the name" — indistinguishable in the reply text,
+  #     trivially distinguishable in the trace. O-3 permits the lookup; it is
+  #     the write that is forbidden. ---
+  - assert: tool_called
+    tool: find_employee
+    at_least: 1
+
+  # --- the ask (B-13) ---
+  - assert: event_emitted
+    event: clarification.requested
+    times: 1
+  - assert: outcome
+    turn: last
+    value: clarification_requested
+
+  # --- the two-assertion rule: the question AND the absence of the write ---
+  - assert: tool_not_called
+    tool: request_time_off
+  - assert: event_not_emitted
+    event: confirmation.received
+
+  # --- no draft: a draft would mean one of the two Sams had already been
+  #     chosen, silently, by whatever order the directory returned them in ---
+  - assert: event_not_emitted
+    event: confirmation.shown
+
+  # --- hygiene is load-bearing here rather than routine: the natural way to
+  #     distinguish two identically-named people is the identifier that
+  #     distinguishes them, and that identifier may not be said (C-3) ---
+  - assert: output_excludes_internal_ids
+  - assert: termination
+    reason: decision
+
+rubrics:
+  - grounding
+  - tone

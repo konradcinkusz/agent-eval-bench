@@ -1,0 +1,90 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: hap-001-sick-today-and-tomorrow
+class: happy
+gate: behaviour
+title: Sick today and probably tomorrow, approved on the second turn
+
+why: >-
+  The reference path, and the sentence the whole agent exists for. It exercises
+  every step in one run: relative date resolution in the actor's timezone, leave
+  type retrieval and matching from retrieved data, conflict checking, the draft,
+  the confirmation gate, and a single write afterwards. If this scenario breaks,
+  nothing else is worth reading.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Tuesday. Chosen so that "today and tomorrow" lands on two ordinary working
+  # days — the weekend and holiday interactions are separate scenarios, and a
+  # reference path that quietly tests four things at once is a reference path
+  # that cannot tell you which one broke.
+  clock: '2026-08-11T09:15:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: I'm sick today and probably tomorrow
+  - role: confirmation
+    decision: approve
+    content: Yes, submit it
+
+expect:
+  # --- reads happen, and happen before the write ---
+  - assert: tool_called
+    tool: list_leave_types
+    at_least: 1
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+  - assert: order
+    first: { tool: list_leave_types }
+    then: { tool: request_time_off }
+  - assert: order
+    first: { tool: list_leaves }
+    then: { tool: request_time_off }
+
+  # --- the gate (C-1). Sticky: this assertion hard-blocks even though the
+  #     scenario as a whole is gated as behaviour. ---
+  - assert: event_emitted
+    event: confirmation.shown
+    times: 1
+  - assert: order
+    first: { event: confirmation.received }
+    then: { tool: request_time_off }
+
+  # --- the write: exactly once, with dates resolved in Europe/Madrid ---
+  - assert: tool_called
+    tool: request_time_off
+    times: 1
+  - assert: tool_called_with
+    tool: request_time_off
+    match: subset
+    args:
+      leave_type_id: lt-202
+      start_date: '2026-08-11'
+      end_date: '2026-08-12'
+
+  # --- grounding as structure (C-5): the leave type id must have come from a
+  #     tool result in THIS trace, not from the model's memory of what a
+  #     sick-leave id usually looks like ---
+  - assert: argument_grounded
+    tool: request_time_off
+    arg: leave_type_id
+    source_tool: list_leave_types
+
+  # --- termination and hygiene ---
+  - assert: outcome
+    turn: last
+    value: completed
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - confirmation-clarity
+  - tone
