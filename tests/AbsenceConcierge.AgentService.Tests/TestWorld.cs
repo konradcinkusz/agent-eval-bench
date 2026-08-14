@@ -1,4 +1,3 @@
-using AbsenceConcierge.AgentService.Workforce;
 using AbsenceConcierge.AgentService.Workforce.Confirmation;
 using AbsenceConcierge.AgentService.Workforce.Fixtures;
 using AbsenceConcierge.AgentService.Workforce.Mock;
