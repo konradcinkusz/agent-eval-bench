@@ -121,9 +121,20 @@
         CA1515  types can be internal. A test class is discovered by reflection
                 and its accessibility is not a design decision.
 
+      And one from xunit's own analyzers:
+
+        xUnit1051  pass TestContext.Current.CancellationToken to anything that
+                takes one. The rule exists so a hung test can be cancelled
+                responsively. These tests are in-memory, synchronous in
+                substance, and cannot hang; threading a token through twenty-five
+                call sites would add noise to precisely the files whose
+                readability is their value. REVISIT when the suite gains tests
+                that do real IO — the eval harness in Phase 4 will, and the rule
+                should come back on for that project.
+
       Everything that could indicate a real defect stays on.
     -->
-    <NoWarn>$(NoWarn);CA1707;CA1859;CA1861;CA1515</NoWarn>
+    <NoWarn>$(NoWarn);CA1707;CA1859;CA1861;CA1515;xUnit1051</NoWarn>
   </PropertyGroup>
 
 </Project>
