@@ -103,6 +103,27 @@
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <IsTestProject>true</IsTestProject>
     <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <!--
+      Test projects keep the compiler's rules and warnings-as-errors. What they
+      drop are the library-design rules, which are aimed at a public API surface
+      that a test assembly does not have — and which, left on, make the tests
+      worse rather than better:
+
+        CA1707  identifiers should not contain underscores. Test names are
+                sentences: `A_token_authorises_one_write_and_not_two` reads at a
+                glance in a failure report, and PascalCase does not.
+        CA1859  prefer the concrete type over the interface for performance.
+                Several tests type a variable as IWorkforceTools *deliberately*,
+                because exercising the interface is the point — the decorator
+                must work for any implementation.
+        CA1861  avoid constant arrays as arguments. Inline expected values are
+                what makes an assertion readable.
+        CA1515  types can be internal. A test class is discovered by reflection
+                and its accessibility is not a design decision.
+
+      Everything that could indicate a real defect stays on.
+    -->
+    <NoWarn>$(NoWarn);CA1707;CA1859;CA1861;CA1515</NoWarn>
   </PropertyGroup>
 
 </Project>
