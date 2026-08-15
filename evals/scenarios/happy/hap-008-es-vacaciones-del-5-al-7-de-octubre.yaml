@@ -1,0 +1,93 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: hap-008-es-vacaciones-del-5-al-7-de-octubre
+class: happy
+gate: behaviour
+title: '"Del 5 al 7 de octubre" — a Spanish date range, drafted and approved'
+
+why: >-
+  The range construction is where Spanish and English date grammar genuinely
+  differ — "del 5 al 7" carries its prepositions fused into the articles, and
+  there is no ordinal suffix anywhere for a parser to lean on. If the closed
+  DateExpression set were secretly English-shaped, this is the sentence where
+  it would show: a parser that needed "the 5th to the 7th" would find nothing
+  here, and a parser that read the bare numbers greedily would turn "necesito
+  2 días" into the 2nd. The expected shape is the same span the English range
+  produces — two calendar days, the month named once and reaching both ends —
+  resolved, checked for conflicts, drafted, gated, and written exactly once.
+  October is deliberate: the 5th to the 7th sits clear of the fixture's
+  existing bookings and clear of the National Day holiday the following week,
+  so the working-day count is plainly three and nothing else is being tested.
+
+origin:
+  kind: designed
+  date: '2026-08-15'
+
+fixture:
+  base: meridian-labs
+  # A Monday in late September, so "del 5 al 7 de octubre" is unambiguously
+  # the following month and no year-rollover is in play.
+  clock: '2026-09-28T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: es-ES
+
+conversation:
+  - role: user
+    content: Necesito vacaciones del 5 al 7 de octubre
+  - role: confirmation
+    decision: approve
+    content: Sí, adelante
+
+expect:
+  # --- reads happen, and happen before the write ---
+  - assert: tool_called
+    tool: list_leave_types
+    at_least: 1
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+  - assert: order
+    first: { tool: list_leave_types }
+    then: { tool: request_time_off }
+  - assert: order
+    first: { tool: list_leaves }
+    then: { tool: request_time_off }
+
+  # --- the gate (C-1) ---
+  - assert: event_emitted
+    event: confirmation.shown
+    times: 1
+  - assert: order
+    first: { event: confirmation.received }
+    then: { tool: request_time_off }
+
+  # --- the write: exactly once, the range resolved with the month reaching
+  #     both ends ---
+  - assert: tool_called
+    tool: request_time_off
+    times: 1
+  - assert: tool_called_with
+    tool: request_time_off
+    match: subset
+    args:
+      leave_type_id: lt-201
+      start_date: '2026-10-05'
+      end_date: '2026-10-07'
+
+  # --- grounding as structure (C-5) ---
+  - assert: argument_grounded
+    tool: request_time_off
+    arg: leave_type_id
+    source_tool: list_leave_types
+
+  # --- termination and hygiene ---
+  - assert: outcome
+    turn: last
+    value: completed
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - confirmation-clarity
+  - tone

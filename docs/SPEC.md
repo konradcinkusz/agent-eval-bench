@@ -1,9 +1,16 @@
 # Absence Concierge — behaviour specification
 
 - **Agent slug**: `absence-concierge`
-- **Spec version**: 1.4.0
+- **Spec version**: 1.5.0
 - **Status**: Accepted — this is the contract. Code is measured against it, not the other way round.
-- **Date**: 2026-08-15 (1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+- **Date**: 2026-08-15 (1.4.0, 1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+
+**What changed in 1.5.0**, on adding Spanish date expressions:
+
+| Change | Why |
+|---|---|
+| [§9](#9-assumptions)'s "English only" assumption narrowed to what remains true: the rule-based interpreter reads English **and Spanish** date expressions and intent forms, selected by the configured locale with a fallback to the other language | An HR agent demonstrated for a Barcelona reader that could not read "mañana" was a demo with a visible hole in it, and the fixture's own `locale` field was carried and ignored. It now selects the reading — the runner injects it the way it injects the clock |
+| The closed `DateExpression` set is **unchanged** | This is the finding, not a footnote: "el viernes que viene" is `NextWeekday`, "del 5 al 7" is a span over two calendar days. A Spanish form needing a new case would have meant the model was English-shaped, and none did. The classification order — payroll, approval, cancellation, medical, time-off — is also byte-for-byte the same in both languages, because it encodes which reading wins, and that is a property of the agent, not of the language |
 
 **What changed in 1.4.0**, on building the public demo in Phases 8b and 9:
 
@@ -321,7 +328,7 @@ is a quality.
 
 | # | Given … the agent … | Scenarios |
 |---|---|---|
-| **B-1** | Given a relative date ("today", "tomorrow", "next Friday"), resolves it in the actor's timezone against the **injected** clock — never the host clock, never UTC arithmetic | `hap-001`, `amb-001`, `amb-004` |
+| **B-1** | Given a relative date ("today", "tomorrow", "next Friday" — or "hoy", "mañana", "el viernes que viene", per the locale), resolves it in the actor's timezone against the **injected** clock — never the host clock, never UTC arithmetic | `hap-001`, `hap-007`, `hap-008`, `amb-001`, `amb-004` |
 | **B-2** | Retrieves the available leave types with `list_leave_types` **before** naming one | `hap-001`, all happy |
 | **B-3** | Maps the user's words to a retrieved leave type; where no retrieved type matches, asks rather than choosing the closest | `hap-001`, `hap-003`, `amb-006` |
 | **B-4** | Checks existing bookings with `list_leaves` **before** drafting | `hap-001`, `hap-004` |
@@ -332,7 +339,7 @@ is a quality.
 | **B-9** | On an explicit rejection, ends `cancelled`, writes nothing, and offers to amend | `hap-005` |
 | **B-10** | After a write, reports the outcome from the tool result — the returned status and dates, never a restatement of what it asked for | `hap-001`, `hap-006`, `deg-003` |
 | **B-11** | Excludes weekends and company holidays from the working-day count, and says which days were excluded | `hap-006` |
-| **B-12** | Where a relative date has two defensible readings, asks — and writes nothing | `amb-001`, `amb-003`, `amb-008` |
+| **B-12** | Where a relative date has two defensible readings, asks — and writes nothing, in either language | `amb-001`, `amb-003`, `amb-008`, `amb-009` |
 | **B-13** | Where a name matches two employees, asks, distinguishing them by team | `amb-005` |
 | **B-14** | Where the requested sick leave exceeds the certificate threshold, surfaces the requirement in the draft | `hap-002` |
 | **B-15** | On a tool failure, degrades per [§7](#7-degradation-contract): partial output, an explicit note, no fabrication, no retry storm | all degradation |
@@ -780,7 +787,7 @@ Written down because an assumption nobody stated is a defect nobody can find.
   than it looks.** *(1.1.0.)* Reading "next Friday" or "the 9th to the 13th of
   October" out of a sentence is done by rules, not a model, so that the suite
   runs on a fresh clone with no credentials. The honest risk is overfitting: a
-  reader written by the same hand that wrote the thirty-two scenarios it will be
+  reader written by the same hand that wrote the thirty-five scenarios it will be
   scored on is a parser fitted to its own test set.
 
   Two things are done about it and neither is a promise. The rules are written
@@ -798,10 +805,19 @@ Written down because an assumption nobody stated is a defect nobody can find.
   The `injection.ignored` event reports that instruction-shaped content was
   present; a pattern list is an incomplete defence by construction, and it is not
   what the constraint rests on.
-- **English only, for now.** The agent is not specified for other languages. This
-  is a real limitation for a Barcelona-based reader and is recorded as such
-  rather than glossed: multilingual date expressions ("el viernes que viene")
-  are a known gap, not a claim.
+- **English and Spanish, and nothing else — for now.** *(Narrowed in 1.5.0; the
+  1.0.0 text said "English only" and named "el viernes que viene" as the example
+  of what did not work.)* The rule-based interpreter now reads Spanish date
+  expressions and intent forms — `hoy`, `mañana`, `el viernes`, `el viernes que
+  viene`, `el viernes de la semana que viene`, `del 5 al 7 de octubre` — selected
+  by the configured locale (`Agent:Locale`; per scenario, `fixture.locale`, which
+  the runner injects the way it injects the clock). When the selected language
+  finds nothing in a sentence, the other one has a look, so a mislabelled locale
+  degrades to a fallback rather than a wall. What remains true and stated: no
+  third language is specified, the closed `DateExpression` set gained no case for
+  Spanish (which was the test of whether the model was English-shaped — it was
+  not), and D-7's overfitting caveat now applies to two vocabularies instead of
+  one.
 - **No memory between conversations.** Each conversation starts empty. A
   confirmation cannot be carried across sessions.
 

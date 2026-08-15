@@ -23,11 +23,11 @@ The agent is the excuse. **The eval bench is the deliverable.**
 > **All ten phases complete.** The contract, the agent, both eval layers, the gates,
 > the production story, the findings, one page, and a tag-driven deployment.
 >
-> `docs/SPEC.md` and 32 scenarios came first and are validated in CI. The agent runs
+> `docs/SPEC.md` and 35 scenarios came first and are validated in CI. The agent runs
 > as a step pipeline whose order *is* the specification — establish the actor, read a
 > decision if one arrived, understand the request, refuse it if out of scope, resolve
 > the dates, retrieve the leave types, check for conflicts, draft, **gate**, execute,
-> reply. And the 32 scenarios now execute against it on every push: constraint
+> reply. And the 35 scenarios now execute against it on every push: constraint
 > scenarios hard-block at 100%, behaviour scenarios are measured against a recorded
 > baseline, and four deliberately broken agents prove the suite can fail.
 >
@@ -76,7 +76,7 @@ The agent is the excuse. **The eval bench is the deliverable.**
 | Phase | What it delivers | Status |
 |---|---|---|
 | 0 | Repository baseline: hygiene files, secret scanning, CI that lints a repo with no code | **Done** |
-| 1 | `docs/SPEC.md` and 32 scenarios as data — the contract, before any agent code | **Done** |
+| 1 | `docs/SPEC.md` and 35 scenarios as data — the contract, before any agent code | **Done** (32 at Phase 1; 35 after the Spanish additions) |
 | 2 | Skeleton: AppHost, agent service, ServiceDefaults, OpenTelemetry end to end, mock tools | **Done** |
 | 3 | The agent loop: intent → dates → leave types → conflicts → draft → **confirmation gate** → execute | **Done** |
 | 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | **Done** |
@@ -165,7 +165,7 @@ Today, from a fresh clone:
 ./scripts/setup.sh                              # prerequisites, hooks, .env — a minute
 dotnet run --project src/AbsenceConcierge.AppHost   # the system, zero credentials
 dotnet test                                     # unit tests and the trace contract
-npm install && npm run lint                     # docs, links, and 32 eval scenarios
+npm install && npm run lint                     # docs, links, and 35 eval scenarios
 ```
 
 With the service running, `GET /workforce/leave-types` returns the world the mock
@@ -216,7 +216,7 @@ docs/
 evals/
   schema/           the scenario contract, as strict JSON Schema
   fixtures/         shared fictional worlds; scenarios write only the delta
-  scenarios/        32 scenarios across five classes
+  scenarios/        35 scenarios across five classes
   rubrics/          versioned judge prompt and rubrics, with the model pinned
   baselines/        recorded pass state a regression is measured against
 prompts/            the agent's prompts, as files a change-coupling check watches
