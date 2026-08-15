@@ -16,6 +16,11 @@ stops for a human before it writes anything.
 
 The agent is the excuse. **The eval bench is the deliverable.**
 
+**One page, if you prefer pictures:** [`docs/index.html`](docs/index.html) — the
+demo, the complete architecture and the infrastructure as diagrams, with every
+arrow spelled out. Serve it with GitHub Pages (`main`, `/docs`) or open the file
+locally; nothing on it claims to be running anywhere it is not.
+
 ## Sixty seconds, if that is all you have
 
 An employee types a sentence. The agent resolves the dates against a real
