@@ -544,7 +544,7 @@ jobs:
       # different and much more suspicious thing.
       - name: Upload test results
         if: steps.detect.outputs.found == 'true' && (success() || failure()) && hashFiles('TestResults/**') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: ./TestResults
@@ -613,7 +613,7 @@ jobs:
 
       - name: Upload traces of what failed
         if: failure() && hashFiles('tests/e2e/.artifacts/**') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: e2e-artifacts
           path: tests/e2e/.artifacts
