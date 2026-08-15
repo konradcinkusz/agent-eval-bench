@@ -184,7 +184,7 @@ jobs:
           echo "key=$key" >> "$GITHUB_OUTPUT"
 
       # ── D-9's first judged run: full scope, live model, real scores ─────────
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
