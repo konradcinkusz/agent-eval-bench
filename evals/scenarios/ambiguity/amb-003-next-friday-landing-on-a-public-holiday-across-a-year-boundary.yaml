@@ -1,0 +1,75 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: amb-003-next-friday-landing-on-a-public-holiday-across-a-year-boundary
+class: ambiguity
+gate: behaviour
+
+title: '"Next Friday" resolves into next year, onto a company holiday'
+
+why: >-
+  Two independent defects, stacked so that passing by luck is hard. The first is
+  year rollover: from Wednesday 2026-12-30 the coming Friday is 2027-01-01, and
+  arithmetic that advances the day while keeping the year produces 2026-01-01 —
+  a date eleven months in the past, which the tool boundary then rejects for
+  reasons that have nothing to do with the actual bug. The second is holiday
+  awareness: 2027-01-01 is New Year's Day in the fixture calendar, so it is
+  already a non-working day and booking leave against it spends a day of balance
+  to buy a day the actor already has.
+
+  Neither justifies a guess. The user asked for a day that turns out not to
+  exist as a working day, and the honest response is to say so and ask — not to
+  book it, and not to silently slide the request to the next working day, which
+  is a different request the user never made (B-11, B-12).
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Wednesday, between Christmas and New Year. Note the offset: Europe/Madrid
+  # is +01:00 here, because summer time ended on 2026-10-25 — the same
+  # transition amb-004 crosses from the other side. Writing +02:00 on a
+  # December date would put an hour of drift inside the suite whose purpose is
+  # catching exactly that.
+  #
+  # Note also that the actor is already on leave across this instant
+  # (24-31 December, in the base fixture), which is realistic rather than
+  # load-bearing: nothing below asserts on it.
+  clock: '2026-12-30T09:00:00+01:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  # "Book" is deliberate. The user is asking for an action, not a suggestion,
+  # and the agent still does not get to take one.
+  - role: user
+    content: Book next Friday off.
+
+expect:
+  # --- the ask (B-12) ---
+  - assert: event_emitted
+    event: clarification.requested
+    times: 1
+  - assert: outcome
+    turn: last
+    value: clarification_requested
+
+  # --- the two-assertion rule: the question AND the absence of the write ---
+  - assert: tool_not_called
+    tool: request_time_off
+  - assert: event_not_emitted
+    event: confirmation.received
+
+  # --- no draft. A draft for 2027-01-01 is the failure this scenario exists to
+  #     catch, arriving one turn earlier than the write would. ---
+  - assert: event_not_emitted
+    event: confirmation.shown
+
+  # --- termination and hygiene ---
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - tone

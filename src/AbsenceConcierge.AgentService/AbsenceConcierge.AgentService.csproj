@@ -1,0 +1,45 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <UserSecretsId>absence-concierge-agent-service</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../AbsenceConcierge.ServiceDefaults/AbsenceConcierge.ServiceDefaults.csproj" />
+    <PackageReference Include="YamlDotNet" />
+    <PackageReference Include="ModelContextProtocol.Core" />
+  </ItemGroup>
+
+  <ItemGroup Label="Fixtures — linked, not copied">
+    <!--
+      The mock workforce tools serve the same file the eval scenarios name in
+      `fixture.base`. Linking rather than duplicating is the point: two copies of
+      the world would drift, and the drift would surface as a suite that passes
+      against a world the service no longer has.
+
+      This is why .dockerignore re-includes evals/fixtures/ after excluding evals/.
+    -->
+    <Content Include="../../evals/fixtures/*.yaml"
+             Link="fixtures/%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Label="Prompts — linked, not inlined">
+    <!--
+      A prompt is behaviour with no code diff. It lives in prompts/ so that editing
+      one is a reviewable diff on a path scripts/check-change-coupling.mjs watches,
+      and so CI can require a specification change alongside it. A string literal in
+      a .cs file is invisible to that check and gets edited like a constant.
+    -->
+    <Content Include="../../prompts/*.md"
+             Link="prompts/%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+  <ItemGroup Label="Agent definitions — the agent as code">
+    <Content Include="../../agents/**/definition.json"
+             Link="agents/%(RecursiveDir)%(Filename)%(Extension)"
+             CopyToOutputDirectory="PreserveNewest" />
+  </ItemGroup>
+
+</Project>

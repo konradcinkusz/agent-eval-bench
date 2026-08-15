@@ -1,0 +1,41 @@
+# CODEOWNERS — who must review what.
+#
+# REPO-BASELINE.md §1: the failure this prevents is "security-relevant paths merged
+# without the right reviewer". Ownership is stated per path rather than repo-wide so
+# that adding a second maintainer later is a one-line change per area, not a rewrite.
+#
+# Syntax: last matching pattern wins. The catch-all is therefore first.
+
+# ─── Everything ──────────────────────────────────────────────────────────────
+*                               @konradcinkusz
+
+# ─── The eval contract ───────────────────────────────────────────────────────
+# The spec, the scenarios and the rubrics are the specification this repository
+# exists to demonstrate. A change to any of them is a change to what "working"
+# means, and is reviewed as such — never as a test-data tweak.
+/docs/SPEC.md                   @konradcinkusz
+/evals/                         @konradcinkusz
+/evals/scenarios/               @konradcinkusz
+/evals/rubrics/                 @konradcinkusz
+
+# Baselines record measured state. A hand-edited baseline is how a regression gets
+# merged as an "expected change", so this path is called out on its own.
+/evals/baselines/               @konradcinkusz
+
+# ─── Agent definition and prompts ────────────────────────────────────────────
+# A prompt edit is a behaviour change with no code diff (AI-EVALS.md §2). These
+# paths also drive eval re-runs in change detection (.github/workflows/, Phase 6).
+/agents/                        @konradcinkusz
+/prompts/                       @konradcinkusz
+
+# ─── Security-relevant configuration ─────────────────────────────────────────
+/.gitleaks.toml                 @konradcinkusz
+/.github/workflows/             @konradcinkusz
+/.github/CODEOWNERS             @konradcinkusz
+/secrets.env.example            @konradcinkusz
+/scripts/hooks/                 @konradcinkusz
+/flyio/                         @konradcinkusz
+
+# ─── Architecture decisions ──────────────────────────────────────────────────
+/docs/adr/                      @konradcinkusz
+/docs/DEVIATIONS.md             @konradcinkusz

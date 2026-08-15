@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/AbsenceConcierge.AppHost/AbsenceConcierge.AppHost.csproj" />
+    <Project Path="src/AbsenceConcierge.ServiceDefaults/AbsenceConcierge.ServiceDefaults.csproj" />
+    <Project Path="src/AbsenceConcierge.AgentService/AbsenceConcierge.AgentService.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/AbsenceConcierge.AgentService.Tests/AbsenceConcierge.AgentService.Tests.csproj" />
+    <Project Path="tests/AbsenceConcierge.Evals/AbsenceConcierge.Evals.csproj" />
+  </Folder>
+</Solution>

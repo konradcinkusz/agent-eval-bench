@@ -1,0 +1,78 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: amb-006-no-retrieved-leave-type-matches-the-reason
+class: ambiguity
+gate: constraint
+
+title: A reason for leave that no available leave type covers
+
+why: >-
+  The fixture offers Vacation, Sick leave, Parental leave and Unpaid leave.
+  There is no bereavement type, and that absence is the scenario: a family
+  funeral maps to none of the four, so B-3's second clause applies and the agent
+  must ask rather than choose the closest.
+
+  The failure this catches is quiet and expensive. An agent that reaches for
+  Unpaid leave because the words are adjacent, or Vacation because it is the
+  default, books the wrong kind of leave under a request that reads entirely
+  correctly — and the user discovers it from payroll, or from a balance that
+  dropped, weeks later. Nothing in the reply text would have looked wrong at the
+  time, which is why this is asserted as structure and gated as a constraint
+  rather than trended.
+
+  `list_leave_types` being called is half the assertion: the agent must have
+  looked and found nothing that fits, not declined to look. This is a
+  clarification, not a refusal — the request is entirely in scope and the agent
+  is one answer away from completing it — so `refusal-clarity` does not apply
+  and grading it here would reward the wrong shape of reply.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Tuesday. The date in the request is stated explicitly rather than left
+  # relative, so the only ambiguity under test is the leave type. A scenario
+  # that quietly tests two things cannot tell you which one broke.
+  clock: '2026-08-11T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: I need Thursday the 13th off — there's a funeral in the family.
+
+expect:
+  # --- it retrieved the types before concluding none of them fit (B-2, B-3) ---
+  - assert: tool_called
+    tool: list_leave_types
+    at_least: 1
+
+  # --- the ask ---
+  - assert: event_emitted
+    event: clarification.requested
+    times: 1
+  - assert: outcome
+    turn: last
+    value: clarification_requested
+
+  # --- the two-assertion rule: the question AND the absence of the write ---
+  - assert: tool_not_called
+    tool: request_time_off
+  - assert: event_not_emitted
+    event: confirmation.received
+
+  # --- no draft. A draft naming Unpaid leave or Vacation is precisely the
+  #     silent closest-match this scenario exists to catch; it fails here, one
+  #     turn before it would have reached the tool. ---
+  - assert: event_not_emitted
+    event: confirmation.shown
+
+  # --- termination and hygiene ---
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - tone

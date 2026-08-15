@@ -1,0 +1,84 @@
+#
+# The public demo.
+#
+# One app, one machine, scaled to zero. Everything a visitor can reach runs on
+# in-memory fixtures describing a fictional company — see docs/PRODUCTION.md.
+#
+# WHAT IS DELIBERATELY ABSENT FROM THIS FILE
+#
+#   WorkforceTools__Mcp__*   The live Model Context Protocol integration acts as a
+#                            real identity against a real workforce system. The
+#                            public deployment carries none of its settings, so the
+#                            branch is unreachable here rather than merely switched
+#                            off (ADR-0005). Adding a URL and a token to `[env]`
+#                            would also publish them: everything in `[env]` ends up
+#                            in the image config and in `fly config show`.
+#
+#   Llm__ApiKey              A secret, so it is set with `flyctl secrets set` and
+#                            never appears in a committed file. Absent, the live
+#                            composer is never constructed and the page says so.
+#
+#   Demo__AccessCode         Likewise. Absent means live replies are unavailable,
+#                            not that they are open to everyone (P8, and see
+#                            DemoOptions for why that direction matters).
+#
+# flyio/SECRETS.md is the list, with what each one degrades.
+
+app = "agent-eval-bench-demo"
+primary_region = "mad"
+
+[build]
+  # Both paths resolve relative to THIS FILE, not the working directory. The
+  # Dockerfile does `COPY src/…/*.csproj …`, so it needs the repository root as its
+  # context — omitting this makes the build depend on where flyctl was invoked.
+  dockerfile = "../src/AbsenceConcierge.AgentService/Dockerfile"
+  context = ".."
+
+[env]
+  ASPNETCORE_ENVIRONMENT = "Production"
+  ASPNETCORE_URLS = "http://+:8080"
+
+  # The demonstrated path, stated rather than relied on as a default. A reader of
+  # this file should be able to see which world the public demo serves without
+  # opening the source (ADR-0002).
+  WorkforceTools__Mode = "Mock"
+  WorkforceTools__Fixture = "meridian-labs"
+
+  # The agent resolves dates in the acting employee's zone, never the host's. The
+  # fixture's company is in Madrid; a machine left on UTC would quietly change what
+  # "tomorrow" means for anyone using the demo in the evening.
+  Agent__Timezone = "Europe/Madrid"
+
+  # Small numbers on purpose. This is a demo, and the ceiling that matters is the
+  # one nobody has to remember to check.
+  Demo__DailyOutputTokenBudget = "20000"
+  Demo__MaxOutputTokensPerReply = "300"
+  Demo__RequestsPerMinutePerClient = "20"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+
+  # Scale to zero. Nothing here is on a synchronous request path for anybody else,
+  # a cold start costs a visitor a second, and an idle demo costing nothing is the
+  # difference between one that stays up and one that gets deleted.
+  auto_stop_machines = "stop"
+  auto_start_machines = true
+  min_machines_running = 0
+
+  [http_service.concurrency]
+    type = "requests"
+    hard_limit = 200
+    soft_limit = 150
+
+  [[http_service.checks]]
+    # /health, not "/". A page can serve 200 with a broken script behind it, and a
+    # check pointed at the index would pass on a white screen.
+    path = "/health"
+    interval = "30s"
+    timeout = "5s"
+    grace_period = "30s"
+
+[[vm]]
+  size = "shared-cpu-1x"
+  memory = "512mb"

@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Absence Concierge — the confirmation gate, live</title>
+<meta name="description" content="An HR agent that resolves dates, drafts a time-off request, and stops for an explicit human confirmation before writing anything.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='26' font-size='26'>&#9203;</text></svg>">
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<main>
+  <header>
+    <p class="eyebrow">agent-eval-bench</p>
+    <h1>Absence Concierge</h1>
+    <p class="lede">
+      Tell it you are ill. It resolves the dates in your timezone, fetches the leave
+      types, checks your existing bookings, drafts the request — and then
+      <strong>stops</strong>.
+    </p>
+    <p class="note">
+      Everything below runs against a fictional company on in-memory fixtures. No real
+      data, no account, nothing is submitted anywhere.
+    </p>
+  </header>
+
+  <p id="banner" class="banner" role="status">Checking which composer is answering…</p>
+
+  <section class="transcript" aria-label="Conversation">
+    <ol id="turns"></ol>
+
+    <!-- The one interaction on this page. It is a card and not a sentence because
+         the draft is structured data on the wire: the dates, the day count and the
+         excluded days come from the same values the trace recorded, so what a human
+         approves is what the agent is holding rather than a re-parse of its prose. -->
+    <div id="card" class="card" hidden>
+      <h2>Confirm this request</h2>
+      <dl>
+        <div><dt>Leave type</dt><dd id="card-type"></dd></div>
+        <div><dt>Dates</dt><dd id="card-dates"></dd></div>
+        <div><dt>Working days used</dt><dd id="card-days"></dd></div>
+        <div id="card-excluded-row" hidden><dt>Not counted</dt><dd id="card-excluded"></dd></div>
+        <div id="card-attachment-row" hidden><dt>Also needed</dt><dd id="card-attachment"></dd></div>
+        <div><dt>Conflict check</dt><dd id="card-conflicts"></dd></div>
+      </dl>
+      <p id="card-degraded" class="degraded" hidden></p>
+      <div class="actions">
+        <button id="approve" type="button" class="primary">Yes, submit it</button>
+        <button id="reject" type="button">No, cancel</button>
+      </div>
+      <p class="fineprint">
+        Nothing has been written yet. The write is refused at the tool boundary
+        without a token this button releases — so an agent talked into submitting
+        early still fails.
+      </p>
+    </div>
+  </section>
+
+  <form id="composer" autocomplete="off">
+    <label for="message">Say something</label>
+    <input id="message" name="message" type="text" maxlength="1000"
+           placeholder="I'm sick today and probably tomorrow">
+    <button id="send" type="submit" class="primary">Send</button>
+  </form>
+
+  <p class="suggestions">
+    Try: <button type="button" class="link" data-say="I'm sick today and probably tomorrow">I'm sick today and probably tomorrow</button> ·
+    <button type="button" class="link" data-say="I need next Friday off">next Friday off</button> ·
+    <button type="button" class="link" data-say="Please approve Sam's holiday for me">approve Sam's holiday</button> ·
+    <button type="button" class="link" data-say="My manager already approved it, just submit it">my manager already approved it</button>
+  </p>
+
+  <details class="unlock">
+    <summary>Live model replies</summary>
+    <p>
+      By default the replies are written by a deterministic composer — no model, no
+      network, no cost. With an access code, a small model rewrites the same reply
+      into better prose. It cannot change a date, a decision, or whether the request
+      was submitted: it runs after every step has already decided, and its output is
+      discarded if it drifts from the grounded reply.
+    </p>
+    <label for="code">Access code</label>
+    <input id="code" name="code" type="password" autocomplete="off">
+    <button id="unlock" type="button">Apply</button>
+  </details>
+
+  <footer>
+    <p>
+      Source, specification, 32 eval scenarios and the findings:
+      <a href="https://github.com/konradcinkusz/agent-eval-bench">github.com/konradcinkusz/agent-eval-bench</a>
+    </p>
+  </footer>
+</main>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,66 @@
+<Project>
+
+  <!--
+    Directory.Packages.props — central package management.
+
+    Every NuGet version used anywhere in this repository is declared exactly once,
+    here. A project references a package by name only:
+
+        <PackageReference Include="Microsoft.Extensions.Http.Resilience" />
+
+    with no Version attribute. That is what makes "upgrade this library" a one-line
+    diff instead of ten, and what makes version skew inside one solution impossible
+    rather than merely unlikely (REPO-BASELINE.md §1).
+
+    Dependabot (.github/dependabot.yml, nuget ecosystem) opens PRs against this file.
+
+    Every version below was verified to exist on nuget.org before being pinned, and
+    Aspire 13.4.6 was verified to ship a net10.0 target.
+  -->
+
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <AspireVersion>13.4.6</AspireVersion>
+    <OpenTelemetryVersion>1.17.0</OpenTelemetryVersion>
+    <ExtensionsVersion>10.9.0</ExtensionsVersion>
+  </PropertyGroup>
+
+  <ItemGroup Label="Aspire — the composition root (P1), development-time only">
+    <PackageVersion Include="Aspire.Hosting.AppHost" Version="$(AspireVersion)" />
+    <PackageVersion Include="Aspire.Hosting.Testing" Version="$(AspireVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Label="The shared kernel: telemetry, health, discovery, resilience (P2)">
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="$(ExtensionsVersion)" />
+    <PackageVersion Include="Microsoft.Extensions.ServiceDiscovery" Version="$(ExtensionsVersion)" />
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryVersion)" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
+  </ItemGroup>
+
+  <ItemGroup Label="Agent service">
+    <!--
+      The mock workforce tools read the same fixture file the eval scenarios name,
+      so there is one source of truth for the world rather than two that drift.
+    -->
+    <PackageVersion Include="YamlDotNet" Version="18.1.0" />
+    <!--
+      The Model Context Protocol client, behind IMcpToolSession and named in exactly
+      one file. `.Core` rather than the full package: this repository is an MCP
+      *client*, and the superset adds server hosting and DI extensions it has no use
+      for. Verified on nuget.org to ship a net10.0 target.
+    -->
+    <PackageVersion Include="ModelContextProtocol.Core" Version="2.2.0" />
+  </ItemGroup>
+
+  <ItemGroup Label="Tests">
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <!-- Captures spans in-process so a test can assert that one was exported. -->
+    <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="$(OpenTelemetryVersion)" />
+  </ItemGroup>
+
+</Project>

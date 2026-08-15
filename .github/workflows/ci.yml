@@ -1,0 +1,552 @@
+name: CI
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  CI — what must be true before anything merges.
+#
+#   ┌────────────┐ ┌────────────┐ ┌────────────┐ ┌──────────────┐ ┌──────────────┐
+#   │ lint-docs  │ │lint-actions│ │ lint-shell │ │ architecture │ │   coupling   │
+#   │markdownlint│ │ actionlint │ │ shellcheck │ │ kernel size  │ │ spec follows │
+#   │ links      │ │            │ │ exec bits  │ │ no domain in │ │ behaviour;   │
+#   │ scenarios  │ │            │ │            │ │ the kernel   │ │ version       │
+#   │            │ │            │ │            │ │              │ │ follows the   │
+#   │            │ │            │ │            │ │              │ │ measuring     │
+#   │            │ │            │ │            │ │              │ │ stick  (PRs)  │
+#   └─────┬──────┘ └─────┬──────┘ └─────┬──────┘ └──────┬───────┘ └──────────────┘
+#         └──────────────┴──────────────┴───────────────┘
+#                               ↓
+#                  ┌──────────────────────────┐
+#                  │ build-test               │  dotnet build + dotnet test
+#                  │   ├─ unit tests          │
+#                  │   ├─ Layer 1, 32 evals   │  constraints 100%, behaviours
+#                  │   │                      │  vs baseline, mutation pass
+#                  │   ├─ Layer 2, judged     │  thresholds; no key ⇒ SKIPPED
+#                  │   └─ sticky PR comment   │  the diff, not a dashboard
+#                  └──────────────────────────┘
+#
+#  ── Why the evals are inside build-test rather than a job of their own ──
+#
+#  They are a test project. A separate job would restore and build the solution a
+#  second time to run `dotnet test` with a filter, and buy nothing: the gates are
+#  assertions inside the suite, so they hard-block from where they are. What is
+#  separate is the REPORTING, because a reviewer should not have to open a job log
+#  to learn that nothing changed.
+#
+#  ── Change detection ──
+#
+#  It includes `prompts/`, `agents/` and `evals/` alongside the source paths. A
+#  prompt edit is a behaviour change with no code diff; a tool-description edit is
+#  a behaviour change with no code diff. If the eval job watched code paths only,
+#  the single most common way to regress an agent would be the one way that never
+#  triggers its tests (AI-EVALS.md §6 and §9, "Prompt edit ships with no eval
+#  run"). Here that is achieved by not filtering at all — the suite runs on every
+#  push — plus the `coupling` job, which fails a pull request that changes
+#  behaviour without writing it down.
+#
+#  Its gates:
+#      constraint scenarios  → 100%, hard block
+#      behaviour scenarios   → at or above the recorded baseline
+#      judge criteria        → per-criterion threshold; no key ⇒ SKIPPED, not green
+#      output                → one sticky PR comment carrying the diff vs baseline
+#
+#  ── Skips are explicit, never silent ──
+#
+#  Every job below either does its work or writes to the step summary why it did
+#  not. A green check that stands for "there was nothing to check" is the failure
+#  mode E2E-ACCEPTANCE-TESTING.md §2 exists to prevent, and it is worse than a red
+#  one because it is trusted.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    # Feature branches are included deliberately. This repository is built phase
+    # by phase on `claude/**` branches, and lint feedback that only arrives when a
+    # pull request is opened is feedback that arrives after the work is finished.
+    # It is also what makes this workflow's own definition of done checkable:
+    # a workflow that has never executed is a claim, not a control.
+    branches: [main, 'claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: 'true'
+  DOTNET_CLI_TELEMETRY_OPTOUT: 'true'
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: 'true'
+
+jobs:
+  # ===========================================================================
+  # Documentation lint
+  #
+  # This repository is mostly documentation and data by design — the spec, the
+  # scenarios, the rubrics and the findings ARE the deliverable. Linting them is
+  # not housekeeping.
+  # ===========================================================================
+  lint-docs:
+    name: Lint documentation
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+
+      - name: Install lint tooling
+        run: npm ci
+
+      - name: markdownlint
+        run: npm run lint:md
+
+      - name: Check for broken relative links
+        run: npm run lint:links
+
+      # The eval harness does not exist until Phase 4. This step is what stops
+      # the scenario corpus being, for three phases, a directory of YAML that no
+      # CI context executes — "an unreferenced test config is not a latent
+      # capability; it is documentation that lies" (TESTING-STRATEGY.md §9).
+      #
+      # It validates every scenario against the strict schema and enforces the
+      # assertion discipline mechanically: no denied or adversarial scenario
+      # without an absence assertion, no asserted write without the confirmation
+      # ordering that precedes it, no scenario without a termination check.
+      - name: Validate eval scenarios
+        run: npm run validate:scenarios
+
+      # The agent definition is behaviour with no code diff, and until this step
+      # nothing compiled it, typed it, or compared it to the service it describes.
+      # It checks the strict schema, that one version appears in all three places
+      # that carry it, and that `allowedTools` / `requireApproval` still match the
+      # read/write catalogue in the service's own source — the definition being the
+      # third place the confirmation gate is enforced.
+      - name: Validate agent definitions
+        run: npm run validate:agents
+
+  # ===========================================================================
+  # Workflow lint
+  #
+  # actionlint catches the class of error that otherwise surfaces only as a
+  # failed run on main: a typo'd context expression, an undefined `needs`, a
+  # shell bug inside a `run:` block (it embeds shellcheck for exactly that).
+  # ===========================================================================
+  lint-actions:
+    name: Lint workflows
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: actionlint
+        run: |
+          set -euo pipefail
+          docker run --rm \
+            -v "$PWD:/repo" \
+            -w /repo \
+            rhysd/actionlint:latest \
+              -color \
+              -verbose
+
+  # ===========================================================================
+  # Shell lint
+  #
+  # The setup script, the CI mirror and the pre-commit hook are the parts of this
+  # repository most likely to be run by a stranger, on a machine we have never
+  # seen. shellcheck is preinstalled on the runner.
+  # ===========================================================================
+  lint-shell:
+    name: Lint shell scripts
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: shellcheck
+        run: |
+          set -euo pipefail
+          # Hooks have no extension, so they are listed explicitly rather than globbed.
+          mapfile -t FILES < <(git ls-files '*.sh' 'scripts/hooks/*')
+          if [ "${#FILES[@]}" -eq 0 ]; then
+            echo "::error::No shell scripts found — this repository ships several, so the glob is wrong, not the repository."
+            exit 1
+          fi
+          echo "Checking:"
+          printf '  %s\n' "${FILES[@]}"
+          # --severity=style is the strictest setting: it reports everything down to
+          # style-level findings. These scripts are the part of this repository most
+          # likely to be run by a stranger on a machine we have never seen.
+          shellcheck --severity=style --shell=bash "${FILES[@]}"
+
+      - name: Executable bits
+        run: |
+          set -euo pipefail
+          # A script committed without +x fails for every new contributor with
+          # "permission denied", and the mode change is invisible in a diff.
+          mapfile -t FILES < <(git ls-files '*.sh' 'scripts/hooks/*')
+          FAILED=0
+          for f in "${FILES[@]}"; do
+            MODE=$(git ls-files --stage -- "$f" | awk '{print $1}')
+            if [ "$MODE" != "100755" ]; then
+              echo "::error file=$f::Committed without the executable bit (mode $MODE). Fix with: git update-index --chmod=+x $f"
+              FAILED=1
+            fi
+          done
+          exit "$FAILED"
+
+  # ===========================================================================
+  # Architecture checks
+  #
+  # P2's kernel ceiling is "mechanical, not advisory" — and the estate says so
+  # because stating it in prose has already failed twice. The worked example this
+  # repository copies its shape from declared a ~700-line ceiling and is now at
+  # 1,365, of which 607 are seeded domain prompts.
+  #
+  # A number in a document does not stop that. A failing build does.
+  # ===========================================================================
+  architecture:
+    name: Architecture checks
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Shared kernel size ceiling
+        run: |
+          set -euo pipefail
+          CEILING=800
+          KERNEL_DIR="src/AbsenceConcierge.ServiceDefaults"
+
+          if [ ! -d "$KERNEL_DIR" ]; then
+            echo "::error::$KERNEL_DIR does not exist. The check is pointing at the wrong path."
+            exit 1
+          fi
+
+          LINES=$(find "$KERNEL_DIR" -name '*.cs' -not -path '*/obj/*' -not -path '*/bin/*' -print0 \
+            | xargs -0 cat | wc -l)
+
+          echo "Shared kernel: $LINES lines (ceiling $CEILING)"
+          {
+            echo "### Shared kernel size"
+            echo
+            echo "\`$KERNEL_DIR\` — **$LINES** lines of C#, ceiling **$CEILING**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$LINES" -gt "$CEILING" ]; then
+            echo "::error::Shared kernel is $LINES lines, over the $CEILING ceiling (P2)."
+            echo "The question to ask is not 'can we raise the ceiling' but 'what domain concept moved in'."
+            exit 1
+          fi
+
+      - name: The kernel holds no domain
+        run: |
+          set -euo pipefail
+          KERNEL_DIR="src/AbsenceConcierge.ServiceDefaults"
+
+          # The kernel is plumbing. If the agent's vocabulary appears in its CODE, a
+          # domain concept has moved into shared code — which is how the estate's
+          # previous kernels became domain libraries, one reasonable-sounding commit
+          # at a time.
+          #
+          # Comments are stripped before matching. The rule is about what the kernel
+          # *holds*, not about what its documentation is allowed to mention: a comment
+          # explaining why confirmation events live elsewhere is the rule being
+          # followed, and failing on it would teach the next author to delete the
+          # explanation rather than to keep the boundary.
+          FORBIDDEN='confirmation|leave|absence|workforce|employee|scenario|rubric'
+          FOUND=0
+
+          while IFS= read -r file; do
+            MATCHES=$(sed -E 's://.*::' "$file" \
+              | grep -vE '^\s*(/\*|\*)' \
+              | grep -niE "$FORBIDDEN" || true)
+            if [ -n "$MATCHES" ]; then
+              echo "::error file=$file::Domain vocabulary in kernel code (P2)"
+              while IFS= read -r match; do
+                echo "  $file:$match"
+              done <<< "$MATCHES"
+              FOUND=1
+            fi
+          done < <(find "$KERNEL_DIR" -name '*.cs' -not -path '*/obj/*' -not -path '*/bin/*')
+
+          if [ "$FOUND" -ne 0 ]; then
+            echo "Domain concepts belong in the service that owns them. A second service must be"
+            echo "able to take this kernel and share none of the agent's vocabulary."
+            exit 1
+          fi
+
+          echo "Kernel code is free of domain vocabulary."
+
+  # ===========================================================================
+  # Change coupling
+  #
+  # Two rules the specification states and nothing enforced until Phase 6:
+  # a behaviour change is written down, and a changed measuring stick is
+  # versioned. Both are the kind of rule that survives exactly as long as
+  # everybody remembers it, which is why it is a job.
+  #
+  # Deliberately NOT in build-test's `needs`. A skipped dependency skips its
+  # dependents, and this job only exists on pull requests — wiring it in would
+  # silently stop the build on every push to a branch.
+  # ===========================================================================
+  coupling:
+    name: Change coupling
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          # The rules are about a diff, so the base branch has to be reachable.
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Behaviour is written down, and a changed measuring stick is versioned
+        # BASE_REF goes through the environment rather than into the script text.
+        # A ref name is attacker-controllable on a fork's pull request, and
+        # interpolating one straight into a shell line is how that becomes an
+        # injection.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$BASE_REF"
+          node scripts/check-change-coupling.mjs "origin/$BASE_REF"
+
+  # ===========================================================================
+  # Build and test
+  #
+  # There is no solution in the repository until Phase 2. This job says so out
+  # loud rather than passing quietly: the detect step writes the reason to the
+  # run summary, and the moment a .sln appears the same job starts building it
+  # with no edit here.
+  # ===========================================================================
+  build-test:
+    name: Build and test
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    needs: [lint-docs, lint-actions, lint-shell, architecture]
+
+    # Narrowest that lets the job leave one comment on a pull request. `contents`
+    # stays read: nothing here pushes.
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # For scripts/eval-comment.mjs. The runner ships a Node, but pinning the
+      # major keeps this job's behaviour from moving with the image.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Is there anything to build?
+        id: detect
+        run: |
+          set -euo pipefail
+          if compgen -G "*.sln" > /dev/null || compgen -G "*.slnx" > /dev/null; then
+            echo "found=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "found=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report the skip
+        if: steps.detect.outputs.found != 'true'
+        run: |
+          {
+            echo "## Build and test: SKIPPED"
+            echo
+            echo "No \`.sln\` or \`.slnx\` in the repository root."
+            echo
+            echo "This is the expected state through **Phase 1**: the repository baseline"
+            echo "and the behaviour spec land before any agent code does — spec first is"
+            echo "the whole method (AI-EVALS.md §2), not a preference about ordering."
+            echo
+            echo "This step exists so the skip is visible. A job that passes because it"
+            echo "found nothing to do, and says nothing about it, is indistinguishable"
+            echo "from a job that verified something — which is the failure mode"
+            echo "E2E-ACCEPTANCE-TESTING.md §2 is written against."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::notice::No solution yet — build and test skipped (expected through Phase 1)."
+
+      - uses: actions/setup-dotnet@v4
+        if: steps.detect.outputs.found == 'true'
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        if: steps.detect.outputs.found == 'true'
+        run: dotnet restore
+
+      - name: Build
+        if: steps.detect.outputs.found == 'true'
+        # Warnings are errors (Directory.Build.props), so --no-warn-as-error is
+        # deliberately absent: a warning that only breaks the build locally is a
+        # warning that gets pushed.
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Test
+        if: steps.detect.outputs.found == 'true'
+        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
+
+      # The eval suite runs as part of `dotnet test` above — it is a test project,
+      # and TESTING-STRATEGY.md §9 is blunt about a suite CI does not run not being
+      # evidence. This step does not gate anything; the gates are tests inside the
+      # suite (constraints at 100%, no regression against the baseline). What it does
+      # is put the numbers where a reviewer sees them without downloading an artifact.
+      - name: Eval summary
+        if: steps.detect.outputs.found == 'true' && (success() || failure())
+        run: |
+          set -euo pipefail
+          report=./TestResults/eval-report.json
+
+          if [ ! -f "$report" ]; then
+            {
+              echo "## Layer 1 evals: no report"
+              echo
+              echo "The suite did not run — most likely the build failed before it could."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "## Layer 1 evals"
+            echo
+            jq -r '
+              "Spec **\(.specVersion)**, interpreter `\(.interpreter)`, \(.durationMs) ms",
+              "",
+              "| | count |",
+              "|---|---|",
+              "| passed | \([.scenarios[] | select(.status == "pass")] | length) |",
+              "| failed | \([.scenarios[] | select(.status == "fail" or .status == "error")] | length) |",
+              "| skipped:unimplemented | \([.scenarios[] | select(.status == "skipped:unimplemented")] | length) |",
+              "| skipped:no-credential | \([.scenarios[] | select(.status == "skipped:no-credential")] | length) |"
+            ' "$report"
+
+            failed=$(jq -r '[.scenarios[] | select(.status == "fail" or .status == "error")] | length' "$report")
+
+            if [ "$failed" != "0" ]; then
+              echo
+              echo "### Failures"
+              echo
+              jq -r '
+                .scenarios[]
+                | select(.status == "fail" or .status == "error")
+                | "- **\(.id)** [\(.gate)]",
+                  ( .assertions[]? | select(.passed | not) | "    - `\(.assertion)` — \(.detail // "no detail")" ),
+                  ( select(.error != null) | "    - harness error: \(.error)" )
+              ' "$report"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          # Layer 2 runs in the same `dotnet test` pass and, with no credential on a
+          # pull request, reports skipped:no-credential for every judged scenario.
+          # That is legitimate here and nowhere else — the keyed run is nightly.yml,
+          # and a test asserts that file exists and passes the key.
+          layer2=./TestResults/eval-report-layer2.json
+
+          if [ -f "$layer2" ]; then
+            {
+              echo
+              echo "## Layer 2 evals (${GITHUB_REF_NAME})"
+              echo
+              jq -r '
+                "Judge **\(.judgeVersion)** — rubrics `\(.rubricsHash)`, prompt `\(.promptHash)`, scope `\(.scope)`",
+                "",
+                "Model: `\(.model // "none — no credential on a pull request")`",
+                "",
+                "Calibration: \(.calibration.reason)"
+              ' "$layer2"
+
+              graded=$(jq -r '[.scenarios[] | select(.status == "pass")] | length' "$layer2")
+
+              if [ "$graded" != "0" ]; then
+                echo
+                echo "| rubric | mean | threshold | lowest | ok |"
+                echo "|---|---|---|---|---|"
+                jq -r '.rubrics[] | "| \(.rubric) | \(.mean) | \(.threshold) | \(.lowest) | \(if .meetsThreshold and .meetsFloor then "yes" else "**no**" end) |"' "$layer2"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      # ── One comment, updated in place, carrying the diff ──────────────────
+      #
+      # `pull_request`, deliberately, and NOT `pull_request_target`. The latter
+      # would give a fork's pull request a write token while this job checks out
+      # and builds that fork's code — the known-dangerous pattern, and one this
+      # repository is not going to demonstrate. The cost is that a fork's pull
+      # request gets a read-only token and no comment; it gets the step summary
+      # instead, and the guard below says so rather than failing.
+      - name: One sticky comment with the diff
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name == github.repository &&
+          steps.detect.outputs.found == 'true' &&
+          (success() || failure())
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          set -euo pipefail
+
+          node scripts/eval-comment.mjs > /tmp/eval-comment.md
+
+          marker='<!-- agent-eval-bench:evals -->'
+
+          # One comment per pull request, found by its marker and updated. Ten
+          # identical comments on a ten-push branch is the same failure as a
+          # dashboard nobody reads, wearing a different hat.
+          existing=$(gh api "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+            --paginate --jq "map(select(.body | contains(\"$marker\"))) | .[0].id // empty" \
+            | head -n 1)
+
+          if [ -n "$existing" ]; then
+            gh api -X PATCH "repos/${GITHUB_REPOSITORY}/issues/comments/${existing}" \
+              -F body=@/tmp/eval-comment.md > /dev/null
+            echo "Updated comment ${existing}."
+          else
+            gh api -X POST "repos/${GITHUB_REPOSITORY}/issues/${PR_NUMBER}/comments" \
+              -F body=@/tmp/eval-comment.md > /dev/null
+            echo "Posted a new comment."
+          fi
+
+      - name: Say why there is no comment
+        if: >-
+          github.event_name == 'pull_request' &&
+          github.event.pull_request.head.repo.full_name != github.repository &&
+          (success() || failure())
+        run: |
+          {
+            echo "## Eval comment: not posted"
+            echo
+            echo "This pull request comes from a fork, so the token is read-only."
+            echo "The results are in this summary and in the \`test-results\` artifact."
+            echo
+            echo "Using \`pull_request_target\` to get a write token here would run a"
+            echo "fork's code with one, which is the pattern this repository is not"
+            echo "going to demonstrate."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # hashFiles is the guard for the honest case: when the BUILD fails, no test
+      # ever ran and there is nothing to upload. `if-no-files-found: error` stays,
+      # because a run that produced a results directory and no results in it is a
+      # different and much more suspicious thing.
+      - name: Upload test results
+        if: steps.detect.outputs.found == 'true' && (success() || failure()) && hashFiles('TestResults/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./TestResults
+          retention-days: 14
+          if-no-files-found: error
