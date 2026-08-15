@@ -325,6 +325,56 @@ jobs:
         if: steps.detect.outputs.found == 'true'
         run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
 
+      # The eval suite runs as part of `dotnet test` above — it is a test project,
+      # and TESTING-STRATEGY.md §9 is blunt about a suite CI does not run not being
+      # evidence. This step does not gate anything; the gates are tests inside the
+      # suite (constraints at 100%, no regression against the baseline). What it does
+      # is put the numbers where a reviewer sees them without downloading an artifact.
+      - name: Eval summary
+        if: steps.detect.outputs.found == 'true' && (success() || failure())
+        run: |
+          set -euo pipefail
+          report=./TestResults/eval-report.json
+
+          if [ ! -f "$report" ]; then
+            {
+              echo "## Layer 1 evals: no report"
+              echo
+              echo "The suite did not run — most likely the build failed before it could."
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          {
+            echo "## Layer 1 evals"
+            echo
+            jq -r '
+              "Spec **\(.specVersion)**, interpreter `\(.interpreter)`, \(.durationMs) ms",
+              "",
+              "| | count |",
+              "|---|---|",
+              "| passed | \([.scenarios[] | select(.status == "pass")] | length) |",
+              "| failed | \([.scenarios[] | select(.status == "fail" or .status == "error")] | length) |",
+              "| skipped:unimplemented | \([.scenarios[] | select(.status == "skipped:unimplemented")] | length) |",
+              "| skipped:no-credential | \([.scenarios[] | select(.status == "skipped:no-credential")] | length) |"
+            ' "$report"
+
+            failed=$(jq -r '[.scenarios[] | select(.status == "fail" or .status == "error")] | length' "$report")
+
+            if [ "$failed" != "0" ]; then
+              echo
+              echo "### Failures"
+              echo
+              jq -r '
+                .scenarios[]
+                | select(.status == "fail" or .status == "error")
+                | "- **\(.id)** [\(.gate)]",
+                  ( .assertions[]? | select(.passed | not) | "    - `\(.assertion)` — \(.detail // "no detail")" ),
+                  ( select(.error != null) | "    - harness error: \(.error)" )
+              ' "$report"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Upload test results
         if: steps.detect.outputs.found == 'true' && (success() || failure())
         uses: actions/upload-artifact@v4

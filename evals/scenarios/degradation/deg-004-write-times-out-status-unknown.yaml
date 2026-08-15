@@ -59,9 +59,14 @@ expect:
   # --- ONE attempt. Not two. The generous §7 rule 3 ceiling does not apply to
   #     a write whose result is unknown: C-6 counts submissions, not successes,
   #     and a second one is a second booking. ---
+  # --- EXACTLY one logical call, and exactly one attempt inside it. The two
+  #     lines catch different defects and the corpus needed both: `call_attempts`
+  #     bounds transport retries within a span, while a second span is the
+  #     orchestrator deciding to submit again — which on an indeterminate write
+  #     books the holiday twice. Found by the Phase 4 mutation pass. ---
   - assert: tool_called
     tool: request_time_off
-    at_least: 1
+    times: 1
   - assert: call_attempts
     tool: request_time_off
     max_attempts: 1

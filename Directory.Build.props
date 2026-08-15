@@ -99,8 +99,13 @@
     packable, they do not need XML documentation, and they run with the same analyzer
     posture as production code because an eval harness that fails to compile cleanly
     is an eval harness nobody trusts.
+
+    *.Evals matches too. The eval suite is a test project by every property that
+    matters — it is discovered by a runner, its method names are sentences, and it
+    is not packable — and giving it a different suffix was a naming decision about
+    what it measures, not a statement that different rules apply.
   -->
-  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) or $(MSBuildProjectName.EndsWith('.Evals'))">
     <IsTestProject>true</IsTestProject>
     <!--
       GenerateDocumentationFile stays ON for test projects too, despite the
