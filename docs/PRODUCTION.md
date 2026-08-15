@@ -10,7 +10,8 @@ That is not a slogan about observability. Layer 1 asserts over spans and events
 and nothing else ([ADR-0003](adr/0003-agent-decisions-are-trace-attributes.md)),
 so a production trace is, by construction, a gradeable one — and a production
 failure can become a scenario by extraction rather than by somebody's
-reconstruction of it. The three sections below are what that costs.
+reconstruction of it. The sections below are what that costs, and end with how the
+thing is deployed and what a visitor can reach.
 
 ## 1. The eval contract is a production contract
 
@@ -168,3 +169,65 @@ would make the `only_for_self` filter pass for somebody else's leave.
 Tool names are configurable (`WorkforceTools:Mcp:ToolNames:*`) because that is
 the boundary's job. Argument names are not, yet, and that is the next thing this
 adapter needs.
+
+## 6. Deploying it
+
+One app, one machine, scaled to zero: [`flyio/demo.fly.toml`](../flyio/demo.fly.toml).
+It ships on a `v*` tag and never on a branch push, and the workflow's first job is
+the eval suite — **an agent deployment whose evals are advisory has no gate.** That
+job needs no credential, which is the property that lets it be a release gate rather
+than a nightly hope ([ADR-0002](adr/0002-mock-first-zero-credential-default.md)).
+
+After the deploy reports success, the workflow checks two things the deploy itself
+cannot:
+
+- **The page answers 200.** Fly's own check points at `/health`, deliberately — a
+  page can serve 200 with a broken script behind it, so a health check pointed at
+  `/` would pass on a white screen. That means nothing has verified `/` until this
+  step does.
+- **The security headers survived.** What removes a header in production is a proxy,
+  a platform default or a middleware ordering change, and a unit test sees none of
+  those.
+
+### The page
+
+Three static files served by the agent service itself: one HTML, one stylesheet, one
+script, no build step and no framework. A page with one interaction does not need a
+dependency tree, and the tree is the part that needs patching for the next five
+years.
+
+Two properties are worth naming because both are easy to lose:
+
+- **The confirmation card is rendered from structured data**, not parsed out of the
+  reply. A page that read dates back out of prose would be a second implementation
+  of the draft, free to disagree with the one a human is about to approve.
+- **Every value is set with `textContent`, never `innerHTML`.** The fixtures contain
+  deliberate injection attempts — `adv-003` hides an instruction inside a leave type
+  name — and a page that rendered them as markup would be the one place in this
+  repository where that content becomes executable.
+
+The content security policy is `default-src 'none'` with `connect-src 'self'` and
+**no `unsafe-inline`**, which is why the CSS and the script are separate files.
+Inlining them would have been one fewer request and would have cost the strictest
+clause in the policy — the trade that quietly happens on most pages, and the reason a
+strict CSP is rarer than a CSP.
+
+### Live replies, and the three things that gate them
+
+The live composer needs a credentialed provider, an access code, and budget left
+today. Each is checked in a different place and each fails closed; a missing secret
+is the normal state of a fork, so unset means *unavailable* rather than *open*.
+
+The access code is a **spend control, not authentication**, and
+[`flyio/SECRETS.md`](../flyio/SECRETS.md) says so rather than letting the word
+"code" imply otherwise. There is no data here to protect: every visitor sees the
+same fictional company and nothing is stored. What bounds the cost is the daily
+token budget, which no amount of code-sharing moves — and which is held in memory,
+so a scale-to-zero restart resets it ([D-13](DEVIATIONS.md)).
+
+### Never deployed
+
+No Fly account is wired to this repository, so the workflow above has never run.
+The configuration is reviewable and the checks are real; whether the app comes up is
+not something a green build can tell you, and this paragraph is here instead of a
+badge that would imply otherwise.
