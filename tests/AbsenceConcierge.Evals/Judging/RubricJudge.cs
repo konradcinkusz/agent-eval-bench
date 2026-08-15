@@ -64,7 +64,7 @@ public sealed class RubricJudge(ILlmProvider provider, JudgeConfiguration config
                 cancellationToken)
             .ConfigureAwait(false);
 
-        var scores = Parse(response.Text, rubrics);
+        var scores = Parse(response.Text, rubrics, configuration);
 
         return new JudgeVerdict(scores, response.Model, response.InputTokens, response.OutputTokens);
     }
@@ -75,7 +75,10 @@ public sealed class RubricJudge(ILlmProvider provider, JudgeConfiguration config
     /// credential — which is the only way this code is exercised in a repository
     /// that ships without one.
     /// </summary>
-    public static IReadOnlyList<RubricScore> Parse(string text, IReadOnlyList<string> expected)
+    public static IReadOnlyList<RubricScore> Parse(
+        string text,
+        IReadOnlyList<string> expected,
+        JudgeConfiguration? judge = null)
     {
         ArgumentNullException.ThrowIfNull(expected);
 
@@ -100,7 +103,7 @@ public sealed class RubricJudge(ILlmProvider provider, JudgeConfiguration config
                 $"The judge returned no scores. Received: {Truncate(text)}");
         }
 
-        var configuration = JudgeConfiguration.Current;
+        var configuration = judge ?? JudgeConfiguration.Current;
         var scores = new List<RubricScore>();
 
         foreach (var name in expected)
