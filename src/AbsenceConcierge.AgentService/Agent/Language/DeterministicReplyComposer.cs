@@ -27,6 +27,16 @@ public sealed class DeterministicReplyComposer : IReplyComposer
 
     private static readonly CultureInfo Display = CultureInfo.GetCultureInfo("en-GB");
 
+    public ValueTask<string> ComposeAsync(
+        AgentTurnContext context,
+        string outcome,
+        CancellationToken cancellationToken = default) =>
+        ValueTask.FromResult(Compose(context, outcome));
+
+    /// <summary>
+    /// The synchronous body, kept as its own method so the live composer can call it
+    /// as a fallback without going through a ValueTask it would immediately unwrap.
+    /// </summary>
     public string Compose(AgentTurnContext context, string outcome)
     {
         ArgumentNullException.ThrowIfNull(context);

@@ -1,0 +1,175 @@
+/*
+  One stylesheet, no build step, no framework.
+
+  A page with one interaction does not need a dependency tree, and the tree is the
+  part that needs patching for the next five years. System fonts for the same reason
+  the content security policy has no `unsafe-inline`: nothing here loads from
+  anywhere but this origin.
+*/
+
+:root {
+  color-scheme: light dark;
+  --ink: #16181d;
+  --muted: #5c6270;
+  --line: #d9dce3;
+  --page: #fbfbfc;
+  --panel: #ffffff;
+  --accent: #1f4fd8;
+  --warn-bg: #fff6e5;
+  --warn-line: #e8c98a;
+  --live-bg: #ecf3ff;
+  --live-line: #9fbdf5;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #e8eaef;
+    --muted: #9aa2b1;
+    --line: #333846;
+    --page: #14161b;
+    --panel: #1b1e26;
+    --accent: #7fa6ff;
+    --warn-bg: #2c2517;
+    --warn-line: #6b5626;
+    --live-bg: #17203a;
+    --live-line: #33507f;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 2rem 1rem 4rem;
+  background: var(--page);
+  color: var(--ink);
+  font: 16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+main { max-width: 44rem; margin: 0 auto; }
+
+.eyebrow {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+h1 { margin: 0.2rem 0 0.6rem; font-size: 1.9rem; letter-spacing: -0.02em; }
+h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
+
+.lede { margin: 0 0 0.5rem; font-size: 1.05rem; }
+.note, .fineprint { color: var(--muted); font-size: 0.85rem; }
+.note { margin: 0; }
+
+.banner {
+  margin: 1.5rem 0;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--warn-line);
+  border-radius: 8px;
+  background: var(--warn-bg);
+  font-size: 0.9rem;
+}
+
+.banner.live { border-color: var(--live-line); background: var(--live-bg); }
+
+.transcript ol { list-style: none; margin: 0; padding: 0; }
+
+.transcript li {
+  margin: 0 0 0.75rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.transcript li.said { background: transparent; border-style: dashed; }
+
+.who {
+  display: block;
+  margin-bottom: 0.2rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.card {
+  margin: 0 0 1rem;
+  padding: 1rem;
+  border: 2px solid var(--accent);
+  border-radius: 12px;
+  background: var(--panel);
+}
+
+.card dl { margin: 0 0 1rem; }
+.card dl > div { display: flex; gap: 0.75rem; padding: 0.35rem 0; border-top: 1px solid var(--line); }
+.card dl > div:first-child { border-top: 0; }
+.card dt { flex: 0 0 10rem; color: var(--muted); font-size: 0.85rem; }
+.card dd { margin: 0; flex: 1; }
+
+.degraded {
+  margin: 0 0 1rem;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid var(--warn-line);
+  background: var(--warn-bg);
+  font-size: 0.88rem;
+}
+
+.actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-bottom: 0.75rem; }
+
+button {
+  font: inherit;
+  padding: 0.5rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) { border-color: var(--accent); }
+button:disabled { opacity: 0.5; cursor: default; }
+
+button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+button.link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+form#composer { display: flex; gap: 0.5rem; align-items: flex-end; flex-wrap: wrap; margin: 1.5rem 0 0.75rem; }
+form#composer label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+
+input[type="text"], input[type="password"] {
+  flex: 1 1 18rem;
+  font: inherit;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--ink);
+}
+
+.suggestions { margin: 0 0 2rem; font-size: 0.85rem; color: var(--muted); }
+
+.unlock {
+  padding: 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.unlock summary { cursor: pointer; font-weight: 600; }
+.unlock p { font-size: 0.88rem; color: var(--muted); }
+.unlock label { display: block; margin-bottom: 0.3rem; font-size: 0.85rem; }
+.unlock input { max-width: 16rem; margin-right: 0.5rem; }
+
+footer { margin-top: 2.5rem; font-size: 0.85rem; color: var(--muted); }
+a { color: var(--accent); }

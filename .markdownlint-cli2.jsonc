@@ -14,6 +14,11 @@
     // every item — correct Markdown, and a list of six rules all called 1 for the
     // thing that has to follow them. Lint rules written for human readers do not
     // apply to a file whose reader is not human.
-    "evals/rubrics/judge-prompt.md"
+    "evals/rubrics/judge-prompt.md",
+
+    // Same reasoning for the agent's own prompts. These are shipped into the image
+    // and read verbatim by a model; the numbering is part of what the model is being
+    // told, not a Markdown style choice.
+    "prompts/**"
   ]
 }
