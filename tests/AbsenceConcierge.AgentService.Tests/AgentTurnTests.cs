@@ -501,7 +501,8 @@ public sealed class AgentTurnTests
         await harness.SayAsync("c1", "Book me Friday off");
 
         var turn = Assert.Single(
-            harness.Exported.Where(span => span.DisplayName.StartsWith("invoke_agent", StringComparison.Ordinal)));
+            harness.Exported,
+            span => span.DisplayName.StartsWith("invoke_agent", StringComparison.Ordinal));
 
         Assert.Equal("deterministic", turn.GetTagItem(AgentDiagnostics.Attributes.Interpreter));
         Assert.Equal("absence-concierge", turn.GetTagItem(AgentDiagnostics.Attributes.AgentName));
