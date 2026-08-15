@@ -1,0 +1,151 @@
+<Project>
+
+  <!--
+    Directory.Build.props — one place where every project in this repository gets its
+    target framework, language version, analyzer posture and package metadata.
+
+    Rationale: REPO-BASELINE.md §1 — "Ten .csproj files each pinning their own package
+    versions; upgrading one library means ten diffs and version skew inside one solution."
+    Package *versions* live in Directory.Packages.props (central package management);
+    everything that is not a version lives here.
+
+    This file is inert until the first project arrives in Phase 2. It is committed now
+    so that no project is ever created without it.
+  -->
+
+  <PropertyGroup Label="Target framework and language">
+    <TargetFramework>net10.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!--
+      Globalization stays ON, against the usual container-slimming advice.
+      Resolving "next Friday" and "probably tomorrow" in the caller's timezone and
+      culture is load-bearing behaviour for this agent, and it is the behaviour the
+      ambiguity scenarios attack. InvariantGlobalization=true would make
+      CultureInfo.GetCultureInfo("es-ES") silently return the invariant culture —
+      a wrong answer with no error, which is the worst failure mode an eval can face.
+      The runtime image therefore carries ICU and tzdata; that cost is declared,
+      not assumed (P6: "native dependencies are declared, not assumed").
+    -->
+    <InvariantGlobalization>false</InvariantGlobalization>
+    <UseSystemResourceKeys>false</UseSystemResourceKeys>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Build correctness">
+    <!--
+      Warnings are errors everywhere, including local builds. A warning that is an
+      error only in CI is a warning that gets pushed.
+    -->
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <WarningLevel>9999</WarningLevel>
+    <EnforceCodeStyleInBuild>true</EnforceCodeStyleInBuild>
+    <AnalysisLevel>latest-recommended</AnalysisLevel>
+    <EnableNETAnalyzers>true</EnableNETAnalyzers>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <!--
+      CS1591 (missing XML comment on a public member) off: the documentation file is
+      generated for the analyzer surface, not to force a doc comment on every DTO.
+      P14 puts reasoning in docs/, not in a comment on every property — and the
+      estate's recorded failure is credentials pasted into XML doc comments as
+      "documentation of each property's value".
+    -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+    <Deterministic>true</Deterministic>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Central package management">
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+    <!-- A restore that silently accepts a vulnerable transitive package is not a restore. -->
+    <NuGetAuditMode>all</NuGetAuditMode>
+    <NuGetAuditLevel>low</NuGetAuditLevel>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Vulnerability policy">
+    <!--
+      Audit findings arrive as warnings, and TreatWarningsAsErrors would turn every
+      one of them into a red build on an unrelated PR. The policy is graded instead:
+
+        NU1901 (low) / NU1902 (moderate)   → warning; visible, does not block
+        NU1903 (high) / NU1904 (critical)  → error;   blocks the merge
+
+      An advisory that blocks unrelated work gets suppressed wholesale within a
+      month; one that is merely loud gets read. High and critical still stop the line.
+    -->
+    <WarningsNotAsErrors>$(WarningsNotAsErrors);NU1901;NU1902</WarningsNotAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Package and repository metadata">
+    <Product>Absence Concierge</Product>
+    <Company>agent-eval-bench</Company>
+    <Authors>Konrad Cinkusz</Authors>
+    <!-- Copyright holder is kept byte-identical to LICENSE. One source of truth. -->
+    <Copyright>Copyright (c) 2026 dev_insight</Copyright>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
+    <RepositoryUrl>https://github.com/konradcinkusz/agent-eval-bench</RepositoryUrl>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+  </PropertyGroup>
+
+  <PropertyGroup Label="Never pack, unless a project opts in">
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    Test projects: conventionally named *.Tests, living under tests/. They are not
+    packable, they do not need XML documentation, and they run with the same analyzer
+    posture as production code because an eval harness that fails to compile cleanly
+    is an eval harness nobody trusts.
+
+    *.Evals matches too. The eval suite is a test project by every property that
+    matters — it is discovered by a runner, its method names are sentences, and it
+    is not packable — and giving it a different suffix was a naming decision about
+    what it measures, not a statement that different rules apply.
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) or $(MSBuildProjectName.EndsWith('.Evals'))">
+    <IsTestProject>true</IsTestProject>
+    <!--
+      GenerateDocumentationFile stays ON for test projects too, despite the
+      documentation being of no interest: IDE0005 (unnecessary usings) only runs
+      on build when it is set, and an unused using in a test file is worth
+      catching in exactly the same way as in a production one. CS1591 is already
+      suppressed globally, so this costs nothing.
+    -->
+    <!--
+      Test projects keep the compiler's rules and warnings-as-errors. What they
+      drop are the library-design rules, which are aimed at a public API surface
+      that a test assembly does not have — and which, left on, make the tests
+      worse rather than better:
+
+        CA1707  identifiers should not contain underscores. Test names are
+                sentences: `A_token_authorises_one_write_and_not_two` reads at a
+                glance in a failure report, and PascalCase does not.
+        CA1859  prefer the concrete type over the interface for performance.
+                Several tests type a variable as IWorkforceTools *deliberately*,
+                because exercising the interface is the point — the decorator
+                must work for any implementation.
+        CA1861  avoid constant arrays as arguments. Inline expected values are
+                what makes an assertion readable.
+        CA1515  types can be internal. A test class is discovered by reflection
+                and its accessibility is not a design decision.
+
+      And one from xunit's own analyzers:
+
+        xUnit1051  pass TestContext.Current.CancellationToken to anything that
+                takes one. The rule exists so a hung test can be cancelled
+                responsively. These tests are in-memory, synchronous in
+                substance, and cannot hang; threading a token through twenty-five
+                call sites would add noise to precisely the files whose
+                readability is their value. REVISIT when the suite gains tests
+                that do real IO — the eval harness in Phase 4 will, and the rule
+                should come back on for that project.
+
+      Everything that could indicate a real defect stays on.
+    -->
+    <NoWarn>$(NoWarn);CA1707;CA1859;CA1861;CA1515;xUnit1051</NoWarn>
+  </PropertyGroup>
+
+</Project>

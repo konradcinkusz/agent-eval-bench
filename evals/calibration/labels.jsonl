@@ -1,0 +1,14 @@
+// Human labels, one JSON object per line. Append-only.
+//
+// EMPTY, AND THAT IS THE HONEST STATE. Zero labels means the judge's scores are
+// reported and trended and gate nothing — see docs/CALIBRATION.md, which also
+// explains why an uncalibrated judge that gates is worse than no judge at all.
+//
+// Format:
+//   {"scenario":"<id>","rubric":"<criterion>","score":<int>,"labeller":"<handle>","date":"YYYY-MM-DD"}
+//
+// `labeller` is a handle, never a name or an email: this repository is public.
+// `score` is on the criterion's own scale, from evals/rubrics/judge.yaml.
+//
+// Label WITHOUT reading the judge's scores first. Reading them produces agreement
+// with the judge rather than a measurement of it, and the bias runs upward.

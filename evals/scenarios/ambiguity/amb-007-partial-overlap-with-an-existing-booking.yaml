@@ -1,0 +1,80 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: amb-007-partial-overlap-with-an-existing-booking
+class: ambiguity
+gate: behaviour
+
+title: A request whose middle days collide with leave already booked
+
+why: >-
+  The requested range, 19–21 August, meets the actor's existing booking of
+  20–22 August in the middle: the 19th is free, the 20th and 21st are not. This
+  is harder than the total-overlap case in hap-004 for one reason — a naive
+  conflict check compares start dates, or ranges for equality, and a partial
+  overlap satisfies neither test. The check that catches it is
+  `start <= other_end AND end >= other_start`, and an implementation that got it
+  wrong looks perfectly correct on every scenario where the ranges are identical
+  or disjoint.
+
+  What follows from noticing is the second half of B-5: report which days
+  collide and stop. Not draft the whole range over the top of an approved
+  booking, and not silently trim the request to the 19th — trimming is a
+  different request the user did not make, and it is worse than the collision
+  because the user is never told it happened. The correct move is to name the
+  20th and the 21st specifically and ask, which is also why `grounding` is
+  graded here: those days must come from the `list_leaves` result, not from a
+  guess about which part of the range looked risky.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Tuesday, nine days ahead of the collision. The colliding booking (20-22
+  # August, approved) is in the base fixture; no override is needed, and the
+  # request below is written as explicit dates so nothing but the overlap is
+  # under test.
+  clock: '2026-08-11T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: Can I book 19 to 21 August off as vacation?
+
+expect:
+  # --- it checked before drafting (B-4). Without this, an agent that never
+  #     looked and asked a vague question would pass the assertions below. ---
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+
+  # --- the collision is reported and the range is not drafted over it (B-5) ---
+  - assert: event_emitted
+    event: clarification.requested
+    times: 1
+  - assert: outcome
+    turn: last
+    value: clarification_requested
+
+  # --- the two-assertion rule: the question AND the absence of the write ---
+  - assert: tool_not_called
+    tool: request_time_off
+  - assert: event_not_emitted
+    event: confirmation.received
+
+  # --- no draft. A draft for 19-21 August is the double-booking, and a draft
+  #     for the 19th alone is the silent trim; B-5 permits neither without the
+  #     user resolving the collision first. ---
+  - assert: event_not_emitted
+    event: confirmation.shown
+
+  # --- termination and hygiene. The overlapping days must be named as dates;
+  #     naming the booking by its identifier instead would breach C-3. ---
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - tone

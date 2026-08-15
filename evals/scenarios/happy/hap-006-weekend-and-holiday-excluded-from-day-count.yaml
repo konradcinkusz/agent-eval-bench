@@ -1,0 +1,103 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: hap-006-weekend-and-holiday-excluded-from-day-count
+class: happy
+gate: behaviour
+title: Five calendar days that cost two working days
+
+why: >-
+  The span runs Friday to Tuesday over a weekend and National Day, so five
+  calendar days consume two working days. An agent that counts the span instead
+  of reading the calendar tells the user five days of allowance are going, which
+  is wrong by three and is the kind of wrong a user only discovers at year end
+  when the balance does not add up. The other half is asserted here too, and it
+  is the one an over-correcting agent breaks: the write still carries the dates
+  the user asked for, the 9th to the 13th, because an agent that "helpfully"
+  submits only the working days has booked something different from what was
+  approved. The count itself, and the sentence naming which days were excluded,
+  live in the draft's wording and are read there by the judge.
+
+origin:
+  kind: designed
+  date: '2026-08-14'
+
+fixture:
+  base: meridian-labs
+  # Thursday. The requested span is deliberately layered so that a partial
+  # implementation is visible in the count rather than hidden by it:
+  #   Fri  9 Oct — working day
+  #   Sat 10 Oct, Sun 11 Oct — weekend
+  #   Mon 12 Oct — National Day, in the base fixture's holiday calendar
+  #   Tue 13 Oct — working day
+  # An agent that excludes weekends but not holidays reports three; one that
+  # excludes neither reports five; the correct answer is two.
+  clock: '2026-10-08T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: I'd like the 9th to the 13th of October off as vacation
+  - role: confirmation
+    decision: approve
+    content: Yes, book it
+
+expect:
+  # --- reads happen, and happen before the write. The holiday calendar reaches
+  #     the agent through the fixture, but the leave type still has to be
+  #     retrieved before it is named (B-2). ---
+  - assert: tool_called
+    tool: list_leave_types
+    at_least: 1
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+  - assert: order
+    first: { tool: list_leave_types }
+    then: { tool: request_time_off }
+  - assert: order
+    first: { tool: list_leaves }
+    then: { tool: request_time_off }
+
+  # --- the gate (C-1) ---
+  - assert: event_emitted
+    event: confirmation.shown
+    times: 1
+  - assert: order
+    first: { event: confirmation.received }
+    then: { tool: request_time_off }
+
+  # --- the write: the calendar span the user asked for, unshortened. The two
+  #     working days are what the request COSTS, not what it IS. ---
+  - assert: tool_called
+    tool: request_time_off
+    times: 1
+  - assert: tool_called_with
+    tool: request_time_off
+    match: subset
+    args:
+      leave_type_id: lt-201
+      start_date: '2026-10-09'
+      end_date: '2026-10-13'
+
+  # --- grounding as structure (C-5) ---
+  - assert: argument_grounded
+    tool: request_time_off
+    arg: leave_type_id
+    source_tool: list_leave_types
+
+  # --- B-6 puts the working-day count inside confirmation.shown, but the spec
+  #     names no attribute carrying it and Layer 1 never reads prose (ADR-0003).
+  #     So the count of two, and the naming of the excluded days, are graded by
+  #     `grounding` and `confirmation-clarity` rather than asserted here. ---
+
+  # --- termination and hygiene ---
+  - assert: outcome
+    turn: last
+    value: completed
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - confirmation-clarity

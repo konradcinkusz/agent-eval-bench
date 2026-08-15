@@ -1,0 +1,16 @@
+blank_issues_enabled: false
+
+contact_links:
+  - name: How this repository evaluates agents
+    url: https://github.com/konradcinkusz/agent-eval-bench/blob/main/docs/SPEC.md
+    about: >-
+      The behaviour spec is the contract. Before filing a bug, check whether the
+      behaviour you saw is specified, unspecified, or explicitly out of scope —
+      each of the three is a different issue.
+
+  - name: Architecture standards
+    url: https://github.com/konradcinkusz/architecture-standards
+    about: >-
+      Questions about the reference architecture itself (the 15 principles, the
+      eval standard, the deployment guides) belong in the standards repository,
+      not here.

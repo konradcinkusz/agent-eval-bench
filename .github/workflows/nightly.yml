@@ -1,0 +1,146 @@
+# ─────────────────────────────────────────────────────────────────────────────
+#  The keyed run.
+#
+#  Layer 2 needs a model, and this repository ships without one — so on a pull
+#  request every judged scenario reports `skipped:no-credential`. SPEC §8.5 is
+#  explicit that this is legitimate there and NOT as the only outcome that ever
+#  occurs: a judge job that skips on every pull request and every night is the
+#  config no CI context ever executes, which TESTING-STRATEGY.md §9 calls
+#  documentation that lies.
+#
+#  This workflow is what stops that. It runs the FULL judged set nightly against
+#  an environment secret, and a test in tests/AbsenceConcierge.Evals asserts that
+#  this file exists and passes the key — so "we will wire it up later" cannot
+#  quietly become the permanent state.
+#
+#  The credentials arrive from a GitHub environment secret and appear nowhere in
+#  this file. `Llm__ApiKey` is the double-underscore form of `Llm:ApiKey`, which
+#  is how .NET configuration binds an environment variable to a section.
+# ─────────────────────────────────────────────────────────────────────────────
+
+name: Nightly evals
+
+on:
+  schedule:
+    # 02:30 UTC. Late enough that a day's merges are in, early enough that the
+    # result is waiting rather than arriving mid-morning.
+    - cron: '30 2 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-evals
+  cancel-in-progress: false
+
+jobs:
+  layer2:
+    name: Layer 2 — full judged set
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # The environment is where the judge's credential lives. Naming it here is
+    # what scopes the secret to this job rather than to the repository.
+    environment: evals
+
+    env:
+      DOTNET_NOLOGO: true
+      DOTNET_CLI_TELEMETRY_OPTOUT: true
+      DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+
+      # Nightly grades everything that carries a rubric. The pull-request run
+      # grades the explicit subset in evals/rubrics/judge.yaml, on a budget.
+      EVAL_LAYER2_SCOPE: full
+
+      Llm__Provider: ${{ vars.LLM_PROVIDER || 'AzureOpenAI' }}
+      Llm__Endpoint: ${{ vars.LLM_ENDPOINT }}
+      Llm__JudgeModel: ${{ vars.LLM_JUDGE_MODEL }}
+      Llm__ApiKey: ${{ secrets.LLM_API_KEY }}
+
+      # Optional. Without them the report states tokens and says the cost is
+      # unknown, which is honest; with them it states dollars against SPEC §8.1's
+      # budget. Rates are not committed because they change and they differ per
+      # deployment.
+      Llm__PricePerMillionInputTokens: ${{ vars.LLM_PRICE_INPUT }}
+      Llm__PricePerMillionOutputTokens: ${{ vars.LLM_PRICE_OUTPUT }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - name: Restore
+        run: dotnet restore
+
+      - name: Build
+        run: dotnet build --configuration Release --no-restore
+
+      - name: Is the judge configured?
+        id: judge
+        run: |
+          set -euo pipefail
+          if [ -n "${Llm__ApiKey:-}" ] && [ -n "${Llm__JudgeModel:-}" ] && [ -n "${Llm__Endpoint:-}" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Report the missing credential
+        if: steps.judge.outputs.configured != 'true'
+        run: |
+          {
+            echo "## Nightly Layer 2: NOT RUN"
+            echo
+            echo "The \`evals\` environment does not have \`LLM_API_KEY\`, \`LLM_JUDGE_MODEL\`"
+            echo "and \`LLM_ENDPOINT\` set, so the judge has no model to call."
+            echo
+            echo "This is reported rather than skipped silently. A Layer 2 that never runs"
+            echo "anywhere is documentation that lies (\`docs/SPEC.md\` §8.5), and the whole"
+            echo "purpose of this workflow is to be the place it does run."
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::Nightly Layer 2 did not run — the judge has no credential."
+
+      - name: Layer 2, full set
+        if: steps.judge.outputs.configured == 'true'
+        run: |
+          dotnet test tests/AbsenceConcierge.Evals/AbsenceConcierge.Evals.csproj \
+            --configuration Release --no-build \
+            --logger "trx;LogFileName=nightly.trx" --results-directory ./TestResults
+
+      - name: Summary
+        if: steps.judge.outputs.configured == 'true' && (success() || failure())
+        run: |
+          set -euo pipefail
+          report=./TestResults/eval-report-layer2.json
+
+          if [ ! -f "$report" ]; then
+            echo "::error::Layer 2 produced no report."
+            exit 1
+          fi
+
+          {
+            echo "## Nightly Layer 2"
+            echo
+            jq -r '
+              "Judge **\(.judgeVersion)** — rubrics `\(.rubricsHash)`, prompt `\(.promptHash)`",
+              "Model: `\(.model // "none")`, \(.durationMs) ms, \(.inputTokens)+\(.outputTokens) tokens",
+              "",
+              "Calibration: \(.calibration.reason)",
+              "",
+              "| rubric | mean | threshold | lowest | ok |",
+              "|---|---|---|---|---|",
+              (.rubrics[] | "| \(.rubric) | \(.mean) | \(.threshold) | \(.lowest) | \(if .meetsThreshold and .meetsFloor then "yes" else "**no**" end) |")
+            ' "$report"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload results
+        if: (success() || failure()) && hashFiles('TestResults/**') != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: nightly-evals
+          path: ./TestResults
+          retention-days: 30
+          if-no-files-found: error

@@ -55,3 +55,84 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+###############################################################################
+# agent-eval-bench additions
+#
+# Everything below was added on top of the stock Dotnet.gitignore. Each block
+# says what it protects against — an ignore rule whose reason is not written
+# down gets deleted by the next person who "cleans up" the file.
+###############################################################################
+
+# --- Secrets. Never committed; see secrets.env.example for the documented set. ---
+.env
+.env.*
+!.env.example
+!secrets.env.example
+*.env.local
+appsettings.Local.json
+appsettings.*.Local.json
+**/appsettings.Development.local.json
+*.pem
+*.pfx
+*.p12
+*.key
+!**/*.key.example
+
+# --- Secret-scanner output. gitleaks writes findings that quote the secret. ---
+gitleaks-report.json
+gitleaks-report.sarif
+.gitleaks-cache/
+
+# --- IDE / editor ---
+.vs/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/launch.json.example
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# --- Node: present only for repo tooling (markdown lint). ---
+node_modules/
+npm-debug.log*
+.npm/
+
+# --- .NET Aspire / local orchestration ---
+.aspire/
+**/Properties/launchSettings.local.json
+
+# --- Test and coverage output ---
+TestResults/
+coverage/
+*.coverage
+*.coverofnet.xml
+coverage.cobertura.xml
+coverage.opencover.xml
+.coverlet/
+
+# --- Eval harness output.
+#     Baselines under evals/baselines/ ARE committed: they are the recorded state a
+#     regression is measured against. Everything a run produces is not.            ---
+evals/runs/
+evals/out/
+evals/**/*.actual.json
+evals/**/*.local.yaml
+!evals/baselines/
+!evals/baselines/**
+
+# --- Fly.io / deployment scratch ---
+.fly/
+.last-image-tag
+fly.toml.local
+
+# --- Local scratch. Anything a session needs but the repo does not. ---
+scratch/
+tmp/
+*.local.md
+
+# Written by the extraction round-trip test beside the scenario it derives from.
+*.yaml.tmp

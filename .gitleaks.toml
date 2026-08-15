@@ -1,0 +1,125 @@
+# gitleaks configuration — agent-eval-bench
+#
+# Runs in two places, deliberately:
+#   • pre-commit hook (scripts/hooks/pre-commit) — catches the mistake before it
+#     becomes history;
+#   • CI job (.github/workflows/secret-scan.yml)  — catches contributors without hooks.
+#
+# P5 makes the scanner mandatory: "a repository without one is assumed to contain
+# credentials until proven otherwise". The estate's recorded failure is live
+# credentials pasted into a tracked helper script because inline literals were the
+# path of least resistance and nothing said no.
+#
+# If a secret ever does land here: ROTATE FIRST, clean history second
+# (REPO-BASELINE.md §2). This repository is public; a pushed commit is disclosed the
+# moment it is pushed, and scrubbing without rotating is theatre.
+
+title = "agent-eval-bench secret scanning"
+
+[extend]
+# Start from the ~170 upstream provider rules (AWS, GitHub, Slack, Stripe, OpenAI, …)
+# and add only the shapes this repository can plausibly leak that upstream misses.
+useDefault = true
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Repository-specific rules
+#
+# Every rule below corresponds to a variable documented in secrets.env.example.
+# When a new secret is introduced, it gets a rule here in the same commit — a
+# secret with no detection rule is a secret nobody will notice leaving.
+#
+# TESTING A NEW RULE — read this before concluding your regex is broken.
+# `useDefault = true` inherits the upstream global allowlist, which includes a
+# large stopword list. A test value like "abcdefghijklmnop0123456789" is
+# suppressed by design: it is a placeholder, not a secret. Verify a new rule with
+# a value of realistic entropy, e.g.
+#
+#     head -c 32 /dev/urandom | base64 | tr -d '+/=' | head -c 32
+#
+# Every rule in this file was verified that way when it was added.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[[rules]]
+id = "flyio-api-token-v1"
+description = "Fly.io deploy token (fo1_ prefix)"
+regex = '''\bfo1_[A-Za-z0-9_\-]{40,}'''
+keywords = ["fo1_"]
+tags = ["flyio", "deploy", "platform"]
+
+[[rules]]
+id = "flyio-api-token-macaroon"
+description = "Fly.io macaroon deploy token (FlyV1 fm2_ prefix)"
+regex = '''FlyV1\s+fm2_[A-Za-z0-9+/=_\-]{40,}'''
+keywords = ["flyv1", "fm2_"]
+tags = ["flyio", "deploy", "platform"]
+
+[[rules]]
+id = "azure-openai-api-key"
+description = "Azure OpenAI API key assigned to a known configuration key"
+# Anchored on the assignment, not on the value shape: a bare 32-hex string is a
+# hash far more often than it is a key, and an unanchored rule that cries wolf is
+# a rule that gets disabled.
+regex = '''(?i)(azure_?openai_?(api_?)?key|AzureOpenAI__ApiKey|AzureOpenAI:ApiKey)["'\s]*[:=]\s*["']?([a-zA-Z0-9]{32,})'''
+secretGroup = 3
+keywords = ["azureopenai", "azure_openai"]
+tags = ["azure", "llm", "provider"]
+
+[[rules]]
+id = "llm-provider-api-key-assignment"
+description = "Any LLM provider key assigned to this repository's configuration keys"
+regex = '''(?i)(Llm__ApiKey|Llm:ApiKey|LLM_API_KEY|Judge__ApiKey|Judge:ApiKey|JUDGE_API_KEY)["'\s]*[:=]\s*["']?([A-Za-z0-9_\-]{20,})'''
+secretGroup = 2
+keywords = ["llm__apikey", "llm:apikey", "llm_api_key", "judge__apikey", "judge:apikey", "judge_api_key"]
+tags = ["llm", "judge", "provider"]
+
+[[rules]]
+id = "workforce-mcp-credential"
+description = "Credential for the live workforce MCP server (never exposed publicly — see docs/adr)"
+regex = '''(?i)(WorkforceTools__Mcp__(ApiKey|ClientSecret|AccessToken)|WORKFORCE_MCP_(API_KEY|CLIENT_SECRET|ACCESS_TOKEN))["'\s]*[:=]\s*["']?([A-Za-z0-9_\-\.]{16,})'''
+secretGroup = 4
+keywords = ["workforcetools__mcp", "workforce_mcp"]
+tags = ["mcp", "workforce", "integration"]
+
+[[rules]]
+id = "public-demo-access-code"
+description = "Access code that unlocks live-LLM mode on the public demo"
+# Low blast radius, but it is the one credential shared out of band by email, which
+# is exactly the kind that gets pasted into a script "just for a minute".
+regex = '''(?i)(PublicDemo__AccessCode|PublicDemo:AccessCode|PUBLIC_DEMO_ACCESS_CODE)["'\s]*[:=]\s*["']?([^\s"'#][^\s"'#]{5,})'''
+secretGroup = 2
+keywords = ["publicdemo__accesscode", "publicdemo:accesscode", "public_demo_access_code"]
+tags = ["demo", "access-control"]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Allowlist
+#
+# Two rules govern additions here:
+#   1. Allowlist a PATH only when the file cannot contain a real secret by
+#      construction (a placeholder file, a lockfile of integrity hashes).
+#   2. Allowlist a VALUE only when it is a documented placeholder shape.
+# Never allowlist a finding by adding the real value to a regex.
+# ─────────────────────────────────────────────────────────────────────────────
+
+[allowlist]
+description = "Placeholder documentation, lockfiles, and this configuration file itself"
+
+paths = [
+  # This file quotes secret-shaped regexes by necessity.
+  '''\.gitleaks\.toml$''',
+  # Documented placeholder set — every value in it is empty or an obvious stand-in.
+  '''secrets\.env\.example$''',
+  # Subresource-integrity hashes are indistinguishable from base64 secrets.
+  '''package-lock\.json$''',
+  # Build output and dependencies are never reviewed and never committed.
+  '''(^|/)(bin|obj|node_modules)/''',
+]
+
+regexes = [
+  # Documented placeholder shapes. Kept deliberately narrow: "changeme" is a
+  # placeholder, "hunter2" is somebody's password.
+  '''(?i)(REPLACE[_-]?ME|CHANGE[_-]?ME|YOUR[_-][A-Z_]+[_-]HERE|<[a-z-]+>|\$\{[A-Z_]+\}|xxxxx+)''',
+  # All-zero GUID: the canonical "no value" identifier.
+  '''00000000-0000-0000-0000-000000000000''',
+  # Documentation examples must use RFC 2606 reserved domains.
+  '''(example|test|invalid|localhost)\.(com|org|net|local)''',
+]
