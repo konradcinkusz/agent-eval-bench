@@ -3,8 +3,12 @@ using AbsenceConcierge.AgentService.Telemetry;
 
 namespace AbsenceConcierge.Evals.Execution;
 
-/// <param name="Position">Index in the merged, time-ordered timeline. What <c>order</c> compares.</param>
-/// <param name="Attempts">Transport attempts inside this one logical call (SPEC §2.2.1).</param>
+/// <summary>
+/// One logical tool call. <c>Position</c> is its index in the merged, time-ordered
+/// timeline — what <c>order</c> compares — and <c>Attempts</c> counts the transport
+/// attempts inside it, which is a different number and a different question
+/// (SPEC §2.2.1).
+/// </summary>
 public sealed record ToolCallRecord(
     int Position,
     string Tool,
@@ -17,7 +21,10 @@ public sealed record ToolCallRecord(
 
 public sealed record TraceEventRecord(int Position, string Name, IReadOnlyDictionary<string, object?> Tags);
 
-/// <param name="Index">1-based, matching a scenario's <c>turn:</c> selector.</param>
+/// <summary>
+/// One turn's graded result. <c>Index</c> is 1-based, matching a scenario's
+/// <c>turn:</c> selector.
+/// </summary>
 public sealed record TurnRecord(int Index, string Outcome, string TerminationReason, string Reply);
 
 /// <summary>
