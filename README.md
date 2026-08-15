@@ -20,7 +20,7 @@ The agent is the excuse. **The eval bench is the deliverable.**
 
 ## Status
 
-> **Phases 0–6 of 10 complete — the contract, the agent, both eval layers, and the gates.**
+> **Phases 0–7 of 10 complete — the contract, the agent, both eval layers, the gates, and the production story.**
 >
 > `docs/SPEC.md` and 32 scenarios came first and are validated in CI. The agent runs
 > as a step pipeline whose order *is* the specification — establish the actor, read a
@@ -66,7 +66,7 @@ The agent is the excuse. **The eval bench is the deliverable.**
 | 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | **Done** |
 | 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | **Done** (judge built and pinned; never yet run against a live model — D-9) |
 | 6 | CI gates: constraints hard-block, behaviours vs baseline, one sticky PR comment with the diff | **Done** |
-| 7 | Production story: OTLP scoring integration, agent-as-code deployment, live MCP mode | Next |
+| 7 | Production story: [`docs/PRODUCTION.md`](docs/PRODUCTION.md) — trace-to-scenario extraction, the agent definition checked against the service's own catalogue, live MCP mode | **Done** (MCP mode built and tested against a fake session; never yet run against a live server — D-10) |
 | 8 | `docs/FINDINGS.md` — numbers-first write-up of what the evals actually caught | Planned |
 | 8b | Showcase frontend: one page, whose one special feature is the confirmation card | Planned |
 | 9 | Public deployment, mock by default, scale-to-zero, live model behind an access code | Planned |
@@ -187,22 +187,23 @@ src/
   AbsenceConcierge.AgentService     the service — tools, telemetry, the gate
 tests/              unit tests, and the trace-contract tests
 agents/
+  schema/           the agent-definition contract, as strict JSON Schema
   absence-concierge/definition.json the agent as code, with the MCP tool extension
 docs/
   SPEC.md           the behaviour contract — behaviours, constraints, rubrics
+  PRODUCTION.md     what changes when it runs somewhere real, and what breaks quietly
+  CALIBRATION.md    how judge scores are checked against human labels
   adr/              architecture decision records
   DEVIATIONS.md     where this repo departs from the standards — dated and reasoned
 evals/
   schema/           the scenario contract, as strict JSON Schema
   fixtures/         shared fictional worlds; scenarios write only the delta
   scenarios/        32 scenarios across five classes
+  rubrics/          versioned judge prompt and rubrics, with the model pinned
+  baselines/        recorded pass state a regression is measured against
 scripts/            setup, hooks, validators, and local mirrors of the CI jobs
                     ────────── planned ──────────
-docs/CALIBRATION.md how judge scores are checked against humans   (Phase 5)
 docs/FINDINGS.md    what the evals actually caught, in numbers    (Phase 8)
-evals/
-  rubrics/          versioned judge prompts, pinned model         (Phase 5)
-  baselines/        recorded pass state a regression is measured against (Phase 4)
 ```
 
 ## How this repository relates to the standards
