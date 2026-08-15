@@ -65,7 +65,7 @@ jobs:
     environment: azure
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: The credential exists, or this run says exactly what to create
         env:
