@@ -1,3 +1,4 @@
+using AbsenceConcierge.AgentService.Agent;
 using AbsenceConcierge.AgentService.Agent.Llm;
 using AbsenceConcierge.AgentService.Demo;
 using Microsoft.Extensions.Options;
@@ -100,12 +101,12 @@ public sealed class DemoModeTests
         Assert.Equal(100, budget.State.Remaining);
     }
 
-    // ── The four ways to be not-live ────────────────────────────────────────────
+    // ── The ways to be not-live ─────────────────────────────────────────────────
 
     [Fact]
     public void With_no_model_configured_live_mode_is_not_merely_locked_but_absent()
     {
-        var access = new DemoAccess(Options("the-code"), Budget(1000), provider: null);
+        var access = Access(Options("the-code"), Budget(1000), provider: null);
 
         var status = access.Evaluate("the-code");
 
@@ -119,19 +120,20 @@ public sealed class DemoModeTests
         // The case this whole design is arranged around. A missing secret is the
         // normal state of a fork and a preview environment, and a default that failed
         // open would make every one of them an unmetered spend.
-        var access = new DemoAccess(Options(accessCode: null), Budget(1000), new FakeLlmProvider("hello"));
+        var access = Access(Options(accessCode: null), Budget(1000), new FakeLlmProvider("hello"));
 
         Assert.False(access.Evaluate("anything").Live);
         Assert.False(access.Status().Live);
+        Assert.False(access.BeginTurn("anything", "203.0.113.7").Live);
     }
 
     [Fact]
     public void The_wrong_code_and_no_code_are_both_locked_and_say_so_differently_from_an_empty_budget()
     {
-        var access = new DemoAccess(Options("the-code"), Budget(1000), new FakeLlmProvider("hello"));
+        var access = Access(Options("the-code"), Budget(1000), new FakeLlmProvider("hello"));
 
         var wrong = access.Evaluate("not-the-code");
-        var exhausted = new DemoAccess(Options("the-code"), Spent(), new FakeLlmProvider("hello"))
+        var exhausted = Access(Options("the-code"), Spent(), new FakeLlmProvider("hello"))
             .Evaluate("the-code");
 
         Assert.False(wrong.Live);
@@ -146,7 +148,7 @@ public sealed class DemoModeTests
     [Fact]
     public void The_right_code_with_budget_left_is_live()
     {
-        var access = new DemoAccess(Options("the-code"), Budget(1000), new FakeLlmProvider("hello"));
+        var access = Access(Options("the-code"), Budget(1000), new FakeLlmProvider("hello"));
 
         var status = access.Evaluate("the-code");
 
@@ -154,10 +156,148 @@ public sealed class DemoModeTests
         Assert.Equal(1000, status.Remaining);
     }
 
+    // ── Open access: live without a code, bounded per client ────────────────────
+
+    [Fact]
+    public void Open_access_is_live_without_a_code_and_consumes_the_clients_allowance()
+    {
+        var access = Access(Open(turnsPerClient: 2), Budget(1000), new FakeLlmProvider("hello"));
+
+        Assert.True(access.BeginTurn(null, "203.0.113.7").Live);
+        Assert.True(access.BeginTurn(null, "203.0.113.7").Live);
+
+        var spent = access.BeginTurn(null, "203.0.113.7");
+
+        Assert.False(spent.Live);
+        Assert.Contains("allowance", spent.Reason, StringComparison.OrdinalIgnoreCase);
+    }
+
+    [Fact]
+    public void One_clients_spent_allowance_does_not_touch_another_clients()
+    {
+        var access = Access(Open(turnsPerClient: 1), Budget(1000), new FakeLlmProvider("hello"));
+
+        Assert.True(access.BeginTurn(null, "203.0.113.7").Live);
+        Assert.False(access.BeginTurn(null, "203.0.113.7").Live);
+
+        Assert.True(access.BeginTurn(null, "198.51.100.9").Live);
+    }
+
+    [Fact]
+    public void The_status_probe_never_consumes_the_allowance()
+    {
+        var access = Access(Open(turnsPerClient: 1), Budget(1000), new FakeLlmProvider("hello"));
+
+        for (var i = 0; i < 5; i++)
+        {
+            Assert.True(access.Evaluate(null, "203.0.113.7").Live);
+        }
+
+        // The allowance is intact: the first real turn is still live.
+        Assert.True(access.BeginTurn(null, "203.0.113.7").Live);
+    }
+
+    [Fact]
+    public void The_shared_budget_still_wins_over_an_open_allowance()
+    {
+        // The allowance is the fairness rule; the budget is the bill's ceiling. A
+        // hundred clients with allowance left must all go deterministic the moment
+        // the shared budget is gone.
+        var access = Access(Open(turnsPerClient: 100), Spent(), new FakeLlmProvider("hello"));
+
+        var status = access.BeginTurn(null, "203.0.113.7");
+
+        Assert.False(status.Live);
+        Assert.Equal(0, status.Remaining);
+    }
+
+    [Fact]
+    public void An_unidentifiable_client_gets_no_unmetered_live_turn()
+    {
+        var access = Access(Open(turnsPerClient: 5), Budget(1000), new FakeLlmProvider("hello"));
+
+        Assert.False(access.BeginTurn(null, clientKey: null).Live);
+        Assert.False(access.BeginTurn(null, clientKey: string.Empty).Live);
+    }
+
+    [Fact]
+    public void A_code_holder_is_not_subject_to_the_open_allowance()
+    {
+        var options = Open(turnsPerClient: 1, accessCode: "the-code");
+        var access = Access(options, Budget(1000), new FakeLlmProvider("hello"));
+
+        Assert.True(access.BeginTurn(null, "203.0.113.7").Live);
+        Assert.False(access.BeginTurn(null, "203.0.113.7").Live);
+
+        // Same client, with the code: the allowance no longer applies.
+        Assert.True(access.BeginTurn("the-code", "203.0.113.7").Live);
+    }
+
+    [Fact]
+    public void The_client_allowance_rolls_over_at_utc_midnight()
+    {
+        var clock = new MovableTimeProvider(Morning);
+        var options = Open(turnsPerClient: 1);
+        var access = new DemoAccess(
+            options,
+            Budget(1000, clock),
+            new DemoClientQuota(clock, options),
+            new FakeLlmProvider("hello"));
+
+        Assert.True(access.BeginTurn(null, "203.0.113.7").Live);
+        Assert.False(access.BeginTurn(null, "203.0.113.7").Live);
+
+        clock.Advance(TimeSpan.FromHours(16));
+
+        Assert.True(access.BeginTurn(null, "203.0.113.7").Live);
+    }
+
+    // ── The conversation store's ceiling ────────────────────────────────────────
+
+    [Fact]
+    public void Past_the_conversation_cap_the_least_recently_touched_is_evicted()
+    {
+        var store = new InMemoryAgentConversationStore(
+            Microsoft.Extensions.Options.Options.Create(new DemoOptions { MaxConversations = 2 }));
+
+        var first = store.GetOrCreate("first");
+        _ = store.GetOrCreate("second");
+
+        // Touch the oldest so "least recently used" and "first created" diverge —
+        // an eviction keyed on creation order would fail here.
+        _ = store.GetOrCreate("first");
+        _ = store.GetOrCreate("third");
+
+        Assert.Null(store.Find("second"));
+        Assert.Same(first, store.Find("first"));
+        Assert.NotNull(store.Find("third"));
+    }
+
+    [Fact]
+    public void Finding_a_conversation_never_creates_one()
+    {
+        var store = new InMemoryAgentConversationStore(
+            Microsoft.Extensions.Options.Options.Create(new DemoOptions()));
+
+        Assert.Null(store.Find("never-started"));
+        Assert.Null(store.Find("never-started"));
+    }
+
     // ── Helpers ─────────────────────────────────────────────────────────────────
+
+    private static DemoAccess Access(IOptions<DemoOptions> options, DemoBudget budget, ILlmProvider? provider) =>
+        new(options, budget, new DemoClientQuota(new FixedTimeProvider(Morning), options), provider);
 
     private static IOptions<DemoOptions> Options(string? accessCode) =>
         Microsoft.Extensions.Options.Options.Create(new DemoOptions { AccessCode = accessCode });
+
+    private static IOptions<DemoOptions> Open(int turnsPerClient, string? accessCode = null) =>
+        Microsoft.Extensions.Options.Options.Create(new DemoOptions
+        {
+            AccessCode = accessCode,
+            AllowLiveWithoutCode = true,
+            LiveTurnsPerClientPerDay = turnsPerClient,
+        });
 
     private static DemoBudget Budget(int dailyBudget, TimeProvider? clock = null) =>
         new(

@@ -38,6 +38,13 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
+    <!--
+      The trace sink the production loop reads (docs/PRODUCTION.md, D-12). An
+      exporter, not the Application Insights SDK: the spans stay OpenTelemetry's,
+      Azure Monitor is one place they can land, and the eval harness goes on
+      reading them in-process with nothing configured. Verified on nuget.org.
+    -->
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.4.0" />
   </ItemGroup>
 
   <ItemGroup Label="Agent service">
@@ -58,7 +65,7 @@
   <ItemGroup Label="Tests">
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.0" />
-    <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+    <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.0" />
     <!-- Captures spans in-process so a test can assert that one was exported. -->
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="$(OpenTelemetryVersion)" />
   </ItemGroup>

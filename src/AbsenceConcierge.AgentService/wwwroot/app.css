@@ -108,6 +108,12 @@ h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
 .card dl { margin: 0 0 1rem; }
 .card dl > div { display: flex; gap: 0.75rem; padding: 0.35rem 0; border-top: 1px solid var(--line); }
 .card dl > div:first-child { border-top: 0; }
+
+/* Any `display` above silently defeats the `hidden` attribute — found when the
+   card showed "Also needed: a medical certificate" on a draft that needed none
+   (F-12). The attribute is the page's contract for optional rows; this makes
+   CSS honour it whatever display the row was given. */
+[hidden] { display: none !important; }
 .card dt { flex: 0 0 10rem; color: var(--muted); font-size: 0.85rem; }
 .card dd { margin: 0; flex: 1; }
 

@@ -11,21 +11,21 @@ which is the list of things the green build says nothing about.
 
 | | Count |
 |---|---|
-| Scenarios | **32** |
-| Assertions across them | **282** |
-| Of those, **absence** assertions (`tool_not_called`, `event_not_emitted`) | **57** (20%) |
-| Constraint-gated scenarios (hard-block at 100%) | **19** |
-| Behaviour-gated scenarios (measured against a baseline) | **13** |
-| Fixture worlds | 1 base + a sparse delta per scenario |
+| Scenarios | **35** (32 English; 3 Spanish since SPEC 1.5.0) |
+| Assertions across them | **313** |
+| Of those, **absence** assertions (`tool_not_called`, `event_not_emitted`) | **60** (19%) |
+| Constraint-gated scenarios (hard-block at 100%) | **20** |
+| Behaviour-gated scenarios (measured against a baseline) | **15** |
+| Fixture worlds | 1 base + a sparse delta per scenario (plus the e2e world with the hostile leave-type name) |
 | Deliberately broken agent variants the suite must catch | **4** |
-| Human calibration labels for the judge | **0** |
+| Calibration labels for the judge | **45**, from one AI rater — what that is and is not evidence of: [`CALIBRATION.md`](CALIBRATION.md) |
 
 By class:
 
 | Class | Scenarios | Assertions | Mean per scenario |
 |---|---|---|---|
-| `happy` | 6 | 66 | 11.0 |
-| `ambiguity` | 8 | 69 | 8.6 |
+| `happy` | 8 | 90 | 11.2 |
+| `ambiguity` | 9 | 76 | 8.4 |
 | `adversarial` | 7 | 59 | 8.4 |
 | `denied` | 6 | 42 | 7.0 |
 | `degradation` | 5 | 46 | 9.2 |
@@ -34,20 +34,20 @@ By assertion type:
 
 | Type | Count | |
 |---|---|---|
-| `event_emitted` | 45 | |
-| `tool_called` | 42 | |
-| `outcome` | 35 | |
-| `termination` | 32 | one per scenario — C-4 is not optional |
-| `output_excludes_internal_ids` | 32 | one per scenario — C-3 is not optional |
-| `event_not_emitted` | 31 | |
-| `tool_not_called` | 26 | |
-| `order` | 19 | this is where C-1 lives |
-| `argument_grounded` | 8 | C-5 |
-| `tool_called_with` | 6 | |
+| `tool_called` | 48 | |
+| `event_emitted` | 48 | |
+| `outcome` | 38 | |
+| `termination` | 35 | one per scenario — C-4 is not optional |
+| `output_excludes_internal_ids` | 35 | one per scenario — C-3 is not optional |
+| `event_not_emitted` | 33 | |
+| `tool_not_called` | 27 | |
+| `order` | 25 | this is where C-1 lives |
+| `argument_grounded` | 10 | C-5 |
+| `tool_called_with` | 8 | |
 | `call_attempts` | 5 | |
 | `span_attribute` | 1 | |
 
-**The 20% figure is the one worth looking at.** One assertion in five says
+**The 19% figure is the one worth looking at.** One assertion in five says
 something did *not* happen. That ratio is not aspiration; it is enforced —
 [`scripts/validate-scenarios.mjs`](../scripts/validate-scenarios.mjs) fails any
 `denied` or `adversarial` scenario without an absence assertion, because
@@ -55,7 +55,7 @@ asserting that the agent refused, without asserting that the forbidden call did
 not happen, is half a test. An agent that refuses politely and calls the tool
 anyway passes the other half.
 
-Current Layer 1 state: **32 of 32 pass**, recorded in
+Current Layer 1 state: **35 of 35 pass**, recorded in
 [`evals/baselines/layer1.json`](../evals/baselines/layer1.json). Runtime is
 published per run in `TestResults/eval-report.json` and in the sticky pull request
 comment; it is not quoted here, because a number copied into prose is a number
@@ -63,7 +63,7 @@ that goes stale on the next commit.
 
 ## 2. What it caught
 
-Eight defects. Six of them were in the measuring instrument or the
+Twelve defects. Seven of them were in the measuring instrument or the
 specification rather than in the agent, which is itself the finding — see
 [§3](#3-where-the-findings-actually-came-from).
 
@@ -77,6 +77,44 @@ specification rather than in the agent, which is itself the finding — see
 | F-6 | Three tests broke on a commit that touched none of them | A red build | 3 | Medium |
 | F-7 | The agent definition claimed a spec version two releases behind | The definition validator | 7 | Medium |
 | F-8 | The analyzer posture had to be relaxed four times on first contact | The first build | 2 | Low |
+| F-9 | The grounding anchors have no answer for world-data the trace summarises but does not carry | The calibration labelling pass | 10 | Medium — an instrument ambiguity, found before the judge ever ran |
+| F-10 | The composer answers a Spanish speaker in English | The calibration labelling pass | 10 | Medium — every fact right, the register wrong for the fixture's own audience |
+| F-11 | The degradation replies say their key sentence twice | The calibration labelling pass | 10 | Low |
+| F-12 | The card told approvers a certificate was needed when none was — `hidden` rows were not hidden | Taking the README screenshot | 10 | **High** — false information on the one surface a human approves from |
+
+### F-9, F-10, F-11 — what labelling caught before the judge ever ran
+
+The calibration protocol's first use produced findings the way running the suite
+never had — by making somebody read every transcript against every anchor. The
+three are written up where they were found
+([`CALIBRATION.md`](CALIBRATION.md), "Who labelled first"), and they split the
+usual way: one instrument defect (F-9 — "Monday 12 October (National Day)" is a
+claim the trace's `excluded_days=2026-10-12=holiday` supports only halfway, and
+the anchor's wording decides neither direction), two agent defects in the one
+component Layer 1 deliberately does not grade — the composer (F-10: `hap-007`,
+`hap-008` and `amb-009` carry `locale: es-ES` and get English prose back; F-11:
+`deg-001` ends "Nothing has been submitted — please try again shortly. Nothing
+has been submitted."). None of the three is fixed in the same change that found
+them, deliberately: F-9 is an anchor amendment the first judged run should get a
+vote on, and F-10/F-11 are composer changes whose spec coupling (§4.1's prompt
+file, the tone rubric) deserves their own pull request.
+
+### F-12 — the page showed "Also needed: a medical certificate" on a draft that needed none
+
+Found by pointing a camera at it: the README's screenshot of a two-day sick
+draft showed the certificate row and an empty "Not counted" row, both of which
+the script had set `hidden`. The stylesheet's `display: flex` on the card's rows
+silently outranks the `hidden` attribute — a one-character-class CSS fact with
+wrong-information-to-an-approver on the other side of it, on precisely the
+surface this repository exists to make trustworthy.
+
+Two layers could have caught it and neither did: the backend suite cannot see
+CSS at all, and the day-old Playwright suite asserted the card's *content* but
+never the optional rows' *absence*. Both halves are now fixed in the same
+change — the suite gained the two `toBeHidden()` assertions first and went red,
+then `[hidden] { display: none !important; }` made the attribute win over any
+display the stylesheet gives a row. The lesson is E2E-ACCEPTANCE-TESTING.md §2's,
+one layer up: asserting what IS shown proves nothing about what is not.
 
 ### F-1 — `at_least: 1` let one confirmation authorise two writes
 
@@ -257,7 +295,7 @@ not eliminated. [SPEC §8.2](SPEC.md#82-determinism-and-what-100-quantifies-over
 bounds what a green Layer 1 is allowed to mean: the orchestration and the
 constraint layer work, not that the agent understood the sentence.
 
-**All 32 scenarios have `origin.kind: designed`.** Not one came from a real
+**All 35 scenarios have `origin.kind: designed`.** Not one came from a real
 failure, because there has not been one — nothing has run in production. The
 machinery to convert a production trace into a scenario exists and is tested
 ([`PRODUCTION.md` §2](PRODUCTION.md#2-from-a-production-trace-to-a-scenario)); it
@@ -281,3 +319,26 @@ The cost is paid elsewhere. Layer 2 — the part that needs a model — runs nig
 against a keyed environment, and its per-run token spend and its scope are pinned
 in [`evals/rubrics/judge.yaml`](../evals/rubrics/judge.yaml) rather than left to
 whatever the schedule fires.
+
+### 6.1 Measured, once, with a date on it
+
+The paragraphs above are qualitative on purpose — a number copied into prose goes
+stale on the next commit. These numbers are therefore **a measurement, not a
+specification**: taken 2026-08-15 at commit `7121e4c`, on one developer-class
+Linux container, quoted so a reader has an order of magnitude rather than a
+promise. SPEC §8.1's budgets are the specification, and CI is deliberately not
+made to assert on wall-clock — a timing assertion on a shared runner is a flaky
+test waiting to happen, and F-6 was this repository's one flakiness finding
+already.
+
+| What | Measured | SPEC §8.1 budget | Headroom |
+|---|---|---|---|
+| Layer 1, whole corpus (35 scenarios), in-process | 0.47 s / 0.87 s / 0.86 s across three runs — ≈ 13–25 ms per scenario | ≤ 3 minutes | ~200× |
+| The entire `dotnet test` pass (305 tests: unit + trace contract + Layer 1 + mutation + judge machinery), binaries prebuilt | ≈ 5.0 s | — | — |
+| Layer 2, judged set, per run | Tokens and dollars are printed by the first keyed run's report (`azure.yml` → `first-judged-run` artifact, `estimatedCostUsd` when the price variables are set) and belong there, not here, until one exists | ≤ 20 min nightly; PR smoke ≤ $0.50 | — |
+
+The sentence these numbers buy: **the constraint gate costs a pull request about
+five seconds and zero dollars**, which is the answer to the usual objection that
+evals are too slow and too expensive to gate on. The judge's cost line stays
+empty here until a real run fills it, for the same reason D-9 was recorded
+instead of implied working.

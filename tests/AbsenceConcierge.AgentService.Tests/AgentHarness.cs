@@ -144,7 +144,7 @@ public sealed class AgentHarness : IDisposable
 
         var orchestrator = new AgentOrchestrator(
             steps,
-            new InMemoryAgentConversationStore(),
+            new InMemoryAgentConversationStore(Options.Create(new AbsenceConcierge.AgentService.Demo.DemoOptions())),
             new DeterministicUtteranceInterpreter(),
             new DeterministicReplyComposer(),
             world,

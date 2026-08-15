@@ -38,7 +38,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           global-json-file: global.json
 
@@ -81,6 +81,16 @@ jobs:
           if [ -z "${FLY_API_TOKEN:-}" ]; then
             echo "::error::FLY_API_TOKEN is not set on the 'demo' environment. See flyio/SECRETS.md."
             exit 1
+          fi
+
+          # The first deploy of a fresh account has no app to deploy INTO, and
+          # `flyctl deploy --app` does not create one. Creation is guarded by an
+          # existence check so this stays a no-op forever after — and the app is
+          # created here, in the deploy workflow, so the answer to "where did
+          # the app come from" is the same place the code comes from.
+          if ! flyctl apps list --json | jq -e --arg app "$FLY_APP" '.[] | select(.Name == $app)' > /dev/null; then
+            echo "App ${FLY_APP} does not exist yet — creating it."
+            flyctl apps create "${FLY_APP}"
           fi
 
           flyctl deploy \
