@@ -1,5 +1,4 @@
 using AbsenceConcierge.Evals.Reporting;
-using AbsenceConcierge.Evals.Scenarios;
 
 namespace AbsenceConcierge.Evals;
 
@@ -75,7 +74,7 @@ public sealed class Layer1GateTests
         Assert.Equal(Layer1Run.Corpus.Count, report.Total);
         Assert.True(report.Total >= 32, $"the corpus has shrunk to {report.Total} scenarios");
         Assert.True(
-            report.Scenarios.Count(result => result.Ran) > 0,
+            report.Scenarios.Any(result => result.Ran),
             "every scenario was skipped, which is not a passing run");
     }
 

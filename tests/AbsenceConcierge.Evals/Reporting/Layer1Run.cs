@@ -38,7 +38,7 @@ public static class Layer1Run
     private static EvalReport Execute()
     {
         var stopwatch = Stopwatch.StartNew();
-        var results = Corpus.Select(RunOne).ToList();
+        var results = Corpus.Select(scenario => RunOne(scenario)).ToList();
         stopwatch.Stop();
 
         var report = new EvalReport(

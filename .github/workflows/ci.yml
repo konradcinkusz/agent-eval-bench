@@ -375,8 +375,12 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # hashFiles is the guard for the honest case: when the BUILD fails, no test
+      # ever ran and there is nothing to upload. `if-no-files-found: error` stays,
+      # because a run that produced a results directory and no results in it is a
+      # different and much more suspicious thing.
       - name: Upload test results
-        if: steps.detect.outputs.found == 'true' && (success() || failure())
+        if: steps.detect.outputs.found == 'true' && (success() || failure()) && hashFiles('TestResults/**') != ''
         uses: actions/upload-artifact@v4
         with:
           name: test-results
