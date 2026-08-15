@@ -12,6 +12,7 @@ Operational scripts, following the conventions in
 | `hooks/pre-commit` | Refuses a commit whose staged changes contain a secret | same job, one commit earlier |
 | `check-links.mjs` | Resolves every relative link in every Markdown file, tracked or not | `ci.yml` → lint-docs |
 | `validate-scenarios.mjs` | Schema, corpus invariants and assertion discipline over `evals/scenarios/` | `ci.yml` → lint-docs |
+| `validate-agent-definitions.mjs` | Schema, one version in three places, and the tool catalogue against the service's source | `ci.yml` → lint-docs |
 | `check-change-coupling.mjs` | A behaviour change is written down; a changed measuring stick is versioned | `ci.yml` → coupling |
 | `eval-comment.mjs` | Renders the pull request's eval comment — the diff against the baseline | `ci.yml` → build-test |
 
@@ -22,6 +23,7 @@ Operational scripts, following the conventions in
 ./scripts/scan-secrets.sh --staged
 
 node scripts/validate-scenarios.mjs
+node scripts/validate-agent-definitions.mjs
 node scripts/check-change-coupling.mjs origin/main
 node scripts/eval-comment.mjs    # needs TestResults/ from a `dotnet test` run
 ```

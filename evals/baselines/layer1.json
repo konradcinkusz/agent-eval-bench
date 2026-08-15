@@ -1,6 +1,6 @@
 {
   "layer": 1,
-  "specVersion": "1.2.0",
+  "specVersion": "1.3.0",
   "interpreter": "deterministic",
   "recorded": "2026-08-15",
   "scenarios": {

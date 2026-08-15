@@ -121,6 +121,15 @@ jobs:
       - name: Validate eval scenarios
         run: npm run validate:scenarios
 
+      # The agent definition is behaviour with no code diff, and until this step
+      # nothing compiled it, typed it, or compared it to the service it describes.
+      # It checks the strict schema, that one version appears in all three places
+      # that carry it, and that `allowedTools` / `requireApproval` still match the
+      # read/write catalogue in the service's own source — the definition being the
+      # third place the confirmation gate is enforced.
+      - name: Validate agent definitions
+        run: npm run validate:agents
+
   # ===========================================================================
   # Workflow lint
   #

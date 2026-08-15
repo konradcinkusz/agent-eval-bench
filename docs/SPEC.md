@@ -1,9 +1,17 @@
 # Absence Concierge — behaviour specification
 
 - **Agent slug**: `absence-concierge`
-- **Spec version**: 1.2.0
+- **Spec version**: 1.3.0
 - **Status**: Accepted — this is the contract. Code is measured against it, not the other way round.
-- **Date**: 2026-08-15 (1.1.0: 2026-08-15, 1.0.0: 2026-08-14)
+- **Date**: 2026-08-15 (1.2.0: 2026-08-15, 1.1.0: 2026-08-15, 1.0.0: 2026-08-14)
+
+**What changed in 1.3.0**, on implementing the live integration in Phase 7:
+
+| Change | Why |
+|---|---|
+| [§2.1.1](#211-the-confirmation-token-why-the-gate-is-not-just-good-behaviour) says where the gate is enforced in MCP mode | "In mock mode and in MCP mode alike" was written in 1.0.0 against an adapter that did not exist. It is now a property of `McpWorkforceTools`, which redeems the token itself, against a draft whose employee id came from `get_current_user` rather than from the arguments — not a hope that a remote server has a gate of its own |
+| [§7.4](#74-which-failure-is-which-at-the-transport) added: a refused connection and a timeout are different failures | §7.2 separates a `5xx` from a timeout at the tool level and said nothing below it. A connection that was refused is knowledge — nothing was booked — and reporting it as indeterminate sends a sick employee to check a system with nothing in it |
+| [§10](#10-how-this-document-changes) records that the version is checked in three places | The agent definition claimed to implement spec 1.0.0 while this document had been at 1.2.0 for two phases. Nothing compared them until `scripts/validate-agent-definitions.mjs` did, on its first run |
 
 **What changed in 1.2.0**, found by writing the Layer 1 harness in Phase 4:
 
@@ -135,6 +143,19 @@ the cost of one argument.
 The adversarial scenarios therefore assert **both** layers: that the agent never
 attempted the unconfirmed write, and — where a variant is deliberately broken to
 try it — that the tool refused it anyway.
+
+**In MCP mode the gate is enforced in the adapter, not delegated to the server.**
+`McpWorkforceTools` redeems the token before anything is sent, against a draft
+whose employee id came from `get_current_user` rather than from the request — so
+an instruction that changed *whose* leave this is would also have to change what
+the approval covered, and it cannot. The token is spent whether or not the remote
+call then succeeds, which is [C-6](#4-hard-constraints) holding through a
+failure: an indeterminate write has nothing left to retry with.
+
+This is deliberately not an argument that a real workforce system has no approval
+step of its own. It probably does. What it does not have is any knowledge of
+*this conversation*, and the confirmation being enforced is a confirmation given
+here, to this draft, by this employee.
 
 ### 2.2 Trace events
 
@@ -520,6 +541,26 @@ Everything above is about the reply. These hold regardless:
 - Every degradation scenario asserts **both** halves: that the note was emitted,
   **and** that no success was claimed.
 
+### 7.4 Which failure is which, at the transport
+
+§7.2 divides what a *tool* answered. Below the tool there is a second division,
+and it decides which of those two sentences the agent is allowed to say:
+
+| What happened | Reached the server? | A write is reported as |
+|---|---|---|
+| DNS did not resolve, the connection was refused, TLS failed | **No** | A definite failure. Nothing was booked |
+| The call timed out, or the response died mid-stream | **Unknown** | Indeterminate — it may or may not have been recorded |
+| The server answered with a tool error | **Yes** | A refusal. Definitely not booked |
+
+The default is the middle row. A failure that cannot be placed in the first or
+the third is treated as indeterminate, because the cost of a wrong "it definitely
+failed" is a human filing the same leave twice, and the cost of a wrong "it may
+have gone through" is a human checking.
+
+Reads do not use this division. A read that may or may not have run produced no
+data either way, and [§7](#7-degradation-contract) rule 5 already covers a step
+that could not be completed.
+
 ## 8. How the suite runs
 
 The estate's testing strategy has three tiers — smoke, core regression, extended
@@ -741,3 +782,17 @@ Written down because an assumption nobody stated is a defect nobody can find.
 A pull request that edits `prompts/` or `agents/` without touching this document
 is a pull request whose behaviour change nobody wrote down. Change detection
 treats those paths as eval-triggering for exactly that reason.
+
+**The version lives in three places, and CI compares them.** The line at the top
+of this document, `version` in the agent definition, and
+`metadata.specVersion` beside it must be the same string;
+`scripts/validate-agent-definitions.mjs` fails the build when they are not. This
+is not hypothetical tidiness. The definition claimed to implement spec 1.0.0
+while this document had been at 1.2.0 for two phases — a Layer 1 baseline
+recorded against one number and a definition advertising another, with nothing
+comparing them. The check found it on the run it was written for.
+
+The same script compares the definition's `allowedTools` and `requireApproval`
+against `WorkforceToolCatalog` in the service's own source, so the definition
+cannot quietly stop agreeing with [§2.1](#21-tools) about which call books
+somebody's leave.

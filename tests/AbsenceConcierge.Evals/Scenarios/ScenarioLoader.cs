@@ -54,9 +54,21 @@ public static class ScenarioLoader
         return loaded;
     }
 
-    private static LoadedScenario Load(string path)
+    private static LoadedScenario Load(string path) => Parse(File.ReadAllText(path), path);
+
+    /// <summary>
+    /// The same deserialisation the corpus gets, for YAML that is not on disk yet.
+    ///
+    /// <para>
+    /// Public so that an extracted scenario is read back by <em>this</em> reader
+    /// rather than a second one configured slightly differently. A round-trip test
+    /// that parsed with its own deserializer would prove the extractor and that
+    /// deserializer agree, which is not the claim anyone wants.
+    /// </para>
+    /// </summary>
+    public static LoadedScenario Parse(string yaml, string path)
     {
-        var scenario = Deserializer.Deserialize<ScenarioFile>(File.ReadAllText(path))
+        var scenario = Deserializer.Deserialize<ScenarioFile>(yaml)
             ?? throw new InvalidOperationException($"Scenario '{path}' is empty.");
 
         if (string.IsNullOrWhiteSpace(scenario.Id))

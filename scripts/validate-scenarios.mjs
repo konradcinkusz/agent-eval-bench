@@ -50,6 +50,14 @@ const SCHEMA_PATH = join(REPO_ROOT, 'evals', 'schema', 'scenario.schema.json');
  * evals/rubrics/, this list is the authority; from Phase 5 the directory is,
  * and this constant is deleted rather than left to drift beside it.
  */
+/**
+ * The prefix ScenarioExtractor writes into a freshly extracted scenario's `title`
+ * and `why`. Kept byte-identical to ScenarioExtractor.ReviewMarker — two places
+ * depend on the exact string, and a rule enforced by a literal in one of them is a
+ * rule that stops being enforced the day the other is reworded.
+ */
+const REVIEW_MARKER = 'REVIEW:';
+
 const KNOWN_RUBRICS = new Set([
   'grounding',
   'confirmation-clarity',
@@ -181,6 +189,19 @@ for (const file of files) {
   for (const rubric of doc.rubrics ?? []) {
     if (!KNOWN_RUBRICS.has(rubric)) {
       fail(rel, `unknown rubric "${rubric}" — docs/SPEC.md §5 defines: ${[...KNOWN_RUBRICS].join(', ')}`);
+    }
+  }
+
+  // A scenario extracted from a trace (ScenarioExtractor) arrives with these
+  // markers in its `title` and `why`. Extraction records what the agent DID; a
+  // scenario says what it SHOULD do, and the gap between those two sentences is a
+  // human's judgement. Committing an extraction unread would enshrine the incident
+  // as the expected behaviour — the exact inversion AI-EVALS.md §3 is guarding
+  // against when it asks for a scenario before a fix.
+  for (const [field, value] of [['title', doc.title], ['why', doc.why]]) {
+    if (typeof value === 'string' && value.trimStart().startsWith(REVIEW_MARKER)) {
+      fail(rel, `${field} still carries the "${REVIEW_MARKER}" marker an extracted scenario is written with. `
+        + 'Replace it with why this behaviour is correct — or change the assertions, and then the agent.');
     }
   }
 
