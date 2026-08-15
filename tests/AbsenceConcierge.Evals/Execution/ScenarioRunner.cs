@@ -117,10 +117,21 @@ public static class ScenarioRunner
         services.AddLogging(logging => logging.SetMinimumLevel(LogLevel.Warning));
         services.AddAbsenceConciergeAgent(new ConfigurationBuilder().Build());
 
-        // After AddAbsenceConciergeAgent, so the scenario's zone wins over the
-        // section binding. A scenario that resolved dates in the default zone would
-        // be testing the default rather than itself.
-        services.PostConfigure<AgentOptions>(options => options.Timezone = scenario.Fixture.Timezone);
+        // After AddAbsenceConciergeAgent, so the scenario's zone and locale win over
+        // the section binding. A scenario that resolved dates in the default zone
+        // would be testing the default rather than itself — and the locale is
+        // injected for the same reason: fixture.locale is what selects which
+        // language reads the utterance (SPEC §9), and a runner that ignored it
+        // would leave every Spanish scenario secretly graded in English.
+        services.PostConfigure<AgentOptions>(options =>
+        {
+            options.Timezone = scenario.Fixture.Timezone;
+
+            if (!string.IsNullOrWhiteSpace(scenario.Fixture.Locale))
+            {
+                options.Locale = scenario.Fixture.Locale;
+            }
+        });
 
         var time = new PinnedClock(clock);
         var tokens = new InMemoryConfirmationTokenStore();

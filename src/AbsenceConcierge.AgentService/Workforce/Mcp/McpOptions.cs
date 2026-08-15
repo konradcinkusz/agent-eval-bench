@@ -20,13 +20,30 @@ public sealed class McpOptions
     public string? ServerUrl { get; set; }
 
     /// <summary>
-    /// A bearer token for the server.
+    /// A bearer token for the server, obtained out of band. One of two ways in:
+    /// this, or the OAuth flow below. Both absent means MCP mode is unavailable.
     ///
     /// Held as configuration so it arrives from user secrets locally and from an
     /// environment secret in CI, and so it is never read out of the environment by
     /// application code that thought it was reading configuration.
     /// </summary>
     public string? AccessToken { get; set; }
+
+    /// <summary>
+    /// OAuth 2.0 with dynamic client registration — the other way in, and the one
+    /// a server like Factorial's actually speaks (D-11).
+    ///
+    /// <para>
+    /// <b>Development-only by intent and by mechanics.</b> The flow needs a human
+    /// at a browser and a loopback listener for the redirect; a headless
+    /// deployment cannot complete it, and the public demo carries none of these
+    /// settings so the branch stays unreachable there (ADR-0005). The flow itself
+    /// — discovery, registration, PKCE, token exchange, refresh — is the SDK's,
+    /// selected here rather than reimplemented: rewriting a tested OAuth stack
+    /// from documentation is the exact failure D-11 was recorded to avoid.
+    /// </para>
+    /// </summary>
+    public McpOAuthOptions OAuth { get; set; } = new();
 
     public int TimeoutSeconds { get; set; } = 30;
 
@@ -69,6 +86,47 @@ public sealed class McpOptions
     /// </para>
     /// </summary>
     public IList<string> PermissionDeniedMarkers { get; } = [];
+}
+
+/// <summary>
+/// How the OAuth flow identifies and receives its answers. Nothing here is a
+/// secret except <see cref="ClientSecret"/>, which only exists for a server that
+/// pre-registered this client — with dynamic registration the client has no
+/// secret at all and PKCE carries the proof.
+/// </summary>
+public sealed class McpOAuthOptions
+{
+    /// <summary>
+    /// Off by default. An explicit switch rather than inference from the other
+    /// fields, so that a half-filled section reads as "misconfigured" in a log
+    /// line and not as "bearer mode".
+    /// </summary>
+    public bool Enabled { get; set; }
+
+    /// <summary>Shown to the human on the server's consent screen during dynamic registration.</summary>
+    public string ClientName { get; set; } = "absence-concierge (agent-eval-bench)";
+
+    /// <summary>
+    /// Where the authorization response lands. Loopback by design: the listener
+    /// binds this exact address for the seconds the flow is in flight, which is
+    /// the standard native-app pattern (RFC 8252) and one more reason this mode
+    /// cannot run headless.
+    /// </summary>
+    public string RedirectUri { get; set; } = "http://127.0.0.1:53682/callback/";
+
+    /// <summary>
+    /// Fallback scopes, used only when the server advertises none. The server's
+    /// own advertisement wins — that is the SDK's scope-selection order, and it is
+    /// the right one: a foreign system's scope names are exactly what this
+    /// boundary exists to absorb (P11).
+    /// </summary>
+    public IList<string> Scopes { get; } = [];
+
+    /// <summary>Set only for a pre-registered client. Absent, the client registers dynamically.</summary>
+    public string? ClientId { get; set; }
+
+    /// <summary>Never committed. Meaningful only alongside <see cref="ClientId"/>.</summary>
+    public string? ClientSecret { get; set; }
 }
 
 public sealed class McpToolNames

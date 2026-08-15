@@ -38,6 +38,13 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="$(OpenTelemetryVersion)" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="$(OpenTelemetryVersion)" />
+    <!--
+      The trace sink the production loop reads (docs/PRODUCTION.md, D-12). An
+      exporter, not the Application Insights SDK: the spans stay OpenTelemetry's,
+      Azure Monitor is one place they can land, and the eval harness goes on
+      reading them in-process with nothing configured. Verified on nuget.org.
+    -->
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.4.0" />
   </ItemGroup>
 
   <ItemGroup Label="Agent service">

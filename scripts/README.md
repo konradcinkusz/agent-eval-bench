@@ -15,6 +15,7 @@ Operational scripts, following the conventions in
 | `validate-agent-definitions.mjs` | Schema, one version in three places, and the tool catalogue against the service's source | `ci.yml` → lint-docs |
 | `check-change-coupling.mjs` | A behaviour change is written down; a changed measuring stick is versioned | `ci.yml` → coupling |
 | `eval-comment.mjs` | Renders the pull request's eval comment — the diff against the baseline | `ci.yml` → build-test |
+| `provision-azure.sh` | Deploys `infra/azure/` (OpenAI `composer` + `judge` deployments, App Insights) and prints the wiring commands | `azure.yml` → provision |
 
 ```bash
 ./scripts/setup.sh              # run once per clone

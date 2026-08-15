@@ -1,6 +1,7 @@
 using AbsenceConcierge.AgentService.Agent;
 using AbsenceConcierge.AgentService.Demo;
 using AbsenceConcierge.AgentService.Extensions;
+using Microsoft.Extensions.Options;
 
 namespace AbsenceConcierge.AgentService.Endpoints;
 
@@ -59,12 +60,22 @@ public static class AgentEndpoints
             AgentTurnPayload payload,
             HttpContext http,
             IAgentOrchestrator orchestrator,
+            IAgentConversationStore conversations,
+            IOptions<DemoOptions> demo,
             DemoAccess access,
             CancellationToken cancellationToken) =>
         {
             if (string.IsNullOrWhiteSpace(payload.ConversationId))
             {
                 return Results.BadRequest(new { error = "A conversation id is required." });
+            }
+
+            if (payload.ConversationId.Length > demo.Value.MaxConversationIdLength)
+            {
+                // The id is a client-invented dictionary key. Its length is bounded
+                // for the same reason the message's is: nothing about this process's
+                // memory may depend on a stranger being reasonable.
+                return Results.BadRequest(new { error = "That conversation id is longer than this demo accepts." });
             }
 
             if ((payload.Message?.Length ?? 0) > MaxMessageLength)
@@ -77,7 +88,20 @@ public static class AgentEndpoints
                 return Results.BadRequest(new { error = "Decision must be 'approve' or 'reject'." });
             }
 
-            var mode = access.Evaluate(http.Request.Headers[AccessCodeHeader].ToString());
+            if (conversations.Find(payload.ConversationId) is { } held
+                && held.TurnIndex >= demo.Value.MaxTurnsPerConversation)
+            {
+                // 429 rather than 400: nothing about the request is malformed, the
+                // conversation has simply had its share. The body says what to do
+                // about it, and the page shows that sentence rather than a generic one.
+                return Results.Json(
+                    new { error = "This conversation has reached its turn limit. Reload the page to start a fresh one." },
+                    statusCode: StatusCodes.Status429TooManyRequests);
+            }
+
+            var mode = access.BeginTurn(
+                http.Request.Headers[AccessCodeHeader].ToString(),
+                DemoClientKey.Resolve(http));
 
             var result = await orchestrator.RunTurnAsync(
                 new AgentTurnRequest(
@@ -97,10 +121,13 @@ public static class AgentEndpoints
         .RequireRateLimiting(ServiceCollectionExtensions.DemoRateLimitPolicy);
 
         // What the page asks on load: whether unlocking is even possible on this
-        // deployment, and how much budget is left. It reports the same four states
-        // the turn endpoint does, from the same code.
+        // deployment, and how much budget is left. It reports the same states the
+        // turn endpoint does, from the same code — and consumes nothing, so polling
+        // it cannot eat anybody's allowance.
         app.MapGet("/demo/status", (HttpContext http, DemoAccess access) =>
-            Results.Ok(access.Evaluate(http.Request.Headers[AccessCodeHeader].ToString())))
+            Results.Ok(access.Evaluate(
+                http.Request.Headers[AccessCodeHeader].ToString(),
+                DemoClientKey.Resolve(http))))
             .WithTags("Agent")
             .RequireRateLimiting(ServiceCollectionExtensions.DemoRateLimitPolicy);
 

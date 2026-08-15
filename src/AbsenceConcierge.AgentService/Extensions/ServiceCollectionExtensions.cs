@@ -122,7 +122,9 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Which MCP settings are absent, by name, so the log line says what to set rather
-    /// than that something is wrong.
+    /// than that something is wrong. Two ways to be credentialed — a bearer token
+    /// obtained out of band, or the OAuth flow (D-11) — and either satisfies the
+    /// check; the log line names both so the reader picks one rather than hunting.
     /// </summary>
     private static List<string> MissingMcpSettings(McpOptions options)
     {
@@ -133,9 +135,9 @@ public static class ServiceCollectionExtensions
             missing.Add($"{McpOptions.SectionName}:ServerUrl");
         }
 
-        if (string.IsNullOrWhiteSpace(options.AccessToken))
+        if (string.IsNullOrWhiteSpace(options.AccessToken) && !options.OAuth.Enabled)
         {
-            missing.Add($"{McpOptions.SectionName}:AccessToken");
+            missing.Add($"{McpOptions.SectionName}:AccessToken (or {McpOptions.SectionName}:OAuth:Enabled)");
         }
 
         return missing;
@@ -159,6 +161,31 @@ public static class ServiceCollectionExtensions
     {
         services.Configure<AgentOptions>(configuration.GetSection(AgentOptions.SectionName));
         services.Configure<LlmOptions>(configuration.GetSection(LlmOptions.SectionName));
+
+        // A pinned clock, from configuration, for the browser suite and nothing
+        // else. The eval harness pins time by construction (ScenarioRunner); the
+        // Playwright suite drives the REAL service over HTTP, and "I'm sick today
+        // and probably tomorrow" typed on a Saturday resolves onto a weekend — a
+        // suite green Monday-to-Friday is not a suite (SPEC §9). Guarded the same
+        // way every optional setting is: absent means the system clock, and a
+        // deployment that sets it gets a log line loud enough to notice, because a
+        // demo frozen in time is otherwise a very quiet bug.
+        if (DateTimeOffset.TryParse(
+                configuration["Agent:PinnedUtcNow"],
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind,
+                out var pinned))
+        {
+            services.AddSingleton<TimeProvider>(sp =>
+            {
+                sp.GetRequiredService<ILogger<AgentOrchestrator>>().LogWarning(
+                    "Agent:PinnedUtcNow is set: the clock is FROZEN at {Pinned}. This exists for the "
+                    + "end-to-end suite; no deployed environment should set it.",
+                    pinned);
+
+                return new PinnedTimeProvider(pinned);
+            });
+        }
 
         // The default path has no model, no credential and no network (ADR-0002).
         // The model-backed implementations register over these when one is configured.
@@ -213,6 +240,16 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IDemoBudget, DemoBudget>();
+        services.AddSingleton<IDemoClientQuota, DemoClientQuota>();
+
+        // The body ceiling, applied at the server rather than per route: the routes
+        // accept three short strings, the framework default is thirty megabytes, and
+        // partial coverage is the recorded failure mode (SECURITY-REVIEW.md §9).
+        services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(kestrel =>
+            kestrel.Limits.MaxRequestBodySize = Math.Max(
+                1024,
+                configuration.GetSection(DemoOptions.SectionName)
+                    .GetValue("MaxRequestBodyBytes", new DemoOptions().MaxRequestBodyBytes)));
 
         // Resilience from the kernel, not hand-rolled here (P2a). The named client
         // exists so the provider's timeouts and retries are the estate's, and so a
@@ -243,6 +280,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new DemoAccess(
             sp.GetRequiredService<IOptions<DemoOptions>>(),
             sp.GetRequiredService<IDemoBudget>(),
+            sp.GetRequiredService<IDemoClientQuota>(),
             sp.GetRequiredService<LlmProviderHandle>().Provider));
 
         services.AddSingleton<IReplyComposer>(sp =>
@@ -297,16 +335,19 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var perMinute = Math.Max(
-            1,
-            configuration.GetSection(DemoOptions.SectionName).GetValue("RequestsPerMinutePerClient", 20));
+        var demo = configuration.GetSection(DemoOptions.SectionName);
+        var perMinute = Math.Max(1, demo.GetValue("RequestsPerMinutePerClient", 20));
+        var concurrent = Math.Max(1, demo.GetValue("MaxConcurrentRequests", new DemoOptions().MaxConcurrentRequests));
 
         services.AddRateLimiter(limiter =>
         {
             limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+            // Partitioned by the SAME client key the live allowance uses. Behind
+            // Fly's proxy the socket peer is the proxy, and a limiter keyed on it
+            // would put every visitor on the internet into one bucket.
             limiter.AddPolicy(DemoRateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
-                http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                DemoClientKey.Resolve(http),
                 _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = perMinute,
@@ -317,6 +358,21 @@ public static class ServiceCollectionExtensions
                     // the honest answer to a rate limit is immediate.
                     QueueLimit = 0,
                 }));
+
+            // A process-wide in-flight ceiling under the per-client window. The
+            // window bounds one client's rate; this bounds what every client
+            // together can hold open on a 512 MB machine at once. Health probes are
+            // exempt — a probe that gets 429'd takes the machine down, which is the
+            // one outcome worse than the burst.
+            limiter.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
+                http.Request.Path.StartsWithSegments("/health")
+                || http.Request.Path.StartsWithSegments("/alive")
+                    ? RateLimitPartition.GetNoLimiter("probes")
+                    : RateLimitPartition.GetConcurrencyLimiter("everything-else", _ => new ConcurrencyLimiterOptions
+                    {
+                        PermitLimit = concurrent,
+                        QueueLimit = 0,
+                    }));
         });
 
         return services;
@@ -333,6 +389,12 @@ public static class ServiceCollectionExtensions
     /// </para>
     /// </summary>
     public sealed record LlmProviderHandle(ILlmProvider? Provider);
+
+    /// <summary>A clock that does not move. Registered only when <c>Agent:PinnedUtcNow</c> is set.</summary>
+    private sealed class PinnedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
 
     private const string LlmHttpClientName = "llm";
 

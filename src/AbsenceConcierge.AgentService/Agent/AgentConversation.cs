@@ -72,13 +72,85 @@ public sealed class AgentConversation(string id)
 public interface IAgentConversationStore
 {
     AgentConversation GetOrCreate(string conversationId);
+
+    /// <summary>
+    /// The conversation if it exists, without creating one. A look, so a ceiling
+    /// check does not itself allocate the thing it is deciding whether to allow.
+    /// </summary>
+    AgentConversation? Find(string conversationId);
 }
 
-public sealed class InMemoryAgentConversationStore : IAgentConversationStore
+/// <summary>
+/// Conversations, held in memory and <b>bounded</b>.
+///
+/// <para>
+/// Every conversation id a caller invents becomes an entry here, and the endpoint
+/// is public with no accounts — so an unbounded map is a memory exhaustion anybody
+/// can cause with a loop and a random string. Past the cap, the least recently
+/// touched conversation is evicted. For an evicted visitor the effect is a fresh
+/// conversation under their old id: a pending draft is gone and its confirmation
+/// token dies with it, which fails in the safe direction — a lost draft is a
+/// re-ask, never a write.
+/// </para>
+/// </summary>
+public sealed class InMemoryAgentConversationStore(
+    Microsoft.Extensions.Options.IOptions<Demo.DemoOptions> options) : IAgentConversationStore
 {
-    private readonly ConcurrentDictionary<string, AgentConversation> _conversations =
-        new(StringComparer.Ordinal);
+    private sealed record Entry(AgentConversation Conversation)
+    {
+        // A monotonic recency stamp, not a clock: eviction needs an order, and the
+        // wall clock can move backwards.
+        public long Touched;
+    }
 
-    public AgentConversation GetOrCreate(string conversationId) =>
-        _conversations.GetOrAdd(conversationId, id => new AgentConversation(id));
+    private readonly ConcurrentDictionary<string, Entry> _conversations = new(StringComparer.Ordinal);
+    private readonly Lock _evicting = new();
+    private readonly int _capacity = Math.Max(1, options.Value.MaxConversations);
+
+    private long _stamp;
+
+    public AgentConversation GetOrCreate(string conversationId)
+    {
+        var entry = _conversations.GetOrAdd(conversationId, id => new Entry(new AgentConversation(id)));
+        entry.Touched = Interlocked.Increment(ref _stamp);
+
+        if (_conversations.Count > _capacity)
+        {
+            Evict();
+        }
+
+        return entry.Conversation;
+    }
+
+    public AgentConversation? Find(string conversationId) =>
+        _conversations.TryGetValue(conversationId, out var entry) ? entry.Conversation : null;
+
+    private void Evict()
+    {
+        lock (_evicting)
+        {
+            // Down to the cap, oldest first. A linear scan per eviction is fine at
+            // this size, and eviction only happens when somebody is already past
+            // the cap — the ordinary path never pays for it.
+            while (_conversations.Count > _capacity)
+            {
+                string? oldestKey = null;
+                var oldestStamp = long.MaxValue;
+
+                foreach (var (key, entry) in _conversations)
+                {
+                    if (entry.Touched < oldestStamp)
+                    {
+                        oldestStamp = entry.Touched;
+                        oldestKey = key;
+                    }
+                }
+
+                if (oldestKey is null || !_conversations.TryRemove(oldestKey, out _))
+                {
+                    break;
+                }
+            }
+        }
+    }
 }
