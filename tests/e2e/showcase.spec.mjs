@@ -40,6 +40,14 @@ test.describe('the confirmation card', () => {
     await expect(page.locator('#card-type')).toContainText('Sick leave');
     await expect(page.locator('#card-conflicts')).toHaveText('Checked — nothing overlaps');
 
+    // The optional rows are ABSENT, not blank: a two-day sick draft excludes no
+    // days and needs no certificate, and a card that shows "Also needed: a
+    // medical certificate" anyway is telling the approver something false.
+    // (F-12: the CSS display on these rows silently defeated the `hidden`
+    // attribute, and no backend test could ever have seen it.)
+    await expect(page.locator('#card-excluded-row')).toBeHidden();
+    await expect(page.locator('#card-attachment-row')).toBeHidden();
+
     // Nothing is written while the card waits. The gate's whole meaning is
     // that this list does not grow until the button is pressed.
     const leaves = await page.request.get('/workforce/leaves');
