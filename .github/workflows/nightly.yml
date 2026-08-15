@@ -21,10 +21,6 @@
 name: Nightly evals
 
 on:
-  schedule:
-    # 02:30 UTC. Late enough that a day's merges are in, early enough that the
-    # result is waiting rather than arriving mid-morning.
-    - cron: '30 2 * * *'
   workflow_dispatch:
 
 permissions:

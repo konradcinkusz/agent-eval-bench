@@ -31,9 +31,6 @@ name: Production loop
 # ═══════════════════════════════════════════════════════════════════════════════
 
 on:
-  schedule:
-    # 04:15 UTC — after the nightly evals, so a morning reader gets both.
-    - cron: '15 4 * * *'
   workflow_dispatch:
 
 permissions:

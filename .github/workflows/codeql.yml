@@ -19,13 +19,6 @@ name: CodeQL
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
-  pull_request:
-    branches: [main]
-  push:
-    branches: [main, 'claude/**']
-  schedule:
-    # Mondays 04:00 UTC. Rule sets change under a codebase that has not.
-    - cron: '0 4 * * 1'
   workflow_dispatch:
 
 permissions:
