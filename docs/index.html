@@ -568,6 +568,90 @@
         </table>
       </div>
 
+      <h2><span class="no">the integration</span>Factorial MCP — one session, spelled out</h2>
+      <p>
+        The mock is not a made-up world: it stands in for Factorial’s public MCP server, and the
+        MCP adapter is how the <em>same</em> agent — same pipeline, same gate — runs against the
+        real thing. The handshake below is OAuth 2.0 with dynamic client registration, taken from
+        the SDK rather than reimplemented, and it needs a human at a browser — one of two reasons
+        this mode is development-only by construction.
+      </p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+        <svg viewBox="0 0 920 640" role="img"
+             aria-label="Sequence diagram of one MCP session against the Factorial MCP server. Once per session: the agent service discovers the server's OAuth endpoints, registers itself dynamically and receives a client id with no secret, opens the consent URL in a system browser where a human signs in, receives the authorization code on a loopback listener, and exchanges code plus PKCE verifier for an access token. Every turn: it initializes a Streamable HTTP session, lists tools with foreign names mapped by configuration, and calls the read tools, with the server enforcing the signed-in user's permissions on every call. The write, request_time_off, happens only after the confirmation gate released a single-use token, at most once per confirmation, and a timed-out write is reported as unknown rather than retried.">
+          <defs>
+            <marker id="arw4" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+            <marker id="arwA4" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head-accent" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+          </defs>
+
+          <rect class="box" x="60" y="20" width="220" height="56" rx="5"/>
+          <text class="name" x="170" y="42" text-anchor="middle">Absence Concierge</text>
+          <text class="meta" x="170" y="60" text-anchor="middle">SDK behind IMcpToolSession</text>
+          <rect class="browser-box" x="350" y="20" width="220" height="56" rx="5"/>
+          <text class="name" x="460" y="42" text-anchor="middle">system browser</text>
+          <text class="meta" x="460" y="60" text-anchor="middle">a human at the consent screen</text>
+          <rect class="box" x="640" y="20" width="220" height="56" rx="5"/>
+          <text class="name" x="750" y="42" text-anchor="middle">Factorial MCP server</text>
+          <text class="meta" x="750" y="60" text-anchor="middle">acts as the signed-in user</text>
+
+          <line class="boundary" x1="170" y1="76" x2="170" y2="596"/>
+          <line class="boundary" x1="460" y1="76" x2="460" y2="596"/>
+          <line class="boundary" x1="750" y1="76" x2="750" y2="596"/>
+
+          <rect class="band" x="40" y="92" width="840" height="22"/>
+          <text class="lbl-strong" x="52" y="107">once per session — OAuth 2.0 + dynamic client registration (RFC 8252 loopback; the SDK’s flow)</text>
+
+          <text class="lbl" x="460" y="136" text-anchor="middle">① discovery — the server advertises its endpoints and scopes</text>
+          <line class="edge" x1="170" y1="142" x2="750" y2="142" marker-end="url(#arw4)"/>
+          <text class="lbl" x="460" y="168" text-anchor="middle">② dynamic registration → client_id — no secret; PKCE carries the proof</text>
+          <line class="edge" x1="170" y1="174" x2="750" y2="174" marker-end="url(#arw4)"/>
+          <text class="lbl" x="315" y="200" text-anchor="middle">③ the consent URL opens — a human is required</text>
+          <line class="edge" x1="170" y1="206" x2="460" y2="206" marker-end="url(#arw4)"/>
+          <text class="lbl" x="605" y="232" text-anchor="middle">④ sign-in + consent</text>
+          <line class="edge" x1="460" y1="238" x2="750" y2="238" marker-end="url(#arw4)"/>
+          <text class="lbl" x="460" y="264" text-anchor="middle">⑤ the code lands on the loopback listener — 127.0.0.1:53682/callback/</text>
+          <line class="edge" x1="750" y1="270" x2="170" y2="270" marker-end="url(#arw4)"/>
+          <text class="lbl" x="460" y="296" text-anchor="middle">⑥ code + PKCE verifier → access token · refresh is the SDK’s job</text>
+          <line class="edge" x1="170" y1="302" x2="750" y2="302" marker-end="url(#arw4)"/>
+
+          <rect class="band" x="40" y="322" width="840" height="22"/>
+          <text class="lbl-strong" x="52" y="337">every turn — reads over Streamable HTTP; tool results are the only ground truth</text>
+
+          <text class="lbl" x="460" y="366" text-anchor="middle">⑦ initialize · tools/list — foreign tool names absorbed by McpToolNames</text>
+          <line class="edge" x1="170" y1="372" x2="750" y2="372" marker-end="url(#arw4)"/>
+          <text class="lbl" x="460" y="398" text-anchor="middle">⑧ get_current_user · list_leave_types · list_leaves — permissions enforced per call</text>
+          <line class="edge" x1="170" y1="404" x2="750" y2="404" marker-end="url(#arw4)"/>
+          <text class="lbl" x="460" y="430" text-anchor="middle">results — anything instruction-shaped inside them is data, never a command (C-7)</text>
+          <line class="edge-private" x1="750" y1="436" x2="170" y2="436" marker-end="url(#arw4)"/>
+
+          <rect class="band" x="40" y="460" width="840" height="22"/>
+          <text class="lbl-strong" x="52" y="475">the write — only after a human decided</text>
+
+          <rect class="gate-box" x="60" y="490" width="320" height="38" rx="4"/>
+          <text class="step-name" x="74" y="505">✋ the pipeline stopped at the gate;</text>
+          <text class="step-name" x="74" y="520">approve released the single-use token</text>
+
+          <text class="lbl" x="460" y="550" text-anchor="middle">⑨ request_time_off — refused without the token · at most one per confirmation (C-6)</text>
+          <line class="edge-accent" x1="170" y1="556" x2="750" y2="556" marker-end="url(#arwA4)"/>
+          <text class="lbl" x="460" y="582" text-anchor="middle">⑩ the outcome — a timeout is “may or may not have happened”, never retried</text>
+          <line class="edge-private" x1="750" y1="588" x2="170" y2="588" marker-end="url(#arw4)"/>
+
+          <text class="lbl" x="40" y="620">dev-only by construction: the public app carries none of these settings (ADR-0005) · built against a fake session, never yet run live (D-10)</text>
+        </svg>
+        </div>
+        <figcaption>
+          Dashed replies are the server’s answers — the only ground truth the agent may cite (C-5),
+          and the injection surface C-7 exists for. The gate holds at this boundary exactly as it
+          does at the mock: the same scenarios assert it, whichever adapter is wired.
+        </figcaption>
+      </figure>
+
       <h2><span class="no">the measuring loop</span>The spec came first; the trace is what gets graded</h2>
       <p>
         Layer 1 asserts over which tools were called, with what arguments, in what order — and
