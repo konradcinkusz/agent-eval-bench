@@ -18,4 +18,7 @@
 //  The whole suite runs in well under a second, so the cost is nothing.
 // ─────────────────────────────────────────────────────────────────────────────
 
-[assembly: CollectionBehavior(DisableTestParallelization = true)]
+using Xunit.Sdk;
+using Xunit.v3;
+
+[assembly: Parallelization(Mode = ParallelMode.None)]
