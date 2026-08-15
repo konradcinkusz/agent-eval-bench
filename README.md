@@ -20,16 +20,23 @@ The agent is the excuse. **The eval bench is the deliverable.**
 
 ## Status
 
-> **Phases 0–2 of 10 complete — the contract, and the skeleton that will satisfy it.**
+> **Phases 0–3 of 10 complete — the contract, the skeleton, and the agent.**
 >
-> `docs/SPEC.md` and 32 scenarios came first and are validated in CI. The service
-> now exists: composition root, shared kernel, mock workforce tools, and
-> OpenTelemetry end to end. **The agent loop itself does not** — that is Phase 3,
-> written against a contract fixed before it.
+> `docs/SPEC.md` and 32 scenarios came first and are validated in CI. The agent now
+> runs: a step pipeline whose order *is* the specification — establish the actor,
+> read a decision if one arrived, understand the request, refuse it if it is out of
+> scope, resolve the dates, retrieve the leave types, check for conflicts, draft,
+> **gate**, execute, reply.
 >
-> The confirmation gate, however, is already real. `request_time_off` refuses any
-> write without an approved, draft-bound, single-use token, enforced at the tool
-> boundary rather than by a prompt. Eight tests cover it.
+> The confirmation gate is real on both sides. The agent stops at it, and
+> `request_time_off` independently refuses any write without an approved,
+> draft-bound, single-use token — enforced at the tool boundary rather than by a
+> prompt.
+>
+> **What the eval suite does not yet exist to prove** is the whole of Phase 4: the
+> corpus is validated but not executed. The tests here assert the same trace
+> properties by hand, for every constraint in the spec, so that Phase 4 has
+> something to disagree with.
 >
 > This README says which lines are built and which are planned. A README that
 > describes a system that does not exist is worse than no README (P14's corollary).
@@ -39,8 +46,8 @@ The agent is the excuse. **The eval bench is the deliverable.**
 | 0 | Repository baseline: hygiene files, secret scanning, CI that lints a repo with no code | **Done** |
 | 1 | `docs/SPEC.md` and 32 scenarios as data — the contract, before any agent code | **Done** |
 | 2 | Skeleton: AppHost, agent service, ServiceDefaults, OpenTelemetry end to end, mock tools | **Done** |
-| 3 | The agent loop: intent → dates → leave types → conflicts → draft → **confirmation gate** → execute | Next |
-| 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | Planned |
+| 3 | The agent loop: intent → dates → leave types → conflicts → draft → **confirmation gate** → execute | **Done** |
+| 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | Next |
 | 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | Planned |
 | 6 | CI gates: constraints hard-block, behaviours vs baseline, one sticky PR comment with the diff | Planned |
 | 7 | Production story: OTLP scoring integration, agent-as-code deployment, live MCP mode | Planned |
