@@ -3,7 +3,8 @@ namespace AbsenceConcierge.AgentService.Workforce;
 /// <summary>
 /// The one internal interface the agent reaches a workforce system through.
 /// Implementations: <c>MockWorkforceTools</c> (the demonstrated path, in-memory,
-/// zero credentials) and, from Phase 7, an MCP-backed adapter.
+/// zero credentials) and <c>McpWorkforceTools</c> (a Model Context Protocol server,
+/// local and dev only, never carried by the public deployment).
 ///
 /// Extensibility is interface plus a registration line (P10). There is no base
 /// class to derive from and no framework to satisfy.
@@ -70,6 +71,14 @@ public static class WorkforceToolCatalog
     };
 
     public static IReadOnlyCollection<string> Names => KindByName.Keys;
+
+    /// <summary>
+    /// Every permission any tool in the catalogue requires, derived rather than
+    /// re-listed. A second list would be the one that goes stale the day a tool is
+    /// added, and this one is used where "the full set" has to mean the full set.
+    /// </summary>
+    public static IReadOnlyList<string> AllPermissions { get; } =
+        [.. PermissionByName.Values.OfType<string>().Distinct(StringComparer.Ordinal).Order(StringComparer.Ordinal)];
 
     /// <summary>
     /// Throws for an unknown tool rather than defaulting to <see cref="WorkforceToolKind.Read"/>.

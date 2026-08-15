@@ -6,6 +6,7 @@ using AbsenceConcierge.AgentService.Telemetry;
 using AbsenceConcierge.AgentService.Workforce;
 using AbsenceConcierge.AgentService.Workforce.Confirmation;
 using AbsenceConcierge.AgentService.Workforce.Fixtures;
+using AbsenceConcierge.AgentService.Workforce.Mcp;
 using AbsenceConcierge.AgentService.Workforce.Mock;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
@@ -44,6 +45,7 @@ public static class ServiceCollectionExtensions
         IConfiguration configuration)
     {
         services.Configure<WorkforceToolsOptions>(configuration.GetSection(WorkforceToolsOptions.SectionName));
+        services.Configure<McpOptions>(configuration.GetSection(McpOptions.SectionName));
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IConfirmationTokenStore, InMemoryConfirmationTokenStore>();
@@ -58,19 +60,48 @@ public static class ServiceCollectionExtensions
             return sp.GetRequiredService<IFixtureLoader>().Load(options.Fixture);
         });
 
+        // Resolved only on the MCP branch below, which is what keeps the constructor —
+        // and the credential it needs — out of the default path entirely. The container
+        // owns the session, so it is the container that closes it at shutdown.
+        services.AddSingleton<IMcpToolSession>(sp =>
+            new McpClientSession(sp.GetRequiredService<IOptions<McpOptions>>().Value));
+
         services.AddSingleton<IWorkforceTools>(sp =>
         {
             var options = sp.GetRequiredService<IOptions<WorkforceToolsOptions>>().Value;
+            var mcp = sp.GetRequiredService<IOptions<McpOptions>>().Value;
+            var maxReadAttempts = sp.GetRequiredService<IOptions<AgentOptions>>().Value.MaxReadAttempts;
             var logger = sp.GetRequiredService<ILogger<MockWorkforceTools>>();
 
-            // P8: an optional integration that is not configured degrades to the
-            // working fallback with a log line naming what was missing. It does not
-            // fail startup, and it does not pretend to be the thing it is not.
             if (string.Equals(options.Mode, WorkforceToolsMode.Mcp, StringComparison.OrdinalIgnoreCase))
             {
-                logger.LogWarning(
-                    "WorkforceTools:Mode is 'Mcp', but the MCP adapter is not implemented until Phase 7. "
-                    + "Falling back to Mock. The demonstrated path is unaffected.");
+                // P8: an optional integration whose configuration is absent degrades to
+                // the working fallback with a log line naming what was missing. It does
+                // not fail startup, and it does not half-configure a client and try
+                // anyway. This is also the deployment control — the public deployment
+                // carries no MCP settings at all, so this branch is unreachable there
+                // rather than merely switched off (ADR-0005).
+                var missing = MissingMcpSettings(mcp);
+
+                if (missing.Count > 0)
+                {
+                    logger.LogWarning(
+                        "WorkforceTools:Mode is 'Mcp' but {Missing} is not configured. Falling back to Mock; "
+                        + "the demonstrated path is unaffected.",
+                        string.Join(" and ", missing));
+                }
+                else
+                {
+                    // Same instrumentation, same attempt policy, same span shape as the
+                    // mock — one assembly order, in one factory.
+                    return WorkforceToolsFactory.Instrument(
+                        new McpWorkforceTools(
+                            sp.GetRequiredService<IMcpToolSession>(),
+                            mcp,
+                            sp.GetRequiredService<IConfirmationTokenStore>(),
+                            sp.GetRequiredService<ILogger<McpWorkforceTools>>()),
+                        maxReadAttempts);
+                }
             }
 
             // Decoration, not inheritance (P10). Every implementation gets the same
@@ -81,10 +112,31 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<WorkforceWorld>(),
                 sp.GetRequiredService<IConfirmationTokenStore>(),
                 sp.GetRequiredService<TimeProvider>(),
-                sp.GetRequiredService<IOptions<AgentOptions>>().Value.MaxReadAttempts);
+                maxReadAttempts);
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// Which MCP settings are absent, by name, so the log line says what to set rather
+    /// than that something is wrong.
+    /// </summary>
+    private static IReadOnlyList<string> MissingMcpSettings(McpOptions options)
+    {
+        List<string> missing = [];
+
+        if (string.IsNullOrWhiteSpace(options.ServerUrl))
+        {
+            missing.Add($"{McpOptions.SectionName}:ServerUrl");
+        }
+
+        if (string.IsNullOrWhiteSpace(options.AccessToken))
+        {
+            missing.Add($"{McpOptions.SectionName}:AccessToken");
+        }
+
+        return missing;
     }
 
     /// <summary>

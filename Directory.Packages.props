@@ -46,6 +46,13 @@
       so there is one source of truth for the world rather than two that drift.
     -->
     <PackageVersion Include="YamlDotNet" Version="18.1.0" />
+    <!--
+      The Model Context Protocol client, behind IMcpToolSession and named in exactly
+      one file. `.Core` rather than the full package: this repository is an MCP
+      *client*, and the superset adds server hosting and DI extensions it has no use
+      for. Verified on nuget.org to ship a net10.0 target.
+    -->
+    <PackageVersion Include="ModelContextProtocol.Core" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup Label="Tests">
