@@ -34,8 +34,8 @@ public sealed class DeterministicReplyComposer : IReplyComposer
         ValueTask.FromResult(Compose(context, outcome));
 
     /// <summary>
-    /// The synchronous body, kept as its own method so the live composer can call it
-    /// as a fallback without going through a ValueTask it would immediately unwrap.
+    /// The synchronous body. Public because this composer genuinely is synchronous
+    /// and a caller that knows which one it holds should not have to await nothing.
     /// </summary>
     public string Compose(AgentTurnContext context, string outcome)
     {

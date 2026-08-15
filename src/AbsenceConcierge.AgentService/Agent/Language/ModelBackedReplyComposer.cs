@@ -36,7 +36,7 @@ namespace AbsenceConcierge.AgentService.Agent.Language;
 /// </para>
 /// </summary>
 public sealed class ModelBackedReplyComposer(
-    DeterministicReplyComposer fallback,
+    IReplyComposer grounded,
     ILlmProvider provider,
     IDemoBudget budget,
     IPromptLibrary prompts,
@@ -67,11 +67,15 @@ public sealed class ModelBackedReplyComposer(
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        var grounded = fallback.Compose(context, outcome);
+        // The grounded reply is produced on every path, including the ones that
+        // never call the model. It is both the fallback and the model's input, so a
+        // composite that skipped it when live would have nothing to fall back to at
+        // the moment it most needs one.
+        var reply = await grounded.ComposeAsync(context, outcome, cancellationToken).ConfigureAwait(false);
 
         if (!context.Request.UseModel)
         {
-            return grounded;
+            return reply;
         }
 
         var ceiling = Math.Max(1, _options.MaxOutputTokensPerReply);
@@ -79,7 +83,7 @@ public sealed class ModelBackedReplyComposer(
         if (!budget.TryReserve(ceiling))
         {
             logger.LogInformation("The live composer was asked for but today's token budget is spent.");
-            return grounded;
+            return reply;
         }
 
         var spent = 0;
@@ -89,19 +93,19 @@ public sealed class ModelBackedReplyComposer(
             var response = await provider.CompleteAsync(
                 new LlmRequest(
                     prompts.Read(PromptLibrary.ReplyComposer),
-                    [new LlmMessage("user", Brief(context, outcome, grounded))],
+                    [new LlmMessage("user", Brief(context, outcome, reply))],
                     ceiling),
                 cancellationToken).ConfigureAwait(false);
 
             spent = response.OutputTokens;
 
-            if (Rejected(response, grounded, context) is { } reason)
+            if (Rejected(response, reply, context) is { } reason)
             {
                 logger.LogWarning(
                     "The model's reply was not used: {Reason}. The deterministic reply was sent instead.",
                     reason);
 
-                return grounded;
+                return reply;
             }
 
             return response.Text.Trim();
@@ -109,7 +113,7 @@ public sealed class ModelBackedReplyComposer(
         catch (OperationCanceledException) when (!cancellationToken.IsCancellationRequested)
         {
             logger.LogWarning("The live composer timed out. The deterministic reply was sent instead.");
-            return grounded;
+            return reply;
         }
 #pragma warning disable CA1031 // Any provider failure degrades; none of them may fail a turn.
         catch (Exception exception)
@@ -117,7 +121,7 @@ public sealed class ModelBackedReplyComposer(
             // A turn that already decided correctly must not fail because the prose
             // was going to be nicer. This is P8 at the granularity of one sentence.
             logger.LogWarning(exception, "The live composer failed. The deterministic reply was sent instead.");
-            return grounded;
+            return reply;
         }
 #pragma warning restore CA1031
         finally

@@ -1,0 +1,132 @@
+name: Deploy
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Tag-driven deployment (P12). A push to a branch never deploys anything; a
+#  signed-off release does, and the tag is the record of what shipped.
+#
+#  The gate is not decoration. `needs: verify` runs the same eval suite CI runs on
+#  every pull request, against the same fixtures, with no credential — so a tag
+#  whose constraint scenarios fail cannot reach the demo. An agent deployment
+#  whose evals are advisory is an agent deployment with no gate at all.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+# One deploy at a time. Two concurrent `flyctl deploy` runs against one app race
+# for the machine and the loser reports a failure that says nothing useful.
+concurrency:
+  group: deploy-demo
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  FLY_APP: agent-eval-bench-demo
+
+jobs:
+  verify:
+    name: Evals must pass before anything ships
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      - run: dotnet restore
+
+      - run: dotnet build --configuration Release --no-restore
+
+      # No credential, no network, no model — which is exactly why this can be a
+      # release gate rather than a nightly hope (ADR-0002).
+      - run: dotnet test --configuration Release --no-build --logger "console;verbosity=normal"
+
+  deploy:
+    name: Deploy the demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [verify]
+
+    # A named environment, so the Fly token is scoped to it and a reviewer can see
+    # in the repository settings which workflow is allowed to spend it.
+    environment: demo
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      # --remote-only: the image is built on Fly's builder rather than on the
+      # runner, so the deploy does not depend on a Docker daemon here and the layer
+      # cache survives between runs.
+      #
+      # --ha=false: one machine. This is a demo that scales to zero; a second
+      # machine doubles the idle footprint to protect against an outage nobody is
+      # paged for.
+      - name: flyctl deploy
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${FLY_API_TOKEN:-}" ]; then
+            echo "::error::FLY_API_TOKEN is not set on the 'demo' environment. See flyio/SECRETS.md."
+            exit 1
+          fi
+
+          flyctl deploy \
+            --config flyio/demo.fly.toml \
+            --app "${FLY_APP}" \
+            --remote-only \
+            --ha=false \
+            --wait-timeout 300
+
+      # The deploy reports success when the health check passes, which is a claim
+      # about /health and not about the page. This checks the thing a visitor
+      # actually lands on.
+      - name: The page is served
+        run: |
+          set -euo pipefail
+          url="https://${FLY_APP}.fly.dev"
+
+          for attempt in 1 2 3 4 5; do
+            code=$(curl -sS -o /dev/null -w '%{http_code}' "${url}/" || echo 000)
+
+            if [ "${code}" = "200" ]; then
+              echo "${url}/ answered 200."
+              exit 0
+            fi
+
+            echo "Attempt ${attempt}: ${url}/ answered ${code}. Retrying."
+            sleep $((attempt * 4))
+          done
+
+          echo "::error::${url}/ never answered 200 after the deploy reported success."
+          exit 1
+
+      - name: Security headers are present
+        run: |
+          set -euo pipefail
+          url="https://${FLY_APP}.fly.dev"
+          headers=$(curl -sS -D - -o /dev/null "${url}/")
+
+          # Checked here rather than only in a unit test because the thing that
+          # removes a header in production is a proxy, a platform default or a
+          # middleware ordering change — none of which a unit test sees.
+          for header in "content-security-policy" "x-content-type-options" "referrer-policy"; do
+            if ! echo "${headers}" | tr '[:upper:]' '[:lower:]' | grep -q "^${header}:"; then
+              echo "::error::${header} is missing from the deployed response."
+              exit 1
+            fi
+          done
+
+          echo "Security headers present."

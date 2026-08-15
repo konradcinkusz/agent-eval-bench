@@ -10,7 +10,6 @@ using AbsenceConcierge.AgentService.Workforce.Confirmation;
 using AbsenceConcierge.AgentService.Workforce.Fixtures;
 using AbsenceConcierge.AgentService.Workforce.Mcp;
 using AbsenceConcierge.AgentService.Workforce.Mock;
-using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Options;
 
