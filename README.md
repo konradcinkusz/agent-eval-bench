@@ -66,9 +66,9 @@ The agent is the excuse. **The eval bench is the deliverable.**
 > rather than implied by a badge.
 >
 > **What the evals actually caught** is in [`docs/FINDINGS.md`](docs/FINDINGS.md),
-> numbers first, including the part that flatters nobody: eight defects, six of them
-> in the measuring instrument or the specification rather than in the agent, and
-> none found by the suite passing or failing on the agent itself.
+> numbers first, including the part that flatters nobody: eleven defects, seven of
+> them in the measuring instrument or the specification rather than in the agent,
+> and none found by the suite passing or failing on the agent itself.
 >
 > This README says which lines are built and which are planned. A README that
 > describes a system that does not exist is worse than no README (P14's corollary).
@@ -83,7 +83,7 @@ The agent is the excuse. **The eval bench is the deliverable.**
 | 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | **Done** (judge built and pinned; never yet run against a live model — D-9) |
 | 6 | CI gates: constraints hard-block, behaviours vs baseline, one sticky PR comment with the diff | **Done** |
 | 7 | Production story: [`docs/PRODUCTION.md`](docs/PRODUCTION.md) — trace-to-scenario extraction, the agent definition checked against the service's own catalogue, live MCP mode | **Done** (MCP mode built and tested against a fake session; never yet run against a live server — D-10) |
-| 8 | [`docs/FINDINGS.md`](docs/FINDINGS.md) — numbers-first write-up of what the evals actually caught | **Done** (8 defects, 6 of them in the instrument or the spec rather than the agent) |
+| 8 | [`docs/FINDINGS.md`](docs/FINDINGS.md) — numbers-first write-up of what the evals actually caught | **Done** (11 defects, 7 of them in the instrument or the spec rather than the agent) |
 | 8b | Showcase frontend: one page, whose one special feature is the confirmation card | **Done** (served by the agent service itself; no build step, strict CSP) |
 | 9 | Public deployment, mock by default, scale-to-zero, live model behind an access code | **Done** (`flyio/`, tag-driven, gated on the eval suite; never deployed — no Fly account is wired) |
 
