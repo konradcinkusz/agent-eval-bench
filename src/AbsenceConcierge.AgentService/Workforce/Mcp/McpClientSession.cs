@@ -1,4 +1,8 @@
+using System.Diagnostics;
+using System.Net;
+using System.Text;
 using ModelContextProtocol;
+using ModelContextProtocol.Authentication;
 using ModelContextProtocol.Client;
 using ModelContextProtocol.Protocol;
 
@@ -60,7 +64,114 @@ public sealed class McpClientSession : IMcpToolSession
             TransportMode = HttpTransportMode.StreamableHttp,
             ConnectionTimeout = _timeout,
             AdditionalHeaders = headers,
+
+            // OAuth 2.0 with dynamic client registration, when the deployment asked
+            // for it (D-11). The flow — discovery, registration, PKCE, token
+            // exchange, refresh — is the SDK's own implementation; what this file
+            // contributes is configuration and the loopback listener a native app
+            // needs for the redirect. A bearer token and OAuth can coexist in
+            // configuration; when both are present the SDK's provider supersedes
+            // the static header on the requests it authorises.
+            OAuth = options.OAuth.Enabled ? BuildOAuth(options.OAuth) : null,
         });
+    }
+
+    /// <summary>
+    /// The SDK's OAuth options, from this repository's configuration vocabulary.
+    ///
+    /// <para>
+    /// With no <c>ClientId</c> the SDK performs RFC 7591 dynamic client
+    /// registration under the configured display name — which is the mode a server
+    /// like Factorial's expects. Scopes are a fallback by SDK contract: the
+    /// server's advertised scopes win when it advertises any, which is the right
+    /// direction for an anti-corruption boundary (P11).
+    /// </para>
+    /// </summary>
+    private static ClientOAuthOptions BuildOAuth(McpOAuthOptions oauth) => new()
+    {
+        RedirectUri = new Uri(oauth.RedirectUri, UriKind.Absolute),
+        ClientId = string.IsNullOrWhiteSpace(oauth.ClientId) ? null : oauth.ClientId,
+        ClientSecret = string.IsNullOrWhiteSpace(oauth.ClientSecret) ? null : oauth.ClientSecret,
+        Scopes = oauth.Scopes.Count == 0 ? null : [.. oauth.Scopes],
+        DynamicClientRegistration = new DynamicClientRegistrationOptions
+        {
+            ClientName = oauth.ClientName,
+        },
+        AuthorizationCallbackHandler = (context, cancellationToken) =>
+            AuthoriseAtLoopbackAsync(context, cancellationToken),
+    };
+
+    /// <summary>
+    /// The human half of the flow: print the authorization URL, try to open a
+    /// browser, and catch the redirect on the loopback listener. Response-bound —
+    /// code, state and issuer all travel back — so the SDK's state and RFC 9207
+    /// checks run rather than being waived.
+    ///
+    /// <para>
+    /// This is what makes OAuth mode development-only in mechanics and not merely
+    /// in documentation: a headless deployment has nobody at the URL and nothing
+    /// listening on loopback, so the flow cannot complete there even if someone
+    /// sets the flag (ADR-0002's direction, applied to an interactive credential).
+    /// </para>
+    /// </summary>
+    private static async Task<AuthorizationResult?> AuthoriseAtLoopbackAsync(
+        AuthorizationCallbackContext context,
+        CancellationToken cancellationToken)
+    {
+        using var listener = new HttpListener();
+
+        // HttpListener requires the trailing slash; a configured redirect without
+        // one must not turn into a cryptic ArgumentException at authorise time.
+        var prefix = context.RedirectUri.GetLeftPart(UriPartial.Path);
+        listener.Prefixes.Add(prefix.EndsWith('/') ? prefix : prefix + "/");
+        listener.Start();
+
+        Console.WriteLine();
+        Console.WriteLine("MCP OAuth: open this URL to authorise the agent:");
+        Console.WriteLine($"  {context.AuthorizationUri}");
+        Console.WriteLine();
+
+        TryOpenBrowser(context.AuthorizationUri.ToString());
+
+        var pending = listener.GetContextAsync();
+        var callback = await pending.WaitAsync(cancellationToken).ConfigureAwait(false);
+
+        var query = System.Web.HttpUtility.ParseQueryString(callback.Request.Url?.Query ?? string.Empty);
+
+        var body = Encoding.UTF8.GetBytes(
+            "<!doctype html><meta charset=\"utf-8\"><title>Authorised</title>"
+            + "<p>Authorisation received. You can close this tab and return to the terminal.</p>");
+
+        callback.Response.ContentType = "text/html; charset=utf-8";
+        callback.Response.ContentLength64 = body.Length;
+        await callback.Response.OutputStream.WriteAsync(body, cancellationToken).ConfigureAwait(false);
+        callback.Response.Close();
+
+        return new AuthorizationResult
+        {
+            Code = query["code"],
+            State = query["state"],
+            Iss = query["iss"],
+        };
+    }
+
+    /// <summary>
+    /// Best effort, never load-bearing: the URL is already on the console, and a
+    /// machine with no browser launcher is a machine whose operator can click it
+    /// somewhere else.
+    /// </summary>
+    private static void TryOpenBrowser(string url)
+    {
+        try
+        {
+            using var _ = Process.Start(new ProcessStartInfo(url) { UseShellExecute = true });
+        }
+#pragma warning disable CA1031 // Opening a browser is a convenience; any failure degrades to the printed URL.
+        catch (Exception)
+        {
+            // The printed URL is the contract; the browser was a courtesy.
+        }
+#pragma warning restore CA1031
     }
 
     public async ValueTask<McpToolReply> CallAsync(

@@ -16,8 +16,9 @@ exists to protect.
 | `Llm__ApiKey` | `flyctl secrets set` | No model is constructed. Replies are written by the deterministic composer and the page's banner says so. |
 | `Llm__Endpoint` | `flyctl secrets set` | As above — the provider reports itself unconfigured rather than half-configured. |
 | `Llm__Model` | `[env]` or a secret | As above. This is the Azure OpenAI **deployment name**, not a model id; conflating the two is the usual first-call failure. |
-| `Demo__AccessCode` | `flyctl secrets set` | Live replies are **unavailable**, not open. A missing secret is the normal state of a fork and a preview environment. |
-| `FLY_API_TOKEN` | GitHub repository secret | The deploy workflow cannot run. Nothing else is affected. |
+| `Demo__AccessCode` | `flyctl secrets set` | Optional here: this demo runs **open** live mode (`Demo__AllowLiveWithoutCode` in `demo.fly.toml`), bounded per visitor and per day. A code, when set, additionally exempts its holder from the per-visitor allowance. On a deployment *without* the open flag, an absent code means live replies are **unavailable**, not open. |
+| `APPLICATIONINSIGHTS_CONNECTION_STRING` | `flyctl secrets set` (written by the Azure provisioning workflow) | Traces are produced but exported nowhere — the demo works, and the production loop (`docs/PRODUCTION.md` §1) has nothing to read. |
+| `FLY_API_TOKEN` | GitHub environment secret (`demo`) | The deploy workflow cannot run. Nothing else is affected. |
 
 ```bash
 flyctl secrets set --app agent-eval-bench-demo \
@@ -41,16 +42,28 @@ If those settings ever *were* set here, the service would still start and still 
 — it would simply be doing something nobody asked it to. The control is that the
 values do not exist on this app, and this paragraph is why.
 
-## Why the access code is not authentication
+## Why there is no authentication, and what bounds the spend instead
 
-It is a spend control, and calling it anything else would set the wrong
-expectations. It answers "is this somebody I gave a code to?" — enough to keep a
-paid model off a public endpoint, and nowhere near enough to protect data. There is
-no data here to protect: every visitor sees the same fictional company, nothing is
-stored, and nothing is written anywhere.
+The demo is deliberately open: no account, no sign-in, and on this deployment no
+access code either. That is a decision, not an omission — a demo behind a code is a
+demo most visitors never see working, and there is no data here to protect: every
+visitor sees the same fictional company, nothing is stored, and nothing is written
+anywhere.
 
-The control that actually bounds cost is the daily token budget, which no amount of
-code-sharing moves.
+What replaces authentication is a stack of ceilings, each of which fails closed:
+
+| Ceiling | Bounds |
+|---|---|
+| `Demo__DailyOutputTokenBudget` | The bill. Shared, daily, and no number of visitors moves it. |
+| `Demo__LiveTurnsPerClientPerDay` | One visitor's share of it. Past it, that visitor's replies go deterministic; the demo keeps working. |
+| `Demo__RequestsPerMinutePerClient` | One address's request rate, on every route a stranger can reach. |
+| `Demo__MaxConcurrentRequests` | What all visitors together can hold open at once. Health probes are exempt. |
+| `Demo__MaxConversations` / `Demo__MaxTurnsPerConversation` / `Demo__MaxRequestBodyBytes` | The process's memory: bounded map, bounded turns, bounded payload. |
+
+The access code still exists as an operator's convenience — a holder is exempt from
+the per-visitor allowance — but nothing about the demo requires a visitor to hold
+anything. It answers "is this somebody I gave a code to?", which is a spend
+question, never an identity one.
 
 ## Rotation
 

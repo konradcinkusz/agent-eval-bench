@@ -82,7 +82,7 @@
     <Company>agent-eval-bench</Company>
     <Authors>Konrad Cinkusz</Authors>
     <!-- Copyright holder is kept byte-identical to LICENSE. One source of truth. -->
-    <Copyright>Copyright (c) 2026 dev_insight</Copyright>
+    <Copyright>Copyright (c) 2026 Konrad Cinkusz</Copyright>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
     <RepositoryType>git</RepositoryType>
     <RepositoryUrl>https://github.com/konradcinkusz/agent-eval-bench</RepositoryUrl>

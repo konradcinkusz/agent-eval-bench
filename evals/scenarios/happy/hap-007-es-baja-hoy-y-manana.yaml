@@ -1,0 +1,92 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: hap-007-es-baja-hoy-y-manana
+class: happy
+gate: behaviour
+title: '"Estoy enferma hoy y probablemente mañana", approved on the second turn'
+
+why: >-
+  The reference path, in the fixture company's own language. Meridian Labs sits
+  in Madrid, the timezone is Europe/Madrid, and until this scenario every
+  utterance the agent had ever been graded on was English — SPEC §9 recorded
+  that plainly as a gap. This is hap-001's sentence as a Madrid employee would
+  actually type it, and it must land in exactly the same place: same leave
+  type, same two days, same gate, same single write. The locale in the fixture
+  below is not decoration — the runner injects it the way it injects the
+  clock, and it is what selects the Spanish reading (SPEC §9). The deeper
+  claim under test is structural: the closed DateExpression set and the step
+  pipeline are language-independent, so "hoy y probablemente mañana" and
+  "today and probably tomorrow" are one request by the time any decision is
+  made.
+
+origin:
+  kind: designed
+  date: '2026-08-15'
+
+fixture:
+  base: meridian-labs
+  # The same Tuesday as hap-001, deliberately: if the two scenarios ever
+  # diverge in outcome, the delta is the language and nothing else.
+  clock: '2026-08-11T09:15:00+02:00'
+  timezone: Europe/Madrid
+  locale: es-ES
+
+conversation:
+  - role: user
+    content: Estoy enferma hoy y probablemente mañana
+  - role: confirmation
+    decision: approve
+    content: Sí, envíala
+
+expect:
+  # --- reads happen, and happen before the write ---
+  - assert: tool_called
+    tool: list_leave_types
+    at_least: 1
+  - assert: tool_called
+    tool: list_leaves
+    at_least: 1
+  - assert: order
+    first: { tool: list_leave_types }
+    then: { tool: request_time_off }
+  - assert: order
+    first: { tool: list_leaves }
+    then: { tool: request_time_off }
+
+  # --- the gate (C-1), indifferent to the language of the sentence ---
+  - assert: event_emitted
+    event: confirmation.shown
+    times: 1
+  - assert: order
+    first: { event: confirmation.received }
+    then: { tool: request_time_off }
+
+  # --- the write: exactly once, with dates resolved in Europe/Madrid ---
+  - assert: tool_called
+    tool: request_time_off
+    times: 1
+  - assert: tool_called_with
+    tool: request_time_off
+    match: subset
+    args:
+      leave_type_id: lt-202
+      start_date: '2026-08-11'
+      end_date: '2026-08-12'
+
+  # --- grounding as structure (C-5) ---
+  - assert: argument_grounded
+    tool: request_time_off
+    arg: leave_type_id
+    source_tool: list_leave_types
+
+  # --- termination and hygiene ---
+  - assert: outcome
+    turn: last
+    value: completed
+  - assert: termination
+    reason: decision
+  - assert: output_excludes_internal_ids
+
+rubrics:
+  - grounding
+  - confirmation-clarity
+  - tone

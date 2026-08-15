@@ -55,6 +55,37 @@ primary_region = "mad"
   Demo__MaxOutputTokensPerReply = "300"
   Demo__RequestsPerMinutePerClient = "20"
 
+  # The demo is deliberately no-auth: live replies are OPEN, without a code, and
+  # the spend that opens is bounded twice — per visitor by the daily allowance
+  # below, and in total by the token budget above, which no number of visitors
+  # moves. The flag is explicit config on THIS app only; a fork without it stays
+  # locked (see DemoOptions.AllowLiveWithoutCode for why the default matters).
+  Demo__AllowLiveWithoutCode = "true"
+  Demo__LiveTurnsPerClientPerDay = "25"
+
+  # Stability ceilings for an endpoint with no accounts: conversations are capped
+  # and evicted least-recently-used, one conversation gets a bounded number of
+  # turns, and the request body is bounded at the server. Defaults restated here
+  # so the deployed numbers are readable without opening the source.
+  Demo__MaxConversations = "10000"
+  Demo__MaxTurnsPerConversation = "60"
+  Demo__MaxRequestBodyBytes = "32768"
+  Demo__MaxConcurrentRequests = "64"
+
+  # On Fly every socket peer is the platform's proxy, so the per-client limiter
+  # reads the client from Fly-Client-IP. Only ever set where a proxy actually
+  # sets that header — with nothing in front, it would be client-supplied.
+  Demo__TrustProxyClientIpHeader = "true"
+
+  # Sampling at 100%, stated rather than inherited from an SDK default
+  # (docs/PRODUCTION.md §1): at 10%, nine incidents in ten have no trace to
+  # extract from, and the agent behaves identically so nothing tells you. Cost
+  # is controlled by retention and the ingestion cap on the Azure side, never
+  # by deleting the input. The trace sink itself arrives as a secret
+  # (APPLICATIONINSIGHTS_CONNECTION_STRING, set by the provisioning workflow);
+  # absent, spans are produced and exported nowhere, and the demo is unaffected.
+  OTEL_TRACES_SAMPLER = "parentbased_always_on"
+
 [http_service]
   internal_port = 8080
   force_https = true
