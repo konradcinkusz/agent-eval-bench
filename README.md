@@ -20,7 +20,7 @@ The agent is the excuse. **The eval bench is the deliverable.**
 
 ## Status
 
-> **Phases 0–4 of 10 complete — the contract, the agent, and Layer 1 running against it.**
+> **Phases 0–6 of 10 complete — the contract, the agent, both eval layers, and the gates.**
 >
 > `docs/SPEC.md` and 32 scenarios came first and are validated in CI. The agent runs
 > as a step pipeline whose order *is* the specification — establish the actor, read a
@@ -42,6 +42,13 @@ The agent is the excuse. **The eval bench is the deliverable.**
 > reports `skipped:no-credential`, the nightly keyed workflow is what fixes that, and
 > it is recorded as D-9 rather than implied to be working.
 >
+> A pull request gets **one comment, updated in place, carrying the diff** rather
+> than a dashboard: what changed against the baseline, or the sentence saying
+> nothing did. Two coupling rules are checks rather than conventions — a change to
+> `agents/` or `prompts/` must come with a change to the spec, and a change to a
+> fixture or a rubric must come with a version bump, because both are edits that
+> move what a number measured.
+>
 > **What Layer 1 does not prove** is that the agent understands English: on the
 > gated path the interpreter is rule-based, so a green run means the orchestration
 > and the constraint layer work. Language understanding is what the judge and the
@@ -58,8 +65,8 @@ The agent is the excuse. **The eval bench is the deliverable.**
 | 3 | The agent loop: intent → dates → leave types → conflicts → draft → **confirmation gate** → execute | **Done** |
 | 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | **Done** |
 | 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | **Done** (judge built and pinned; never yet run against a live model — D-9) |
-| 6 | CI gates: constraints hard-block, behaviours vs baseline, one sticky PR comment with the diff | Next |
-| 7 | Production story: OTLP scoring integration, agent-as-code deployment, live MCP mode | Planned |
+| 6 | CI gates: constraints hard-block, behaviours vs baseline, one sticky PR comment with the diff | **Done** |
+| 7 | Production story: OTLP scoring integration, agent-as-code deployment, live MCP mode | Next |
 | 8 | `docs/FINDINGS.md` — numbers-first write-up of what the evals actually caught | Planned |
 | 8b | Showcase frontend: one page, whose one special feature is the confirmation card | Planned |
 | 9 | Public deployment, mock by default, scale-to-zero, live model behind an access code | Planned |

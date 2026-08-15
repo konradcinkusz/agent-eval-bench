@@ -10,12 +10,20 @@ Operational scripts, following the conventions in
 | `install-hooks.sh` | Points `core.hooksPath` at the committed `hooks/` directory | — |
 | `scan-secrets.sh` | gitleaks over full history, staged changes, or the working tree | `.github/workflows/secret-scan.yml` |
 | `hooks/pre-commit` | Refuses a commit whose staged changes contain a secret | same job, one commit earlier |
+| `check-links.mjs` | Resolves every relative link in every Markdown file, tracked or not | `ci.yml` → lint-docs |
+| `validate-scenarios.mjs` | Schema, corpus invariants and assertion discipline over `evals/scenarios/` | `ci.yml` → lint-docs |
+| `check-change-coupling.mjs` | A behaviour change is written down; a changed measuring stick is versioned | `ci.yml` → coupling |
+| `eval-comment.mjs` | Renders the pull request's eval comment — the diff against the baseline | `ci.yml` → build-test |
 
 ```bash
 ./scripts/setup.sh              # run once per clone
 ./scripts/setup.sh --check      # prerequisites only, changes nothing
 ./scripts/scan-secrets.sh       # exactly what CI runs
 ./scripts/scan-secrets.sh --staged
+
+node scripts/validate-scenarios.mjs
+node scripts/check-change-coupling.mjs origin/main
+node scripts/eval-comment.mjs    # needs TestResults/ from a `dotnet test` run
 ```
 
 ## Why bash and not PowerShell
