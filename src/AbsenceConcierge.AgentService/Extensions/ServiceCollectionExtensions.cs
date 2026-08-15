@@ -122,7 +122,9 @@ public static class ServiceCollectionExtensions
 
     /// <summary>
     /// Which MCP settings are absent, by name, so the log line says what to set rather
-    /// than that something is wrong.
+    /// than that something is wrong. Two ways to be credentialed — a bearer token
+    /// obtained out of band, or the OAuth flow (D-11) — and either satisfies the
+    /// check; the log line names both so the reader picks one rather than hunting.
     /// </summary>
     private static List<string> MissingMcpSettings(McpOptions options)
     {
@@ -133,9 +135,9 @@ public static class ServiceCollectionExtensions
             missing.Add($"{McpOptions.SectionName}:ServerUrl");
         }
 
-        if (string.IsNullOrWhiteSpace(options.AccessToken))
+        if (string.IsNullOrWhiteSpace(options.AccessToken) && !options.OAuth.Enabled)
         {
-            missing.Add($"{McpOptions.SectionName}:AccessToken");
+            missing.Add($"{McpOptions.SectionName}:AccessToken (or {McpOptions.SectionName}:OAuth:Enabled)");
         }
 
         return missing;
