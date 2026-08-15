@@ -27,14 +27,26 @@ public static class WorkforceToolsFactory
         IConfirmationTokenStore tokens,
         TimeProvider timeProvider,
         int maxReadAttempts,
+        Func<IWorkforceTools, IWorkforceTools>? decorate = null) =>
+        Instrument(new MockWorkforceTools(world, tokens, timeProvider), maxReadAttempts, decorate);
+
+    /// <summary>
+    /// The same chain over a backend that is not the mock.
+    ///
+    /// <para>
+    /// The MCP adapter goes through here rather than constructing its own decorator,
+    /// so the two modes are not merely documented as producing the same trace shape —
+    /// they produce it by running the same three lines. A scenario that passes on the
+    /// mock is then evidence about the span shape of the integration, which is the
+    /// only claim this repository can make about a mode it has no server to test.
+    /// </para>
+    /// </summary>
+    public static IWorkforceTools Instrument(
+        IWorkforceTools backend,
+        int maxReadAttempts,
         Func<IWorkforceTools, IWorkforceTools>? decorate = null)
     {
-        IWorkforceTools tools = new MockWorkforceTools(world, tokens, timeProvider);
-
-        if (decorate is not null)
-        {
-            tools = decorate(tools);
-        }
+        var tools = decorate is null ? backend : decorate(backend);
 
         return new InstrumentedWorkforceTools(tools, new ToolAttemptPolicy(maxReadAttempts));
     }
