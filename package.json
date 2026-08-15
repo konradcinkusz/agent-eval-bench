@@ -9,10 +9,11 @@
     "node": ">=20"
   },
   "scripts": {
-    "lint": "npm run lint:md && npm run lint:links && npm run validate:scenarios",
+    "lint": "npm run lint:md && npm run lint:links && npm run validate:scenarios && npm run validate:agents",
     "lint:md": "markdownlint-cli2",
     "lint:links": "node scripts/check-links.mjs",
-    "validate:scenarios": "node scripts/validate-scenarios.mjs"
+    "validate:scenarios": "node scripts/validate-scenarios.mjs",
+    "validate:agents": "node scripts/validate-agent-definitions.mjs"
   },
   "devDependencies": {
     "ajv": "^8.20.0",

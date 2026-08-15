@@ -133,3 +133,6 @@ fly.toml.local
 scratch/
 tmp/
 *.local.md
+
+# Written by the extraction round-trip test beside the scenario it derives from.
+*.yaml.tmp
