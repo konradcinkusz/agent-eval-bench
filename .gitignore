@@ -136,3 +136,6 @@ tmp/
 
 # Written by the extraction round-trip test beside the scenario it derives from.
 *.yaml.tmp
+
+# Playwright e2e output (tests/e2e/)
+tests/e2e/.artifacts/

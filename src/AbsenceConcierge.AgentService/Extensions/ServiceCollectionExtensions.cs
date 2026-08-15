@@ -160,6 +160,31 @@ public static class ServiceCollectionExtensions
         services.Configure<AgentOptions>(configuration.GetSection(AgentOptions.SectionName));
         services.Configure<LlmOptions>(configuration.GetSection(LlmOptions.SectionName));
 
+        // A pinned clock, from configuration, for the browser suite and nothing
+        // else. The eval harness pins time by construction (ScenarioRunner); the
+        // Playwright suite drives the REAL service over HTTP, and "I'm sick today
+        // and probably tomorrow" typed on a Saturday resolves onto a weekend — a
+        // suite green Monday-to-Friday is not a suite (SPEC §9). Guarded the same
+        // way every optional setting is: absent means the system clock, and a
+        // deployment that sets it gets a log line loud enough to notice, because a
+        // demo frozen in time is otherwise a very quiet bug.
+        if (DateTimeOffset.TryParse(
+                configuration["Agent:PinnedUtcNow"],
+                System.Globalization.CultureInfo.InvariantCulture,
+                System.Globalization.DateTimeStyles.RoundtripKind,
+                out var pinned))
+        {
+            services.AddSingleton<TimeProvider>(sp =>
+            {
+                sp.GetRequiredService<ILogger<AgentOrchestrator>>().LogWarning(
+                    "Agent:PinnedUtcNow is set: the clock is FROZEN at {Pinned}. This exists for the "
+                    + "end-to-end suite; no deployed environment should set it.",
+                    pinned);
+
+                return new PinnedTimeProvider(pinned);
+            });
+        }
+
         // The default path has no model, no credential and no network (ADR-0002).
         // The model-backed implementations register over these when one is configured.
         services.TryAddSingleton<IUtteranceInterpreter, DeterministicUtteranceInterpreter>();
@@ -362,6 +387,12 @@ public static class ServiceCollectionExtensions
     /// </para>
     /// </summary>
     public sealed record LlmProviderHandle(ILlmProvider? Provider);
+
+    /// <summary>A clock that does not move. Registered only when <c>Agent:PinnedUtcNow</c> is set.</summary>
+    private sealed class PinnedTimeProvider(DateTimeOffset now) : TimeProvider
+    {
+        public override DateTimeOffset GetUtcNow() => now;
+    }
 
     private const string LlmHttpClientName = "llm";
 
