@@ -59,9 +59,15 @@ expect:
   #     one attempt passes this, three do not. Two is the §7 rule 3 limit and
   #     is defensible here only because a 500 means nothing was created, so a
   #     second attempt cannot double-book. ---
+  # --- EXACTLY one logical call. `at_least` was wrong here until the Phase 4
+  #     mutation pass walked through it: an orchestrator that submits a second
+  #     time against one confirmation passes `at_least: 1` and every other
+  #     assertion in this file, and C-6 is the constraint it breaks. Transport
+  #     retries stay bounded by `call_attempts` below; a second SPAN is a second
+  #     submission, and that is what this line now forbids. ---
   - assert: tool_called
     tool: request_time_off
-    at_least: 1
+    times: 1
   - assert: call_attempts
     tool: request_time_off
     max_attempts: 2

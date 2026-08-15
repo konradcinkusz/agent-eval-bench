@@ -1,9 +1,17 @@
 # Absence Concierge — behaviour specification
 
 - **Agent slug**: `absence-concierge`
-- **Spec version**: 1.1.0
+- **Spec version**: 1.2.0
 - **Status**: Accepted — this is the contract. Code is measured against it, not the other way round.
-- **Date**: 2026-08-15 (1.0.0: 2026-08-14)
+- **Date**: 2026-08-15 (1.1.0: 2026-08-15, 1.0.0: 2026-08-14)
+
+**What changed in 1.2.0**, found by writing the Layer 1 harness in Phase 4:
+
+| Change | Why |
+|---|---|
+| Tool spans carry `workforce.tool.result_ids` ([§2.2](#22-trace-events)) | C-5 asserts that an identifier in a write came from an earlier tool result. Nothing recorded what a tool result contained, so the constraint was specified and unevaluable — the harness could only have read the agent's memory, which is not the trace |
+| [§8.1](#81-budgets) records that injected latency is not slept through | `deg-001` declares a 30-second timeout. Honouring it literally would spend more than the whole Layer 1 budget on one scenario, and the outcome is what the scenario asserts |
+| [§2.2.1](#221-one-span-per-logical-tool-call) corrected: an orchestrator retry shows up in `tool_called`, **not** in `call_attempts` | The original sentence said the opposite, and two scenarios were written on the strength of it. A broken agent that submitted twice against one confirmation passed both. `deg-003` and `deg-004` now assert `times: 1` |
 
 **What changed in 1.1.0**, all of it found by implementing the agent in Phase 3
 and amended in the same pull request as the code, per the rule below:
@@ -180,6 +188,18 @@ perfectly deterministic facts. Putting the draft's contents on the event moves
 them back where they belong. Layer 1 asserts the numbers; Layer 2 grades whether
 the sentence built from them reads well.
 
+Tool spans additionally carry **`workforce.tool.result_ids`** — the identifiers the
+call returned, semicolon-separated. *(Added in 1.2.0.)* Without it
+[C-5](#4-hard-constraints) is a constraint the trace cannot answer: grounding asks
+whether an identifier in a write came from an earlier tool result, and until
+version 1.2.0 the span recorded the call's *arguments* and its outcome but never
+what came back. Writing the Layer 1 harness is what surfaced it, and the fix
+belongs in the trace rather than in the harness — Layer 1 asserts over the trace
+and nothing else ([ADR-0003](adr/0003-agent-decisions-are-trace-attributes.md)).
+
+Identifiers only, never display text. A leave type's *name* can carry an injected
+instruction and has no business in an attribute the harness reads.
+
 ### 2.2.1 One span per logical tool call
 
 **A tool call is one span, however many transport attempts it took.** Retries
@@ -208,7 +228,17 @@ Here it is one. Consequently:
 
 A resilience-handler retry is therefore not a "silent retry loop" — it is visible
 infrastructure beneath the trace. An *orchestrator* loop that calls the tool again
-is, and `call_attempts` is where it shows up.
+is, and it shows up as a **second span**, which `tool_called` counts and
+`call_attempts` does not.
+
+> **Corrected in 1.2.0.** Version 1.0.0 of this section ended "and `call_attempts`
+> is where it shows up", which is exactly backwards: an orchestrator retry opens a
+> new span with one attempt in it, so the attempt bound is the one place it is
+> invisible. The Phase 4 mutation pass walked a deliberately broken agent through
+> `deg-003` and `deg-004` and both passed — the scenarios asserted `at_least: 1` on
+> the write, on the strength of this sentence. Both now assert `times: 1`, which is
+> what [C-6](#4-hard-constraints) said all along. This is the mutation requirement
+> in [§8.6](#86-proving-the-suite-can-fail) earning its place on its first run.
 
 ### 2.3 Turn outcomes
 
@@ -521,6 +551,15 @@ combined, for this suite:
 
 The cost column is an addition: TESTING-STRATEGY.md budgets minutes, never money,
 because no tier before this one had metered spend.
+
+**Injected latency is declared, not slept through.** *(1.2.0.)* A scenario's
+`tool_behaviour.latency_ms` describes the failure being modelled — `deg-001`
+declares 30 seconds — and the harness does not wait it out. Honouring one such
+scenario literally would spend more than the entire Layer 1 budget above, and the
+suite would be pruned within the month; what the scenario asserts is the *outcome*
+and the attempt count, both of which arrive immediately. The field stays in the
+fixture because it documents what is being modelled, and this paragraph exists so
+that "the harness sleeps for 30 seconds" is never inferred from its presence.
 
 > *"A smoke suite that grows past its budget gets pruned, not renamed."*
 > — TESTING-STRATEGY.md §2

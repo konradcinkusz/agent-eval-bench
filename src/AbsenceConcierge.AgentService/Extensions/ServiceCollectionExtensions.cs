@@ -73,19 +73,15 @@ public static class ServiceCollectionExtensions
                     + "Falling back to Mock. The demonstrated path is unaffected.");
             }
 
-            IWorkforceTools tools = new MockWorkforceTools(
+            // Decoration, not inheritance (P10). Every implementation gets the same
+            // trace shape because every implementation goes through the same
+            // factory — the one the eval harness also calls, so the suite cannot
+            // measure a chain the service does not have.
+            return WorkforceToolsFactory.Build(
                 sp.GetRequiredService<WorkforceWorld>(),
                 sp.GetRequiredService<IConfirmationTokenStore>(),
-                sp.GetRequiredService<TimeProvider>());
-
-            // Decoration, not inheritance (P10). Every implementation gets the same
-            // trace shape because every implementation goes through this wrapper —
-            // including the attempt loop, which must live inside the span so that
-            // one logical call stays one span (SPEC §2.2.1).
-            var attempts = new ToolAttemptPolicy(
+                sp.GetRequiredService<TimeProvider>(),
                 sp.GetRequiredService<IOptions<AgentOptions>>().Value.MaxReadAttempts);
-
-            return new InstrumentedWorkforceTools(tools, attempts);
         });
 
         return services;

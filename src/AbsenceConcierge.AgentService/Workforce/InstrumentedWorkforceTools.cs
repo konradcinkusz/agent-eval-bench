@@ -135,6 +135,14 @@ public sealed class InstrumentedWorkforceTools(IWorkforceTools inner, IToolAttem
                 if (attempt >= maxAttempts || !IsWorthRetrying(result.Outcome))
                 {
                     activity?.SetTag(AgentDiagnostics.Attributes.ToolOutcome, outcome);
+
+                    // What the call returned, as identifiers. This is what makes
+                    // C-5 answerable from the trace rather than from trust.
+                    if (ToolResultIdentifiers.Of(result.Value) is { } ids)
+                    {
+                        activity?.SetTag(AgentDiagnostics.Attributes.ToolResultIds, ids);
+                    }
+
                     break;
                 }
             }

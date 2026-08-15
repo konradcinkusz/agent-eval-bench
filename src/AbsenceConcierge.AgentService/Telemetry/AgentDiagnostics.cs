@@ -81,6 +81,14 @@ public static class AgentDiagnostics
         public const string ToolOutcome = "workforce.tool.outcome";
         public const string ToolArguments = "workforce.tool.arguments";
 
+        /// <summary>
+        /// The identifiers the call returned, semicolon-separated. Without it C-5
+        /// is a constraint the trace cannot answer: grounding asks whether a written
+        /// id came from an earlier tool result, and nothing recorded what a result
+        /// contained (SPEC §2.2).
+        /// </summary>
+        public const string ToolResultIds = "workforce.tool.result_ids";
+
         public const string TurnOutcome = "agent.turn.outcome";
         public const string TerminationReason = "agent.termination.reason";
 

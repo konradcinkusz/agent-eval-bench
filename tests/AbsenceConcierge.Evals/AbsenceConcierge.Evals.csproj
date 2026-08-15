@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <!-- xunit v3 runs as its own process. -->
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" />
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="xunit.runner.visualstudio" />
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/AbsenceConcierge.AgentService/AbsenceConcierge.AgentService.csproj" />
+  </ItemGroup>
+
+  <!--
+    NOTHING under evals/ is copied into the output directory, and that is deliberate.
+
+    The other projects link evals/fixtures/*.yaml because the service must carry its
+    world into a container. This project reads the corpus from the source tree at
+    run time instead: a copied scenario is a scenario that can be stale, and a suite
+    that graded yesterday's corpus while the repository holds today's would report
+    green for a scenario nobody can find. RepositoryLayout walks up to the solution
+    file and fails loudly if it cannot.
+  -->
+
+</Project>
