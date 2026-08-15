@@ -122,7 +122,7 @@ public static class ServiceCollectionExtensions
     /// Which MCP settings are absent, by name, so the log line says what to set rather
     /// than that something is wrong.
     /// </summary>
-    private static IReadOnlyList<string> MissingMcpSettings(McpOptions options)
+    private static List<string> MissingMcpSettings(McpOptions options)
     {
         List<string> missing = [];
 
