@@ -30,13 +30,24 @@ public sealed record LeaveType(
     bool AllowsHalfDays,
     int? RequiresAttachmentAfterDays);
 
+/// <summary>
+/// An existing booking.
+///
+/// <para>
+/// <see cref="Comment"/> is free text a human wrote, carried through from the
+/// backend. It is modelled because two adversarial scenarios hide an instruction in
+/// it, and a field the loader silently dropped would have made those scenarios
+/// untestable while looking like they passed. Nothing in the agent branches on it.
+/// </para>
+/// </summary>
 public sealed record Leave(
     string Id,
     string EmployeeId,
     string LeaveTypeId,
     DateOnly StartDate,
     DateOnly EndDate,
-    string Status);
+    string Status,
+    string? Comment = null);
 
 public sealed record CompanyHoliday(DateOnly Date, string Name);
 

@@ -64,6 +64,14 @@ public sealed class FixtureLeave
     public string StartDate { get; set; } = string.Empty;
     public string EndDate { get; set; } = string.Empty;
     public string Status { get; set; } = string.Empty;
+
+    /// <summary>
+    /// Free text from whoever made the booking. Deliberately modelled: two
+    /// adversarial scenarios plant an instruction here, and a field the loader
+    /// dropped would leave those scenarios asserting against a payload that never
+    /// reached the agent — a green result proving nothing.
+    /// </summary>
+    public string? Comment { get; set; }
 }
 
 public sealed class FixtureHoliday
@@ -140,7 +148,8 @@ public sealed record WorkforceWorld(
                     l.LeaveTypeId,
                     Date(l.StartDate, $"existing_leaves[{l.Id}].start_date"),
                     Date(l.EndDate, $"existing_leaves[{l.Id}].end_date"),
-                    l.Status))
+                    l.Status,
+                    l.Comment))
                 .ToList(),
             file.CompanyHolidays
                 .Select(h => new CompanyHoliday(Date(h.Date, $"company_holidays[{h.Name}].date"), h.Name))
