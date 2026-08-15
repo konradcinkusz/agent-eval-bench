@@ -1,7 +1,6 @@
 using AbsenceConcierge.AgentService.Agent;
 using AbsenceConcierge.AgentService.Demo;
 using AbsenceConcierge.AgentService.Extensions;
-using Microsoft.AspNetCore.RateLimiting;
 
 namespace AbsenceConcierge.AgentService.Endpoints;
 

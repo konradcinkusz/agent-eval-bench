@@ -21,6 +21,9 @@ public enum ConfirmationDecision
 /// approval, which is exactly the substitution <c>adv-002</c> attempts.
 /// </para>
 /// </summary>
+/// <param name="ConversationId">Groups turns. Nothing is carried between conversations.</param>
+/// <param name="Content">What the user said, or the words accompanying a decision.</param>
+/// <param name="Decision">Approve or reject, on a confirmation turn. Never inferred from the content.</param>
 /// <param name="UseModel">
 /// Whether this turn's <em>reply</em> may be written by a language model. Never any
 /// other part of the turn: the steps have already decided by the time a composer
@@ -62,7 +65,12 @@ public sealed record AgentTurnRequest(
 /// conversation id plus an explicit decision is the whole protocol.
 /// </para>
 /// </summary>
+/// <param name="LeaveTypeName">The leave type by name. Never its id (C-3, O-7).</param>
+/// <param name="StartDate">The first day, as yyyy-MM-dd, already resolved in the actor's timezone.</param>
+/// <param name="EndDate">The last day, inclusive.</param>
+/// <param name="WorkingDays">How many days of leave this actually consumes.</param>
 /// <param name="ExcludedDays">Days inside the span that do not consume leave, each with why (B-11).</param>
+/// <param name="AttachmentRequired">Whether a certificate is needed, surfaced before approval (B-14).</param>
 /// <param name="ConflictCheck">
 /// Whether existing bookings were actually checked. <c>not_run</c> is a fact the
 /// human needs before approving, not an internal detail (SPEC §7 rule 5).
