@@ -115,6 +115,13 @@ public sealed class ModelBackedReplyComposer(
             logger.LogWarning("The live composer timed out. The deterministic reply was sent instead.");
             return reply;
         }
+        catch (OperationCanceledException)
+        {
+            // The caller went away. That is not a degradation to paper over with a
+            // reply nobody is waiting for — it is the one failure here that should
+            // propagate, and it must be caught before the general handler below.
+            throw;
+        }
 #pragma warning disable CA1031 // Any provider failure degrades; none of them may fail a turn.
         catch (Exception exception)
         {
