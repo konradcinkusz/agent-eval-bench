@@ -1,9 +1,16 @@
 # Absence Concierge — behaviour specification
 
 - **Agent slug**: `absence-concierge`
-- **Spec version**: 1.3.0
+- **Spec version**: 1.4.0
 - **Status**: Accepted — this is the contract. Code is measured against it, not the other way round.
-- **Date**: 2026-08-15 (1.2.0: 2026-08-15, 1.1.0: 2026-08-15, 1.0.0: 2026-08-14)
+- **Date**: 2026-08-15 (1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+
+**What changed in 1.4.0**, on building the public demo in Phases 8b and 9:
+
+| Change | Why |
+|---|---|
+| [§4.1](#41-where-a-model-is-allowed-to-run) added: a model may write the reply and nothing else | The demo has a live mode, and a live mode is a behaviour change whether or not it has a code diff. Stating where the model sits is what makes "every constraint is indifferent to which composer ran" checkable instead of reassuring — and `prompts/reply-composer.md` is now a file this document is coupled to |
+| The confirmation draft is part of the turn's result, not only of its prose | A client that parsed dates back out of the reply would be a second implementation of the draft, free to disagree with the one the trace recorded. What a human approves has to be what the agent is holding |
 
 **What changed in 1.3.0**, on implementing the live integration in Phase 7:
 
@@ -361,6 +368,42 @@ at the MCP boundary, independently of anything the agent decides — the layered
 enforcement split of `PAYMENTS-AND-MONETIZATION.md` §7, applied to agents by
 AI-EVALS.md §8. The adversarial scenarios assert both layers: that the agent did
 not attempt the forbidden call, and that nothing would have happened if it had.
+
+### 4.1 Where a model is allowed to run
+
+A language model may write **one thing**: the sentence the user reads. It may
+write nothing else, and this is a structural claim rather than a policy.
+
+By the time a reply is composed, every step has run, the outcome is resolved, and
+both are already trace attributes ([ADR-0003](adr/0003-agent-decisions-are-trace-attributes.md)).
+So a model in that position cannot call a tool, cannot reach the gate, cannot
+change a date and cannot change an outcome. Every constraint in §4 is a property
+of the step pipeline and the tool boundary, and is therefore indifferent to which
+composer ran. **The model writes; the pipeline decides.**
+
+Three rules make that sentence true rather than merely likely:
+
+1. **The user's words are not in the model's input.** Its entire input is the
+   reply the deterministic composer already produced, plus the outcome. A
+   rewriter that could see the conversation is a rewriter that can be told what to
+   write.
+1. **The result is checked before it is used.** A reply that is empty, that was
+   truncated at the output ceiling, that grew past roughly twice the grounded
+   reply's length, or that contains any identifier this turn handled, is
+   discarded. The identifier check is exact — the actual ids in play — never a
+   pattern for things that look like ids.
+1. **Every failure is a fallback, never an error.** No credential, no budget, a
+   timeout, a refused check: each returns the grounded reply. A turn that already
+   decided correctly must not fail because the prose was going to be nicer.
+
+The prompt is a file (`prompts/reply-composer.md`), never a string literal, so
+editing it is a diff on a path CI couples to a change in this document (§10).
+
+**Layer 1 is unaffected and stays that way.** The whole eval suite runs with no
+model, which is what lets it gate every pull request
+([ADR-0002](adr/0002-mock-first-zero-credential-default.md)). A model-written
+reply is graded by Layer 2's rubrics, on the same anchors as a deterministic one —
+because a reply is judged on what it says, not on what wrote it.
 
 ## 5. Success criteria and rubric anchors
 
