@@ -20,23 +20,25 @@ The agent is the excuse. **The eval bench is the deliverable.**
 
 ## Status
 
-> **Phases 0–3 of 10 complete — the contract, the skeleton, and the agent.**
+> **Phases 0–4 of 10 complete — the contract, the agent, and Layer 1 running against it.**
 >
-> `docs/SPEC.md` and 32 scenarios came first and are validated in CI. The agent now
-> runs: a step pipeline whose order *is* the specification — establish the actor,
-> read a decision if one arrived, understand the request, refuse it if it is out of
-> scope, resolve the dates, retrieve the leave types, check for conflicts, draft,
-> **gate**, execute, reply.
+> `docs/SPEC.md` and 32 scenarios came first and are validated in CI. The agent runs
+> as a step pipeline whose order *is* the specification — establish the actor, read a
+> decision if one arrived, understand the request, refuse it if out of scope, resolve
+> the dates, retrieve the leave types, check for conflicts, draft, **gate**, execute,
+> reply. And the 32 scenarios now execute against it on every push: constraint
+> scenarios hard-block at 100%, behaviour scenarios are measured against a recorded
+> baseline, and four deliberately broken agents prove the suite can fail.
 >
 > The confirmation gate is real on both sides. The agent stops at it, and
 > `request_time_off` independently refuses any write without an approved,
 > draft-bound, single-use token — enforced at the tool boundary rather than by a
 > prompt.
 >
-> **What the eval suite does not yet exist to prove** is the whole of Phase 4: the
-> corpus is validated but not executed. The tests here assert the same trace
-> properties by hand, for every constraint in the spec, so that Phase 4 has
-> something to disagree with.
+> **What Layer 1 does not prove** is that the agent understands English: on the
+> gated path the interpreter is rule-based, so a green run means the orchestration
+> and the constraint layer work. Language understanding is Layer 2's and the keyed
+> nightly matrix's job (Phase 5), and the two baselines are never merged.
 >
 > This README says which lines are built and which are planned. A README that
 > describes a system that does not exist is worse than no README (P14's corollary).
@@ -47,8 +49,8 @@ The agent is the excuse. **The eval bench is the deliverable.**
 | 1 | `docs/SPEC.md` and 32 scenarios as data — the contract, before any agent code | **Done** |
 | 2 | Skeleton: AppHost, agent service, ServiceDefaults, OpenTelemetry end to end, mock tools | **Done** |
 | 3 | The agent loop: intent → dates → leave types → conflicts → draft → **confirmation gate** → execute | **Done** |
-| 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | Next |
-| 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | Planned |
+| 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | **Done** |
+| 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | Next |
 | 6 | CI gates: constraints hard-block, behaviours vs baseline, one sticky PR comment with the diff | Planned |
 | 7 | Production story: OTLP scoring integration, agent-as-code deployment, live MCP mode | Planned |
 | 8 | `docs/FINDINGS.md` — numbers-first write-up of what the evals actually caught | Planned |
