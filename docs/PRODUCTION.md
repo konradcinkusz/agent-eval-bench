@@ -212,18 +212,31 @@ Inlining them would have been one fewer request and would have cost the strictes
 clause in the policy — the trade that quietly happens on most pages, and the reason a
 strict CSP is rarer than a CSP.
 
-### Live replies, and the three things that gate them
+### Live replies, and what gates them
 
-The live composer needs a credentialed provider, an access code, and budget left
-today. Each is checked in a different place and each fails closed; a missing secret
-is the normal state of a fork, so unset means *unavailable* rather than *open*.
+The live composer needs a credentialed provider, permission to run for this
+visitor, and budget left today. Each is checked in a different place and each
+fails closed; a missing secret is the normal state of a fork, so unset means
+*unavailable* rather than *open*.
 
-The access code is a **spend control, not authentication**, and
+"Permission to run for this visitor" has two forms, and the public demo uses the
+second. An **access code** — a spend control, not authentication, and
 [`flyio/SECRETS.md`](../flyio/SECRETS.md) says so rather than letting the word
-"code" imply otherwise. There is no data here to protect: every visitor sees the
-same fictional company and nothing is stored. What bounds the cost is the daily
-token budget, which no amount of code-sharing moves — and which is held in memory,
-so a scale-to-zero restart resets it ([D-13](DEVIATIONS.md)).
+"code" imply otherwise. Or **open access**
+(`Demo__AllowLiveWithoutCode`), set explicitly on the demo because a demo behind
+a code is a demo most visitors never see working. Open is not unbounded: each
+client gets a daily live-turn allowance, past which their replies go
+deterministic while everything else keeps working — and the shared daily token
+budget stays the ceiling on the bill, which no number of clients moves. Both
+budgets are held in memory, so a scale-to-zero restart resets them
+([D-13](DEVIATIONS.md)).
+
+There is no data here to protect: every visitor sees the same fictional company
+and nothing is stored. What the no-auth surface needs instead of an identity is
+ceilings, and they are stacked — per-client rate limit keyed on the platform's
+forwarded client address, a process-wide concurrency bound with the health
+probes exempt, a bounded conversation store, bounded turns per conversation,
+and a request body limit that replaces the framework's thirty-megabyte default.
 
 ### Never deployed
 
@@ -231,3 +244,38 @@ No Fly account is wired to this repository, so the workflow above has never run.
 The configuration is reviewable and the checks are real; whether the app comes up is
 not something a green build can tell you, and this paragraph is here instead of a
 badge that would imply otherwise.
+
+## 7. The production loop
+
+The loop `AI-EVALS.md` §10 items 8 and 9 describe — production sessions scored on
+the shared trace schema, worst sessions read, low scorers becoming scenarios,
+constraint checks paging — exists in three pieces, and the honest state of each is
+stated here (D-12 tracks what remains).
+
+**Where the spans go.** The kernel attaches an Azure Monitor trace exporter when
+`APPLICATIONINSIGHTS_CONNECTION_STRING` is present — provisioned by
+[`infra/azure/`](../infra/azure/main.bicep), set on the app by the provisioning
+workflow, absent everywhere else. Spans are produced regardless; that is what the
+eval harness reads in-process. The demo samples at **100%**, stated in
+[`flyio/demo.fly.toml`](../flyio/demo.fly.toml) rather than inherited from an SDK
+default, because §1 above is not negotiable: at 10% sampling, nine incidents in
+ten have no trace to extract from, and nothing tells you.
+
+**Who reads them back.** A scheduled pass
+([`production-loop.yml`](../.github/workflows/production-loop.yml), daily) queries
+the day's turns out of Application Insights and scores them on the same schema the
+offline harness asserts against — outcome counts, injection reports, unverified
+conflict checks. It runs C-1 post-hoc over every write span, and **a violation
+fails the run, which notifies the repository owner: that is the demo's pager**,
+named as such rather than dressed up as one. The ten worst sessions are ranked in
+the run summary, and their complete span sets land in the run's artifact — which
+is exactly the input [`ScenarioExtractor`](../tests/AbsenceConcierge.Evals/Extraction/ScenarioExtractor.cs)
+turns into a scenario a human then edits past its `REVIEW:` marker.
+
+**The cadence, and who keeps it.** The schedule runs itself; the reading is a
+person's job and is stated as one: the owner reads the previous day's summary with
+the morning's notifications — the same glance that would catch a red nightly. A
+red production-loop run is a page, not a dashboard entry. What no workflow can
+promise is that this sentence stays true, which is why D-12 stays open until the
+first `origin.kind: production-trace` scenario proves the loop has carried water
+end to end.

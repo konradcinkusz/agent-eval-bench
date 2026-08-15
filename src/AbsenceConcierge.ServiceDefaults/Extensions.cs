@@ -1,3 +1,4 @@
+using Azure.Monitor.OpenTelemetry.Exporter;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.Extensions.DependencyInjection;
@@ -91,9 +92,19 @@ public static class Extensions
     }
 
     /// <summary>
-    /// Optional dependency, degraded rather than required (P8). No endpoint configured
-    /// means no exporter — not a startup failure. The spans are still produced, which
-    /// is what lets the eval harness read them in-process with nothing configured at all.
+    /// Optional dependencies, degraded rather than required (P8). No endpoint
+    /// configured means no exporter — not a startup failure. The spans are still
+    /// produced, which is what lets the eval harness read them in-process with
+    /// nothing configured at all.
+    ///
+    /// <para>
+    /// Two sinks, independently optional. OTLP is the estate's default answer for
+    /// anything that runs a collector. Azure Monitor is the one the public demo
+    /// uses, because the demo's platform runs no collector and the scoring pass
+    /// needs the spans somewhere queryable — the exporter attaches only when
+    /// <c>APPLICATIONINSIGHTS_CONNECTION_STRING</c> is present, which on the demo
+    /// is a deploy-time secret and on a fresh clone is nothing.
+    /// </para>
     /// </summary>
     private static TBuilder AddOpenTelemetryExporters<TBuilder>(this TBuilder builder)
         where TBuilder : IHostApplicationBuilder
@@ -104,6 +115,18 @@ public static class Extensions
         if (useOtlpExporter)
         {
             builder.Services.AddOpenTelemetry().UseOtlpExporter();
+        }
+
+        var azureMonitor = builder.Configuration["APPLICATIONINSIGHTS_CONNECTION_STRING"];
+
+        if (!string.IsNullOrWhiteSpace(azureMonitor))
+        {
+            // Traces only, deliberately. The scoring pass reads spans and span
+            // events; metrics and logs would triple the ingestion bill of a demo
+            // to answer questions nobody is asking it.
+            builder.Services.AddOpenTelemetry().WithTracing(tracing =>
+                tracing.AddAzureMonitorTraceExporter(options =>
+                    options.ConnectionString = azureMonitor));
         }
 
         return builder;

@@ -95,7 +95,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
           cache: npm
@@ -306,7 +306,7 @@ jobs:
           # The rules are about a diff, so the base branch has to be reachable.
           fetch-depth: 0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -347,7 +347,7 @@ jobs:
 
       # For scripts/eval-comment.mjs. The runner ships a Node, but pinning the
       # major keeps this job's behaviour from moving with the image.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -380,7 +380,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::notice::No solution yet — build and test skipped (expected through Phase 1)."
 
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         if: steps.detect.outputs.found == 'true'
         with:
           global-json-file: global.json
@@ -544,9 +544,77 @@ jobs:
       # different and much more suspicious thing.
       - name: Upload test results
         if: steps.detect.outputs.found == 'true' && (success() || failure()) && hashFiles('TestResults/**') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: test-results
           path: ./TestResults
           retention-days: 14
           if-no-files-found: error
+
+  # ===========================================================================
+  # The page, through a browser
+  #
+  # Every other claim in this repository is checked by something; until this
+  # job, the three files a visitor actually touches were checked by nothing.
+  # The suite drives the REAL service (dotnet run, mock world, pinned clock)
+  # and asserts the interactions that matter: the card renders from the
+  # structured draft, approve writes and reject does not, a hostile string in
+  # DATA stays text, the banner names its composer, the headers arrive, and
+  # both 429s say which ceiling was hit.
+  #
+  # NO browser download step: the runner image already carries a Chromium, and
+  # the Playwright config resolves it (issue #13's explicit instruction).
+  # ===========================================================================
+  e2e:
+    name: Showcase page (Playwright)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    needs: [lint-docs, lint-actions, lint-shell, architecture]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: '22'
+          cache: npm
+
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Install test tooling
+        run: npm ci
+
+      - name: Build the service the suite will start
+        run: |
+          set -euo pipefail
+          dotnet restore src/AbsenceConcierge.AgentService
+          dotnet build src/AbsenceConcierge.AgentService --configuration Release --no-restore
+
+      - name: Point Playwright at the image's browser
+        id: browser
+        run: |
+          set -euo pipefail
+          for candidate in /usr/bin/google-chrome /usr/bin/chromium-browser /usr/bin/chromium; do
+            if [ -x "$candidate" ]; then
+              echo "path=$candidate" >> "$GITHUB_OUTPUT"
+              echo "Using $candidate"
+              exit 0
+            fi
+          done
+          echo "::error::No Chromium on this runner image. The fix is to update the resolver, not to add a download step."
+          exit 1
+
+      - name: Playwright
+        env:
+          CHROMIUM_EXECUTABLE: ${{ steps.browser.outputs.path }}
+        run: npm run test:e2e
+
+      - name: Upload traces of what failed
+        if: failure() && hashFiles('tests/e2e/.artifacts/**') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: e2e-artifacts
+          path: tests/e2e/.artifacts
+          retention-days: 14

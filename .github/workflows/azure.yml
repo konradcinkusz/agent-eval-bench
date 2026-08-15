@@ -1,0 +1,346 @@
+name: Provision Azure
+
+# ═══════════════════════════════════════════════════════════════════════════════
+#  Everything this repository needs in Azure, provisioned end to end, then used
+#  immediately — because infrastructure that has never served a request is the
+#  "config no CI context executes" trap wearing a resource group (TESTING-
+#  STRATEGY.md §9). One dispatch of this workflow:
+#
+#    1. deploys infra/azure/main.bicep — the OpenAI account with the `composer`
+#       and `judge` deployments, and the Log Analytics + App Insights pair the
+#       production loop reads (D-12);
+#    2. runs Layer 2 against the live judge, once, full scope — the run D-9 has
+#       been waiting for since Phase 5;
+#    3. wires the Fly demo (when FLY_API_TOKEN is present): the composer's
+#       endpoint and key, and the trace sink's connection string, as secrets on
+#       the app;
+#    4. stores the judge's credentials on the `evals` GitHub environment for
+#       nightly.yml (when ADMIN_GH_TOKEN is present), or prints the exact
+#       commands when it is not.
+#
+#  ONE JOB, deliberately. The OpenAI key is fetched here and used here; a job
+#  boundary would mean passing it through outputs, and outputs are stored in
+#  plain text in the workflow's metadata.
+#
+#  Secrets, on the `azure` GitHub environment:
+#    AZURE_CREDENTIALS   required — the {clientId, clientSecret, subscriptionId,
+#                        tenantId} JSON of a service principal with Contributor
+#                        on the subscription (az ad sp create-for-rbac --sdk-auth)
+#    FLY_API_TOKEN       optional — wires the demo app when present
+#    ADMIN_GH_TOKEN      optional — a repo-admin PAT; lets this workflow store
+#                        the judge credentials on the `evals` environment itself
+#  Variables (optional): AZURE_LOCATION, AZURE_ENV_NAME, LLM_PRICE_INPUT,
+#  LLM_PRICE_OUTPUT.
+# ═══════════════════════════════════════════════════════════════════════════════
+
+on:
+  workflow_dispatch:
+    inputs:
+      environmentName:
+        description: 'Environment name (rg-<name>; defaults to the AZURE_ENV_NAME variable or agent-eval-bench)'
+        required: false
+        type: string
+      location:
+        description: 'Azure region (defaults to the AZURE_LOCATION variable or swedencentral)'
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: provision-azure
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  FLY_APP: agent-eval-bench-demo
+
+jobs:
+  provision:
+    name: Provision, judge once, wire the demo
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    environment: azure
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: The credential exists, or this run says exactly what to create
+        env:
+          AZURE_CREDENTIALS: ${{ secrets.AZURE_CREDENTIALS }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${AZURE_CREDENTIALS:-}" ]; then
+            {
+              echo "## Provisioning did not run"
+              echo
+              echo "\`AZURE_CREDENTIALS\` is not set on the \`azure\` environment."
+              echo
+              echo "Create a service principal and store its JSON:"
+              echo
+              echo '```bash'
+              echo "az ad sp create-for-rbac --name agent-eval-bench-ci \\"
+              echo '  --role Contributor --scopes "/subscriptions/<subscription-id>" --sdk-auth'
+              echo 'gh secret set AZURE_CREDENTIALS --env azure < the-json-file'
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::AZURE_CREDENTIALS is not set on the 'azure' environment. The step summary says what to create."
+            exit 1
+          fi
+
+          echo "Credential present."
+
+      - uses: azure/login@v2
+        with:
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Deploy the Bicep stack
+        id: deploy
+        env:
+          INPUT_ENV_NAME: ${{ inputs.environmentName }}
+          VAR_ENV_NAME: ${{ vars.AZURE_ENV_NAME }}
+          INPUT_LOCATION: ${{ inputs.location }}
+          VAR_LOCATION: ${{ vars.AZURE_LOCATION }}
+        run: |
+          set -euo pipefail
+
+          ENV_NAME="${INPUT_ENV_NAME:-${VAR_ENV_NAME:-agent-eval-bench}}"
+          LOCATION="${INPUT_LOCATION:-${VAR_LOCATION:-swedencentral}}"
+          echo "Provisioning environment '$ENV_NAME' in '$LOCATION'."
+
+          restore_openai=false
+          subdomain=""
+
+          # Two ARM errors have known, mechanical fixes, learned the hard way in
+          # the reference repository: a soft-deleted OpenAI account needs the
+          # restore flag, and an existing account refuses a different subdomain.
+          for attempt in 1 2 3; do
+            set +e
+            output=$(az deployment sub create \
+              --name "agent-eval-bench-azure" \
+              --location "$LOCATION" \
+              --template-file infra/azure/main.bicep \
+              --parameters environmentName="$ENV_NAME" location="$LOCATION" \
+                restoreOpenAi="$restore_openai" openAiCustomSubDomainName="$subdomain" \
+              2>&1)
+            status=$?
+            set -e
+
+            if [ "$status" -eq 0 ]; then
+              echo "Deployment succeeded on attempt $attempt."
+              break
+            fi
+
+            echo "$output" | tail -20
+
+            if echo "$output" | grep -q "FlagMustBeSetForRestore"; then
+              echo "Soft-deleted OpenAI account detected — retrying with restore."
+              restore_openai=true
+              continue
+            fi
+
+            if echo "$output" | grep -q "UpdatingCustomDomainNotAllowed\|CustomDomainInUse"; then
+              subdomain=$(az cognitiveservices account show \
+                --name "oai-$ENV_NAME" --resource-group "rg-$ENV_NAME" \
+                --query "properties.customSubDomainName" -o tsv)
+              echo "Existing account found — retrying with its subdomain '$subdomain'."
+              continue
+            fi
+
+            echo "::error::Deployment failed for a reason with no mechanical fix. The tail of the output is above."
+            exit "$status"
+          done
+
+          outputs=$(az deployment sub show --name "agent-eval-bench-azure" --query properties.outputs -o json)
+
+          {
+            echo "resource_group=$(echo "$outputs" | jq -r '.resourceGroupName.value')"
+            echo "openai_name=$(echo "$outputs" | jq -r '.openAiName.value')"
+            echo "endpoint=$(echo "$outputs" | jq -r '.openAiEndpoint.value')"
+            echo "composer=$(echo "$outputs" | jq -r '.composerDeploymentName.value')"
+            echo "judge=$(echo "$outputs" | jq -r '.judgeDeploymentName.value')"
+            echo "appinsights_app_id=$(echo "$outputs" | jq -r '.appInsightsAppId.value')"
+          } >> "$GITHUB_OUTPUT"
+
+          # The connection string is not a strong secret, but it does not belong
+          # in a public run log either.
+          conn=$(echo "$outputs" | jq -r '.appInsightsConnectionString.value')
+          echo "::add-mask::$conn"
+          echo "appinsights_connection=$conn" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch the key, mask it, keep it in this job
+        id: key
+        env:
+          RESOURCE_GROUP: ${{ steps.deploy.outputs.resource_group }}
+          OPENAI_NAME: ${{ steps.deploy.outputs.openai_name }}
+        run: |
+          set -euo pipefail
+          key=$(az cognitiveservices account keys list \
+            --name "$OPENAI_NAME" --resource-group "$RESOURCE_GROUP" --query key1 -o tsv)
+          echo "::add-mask::$key"
+          echo "key=$key" >> "$GITHUB_OUTPUT"
+
+      # ── D-9's first judged run: full scope, live model, real scores ─────────
+      - uses: actions/setup-dotnet@v6
+        with:
+          global-json-file: global.json
+
+      - name: Restore and build
+        run: |
+          set -euo pipefail
+          dotnet restore
+          dotnet build --configuration Release --no-restore
+
+      - name: Layer 2 against the live judge, full scope
+        env:
+          EVAL_LAYER2_SCOPE: full
+          Llm__Provider: AzureOpenAI
+          Llm__Endpoint: ${{ steps.deploy.outputs.endpoint }}
+          Llm__JudgeModel: ${{ steps.deploy.outputs.judge }}
+          Llm__ApiKey: ${{ steps.key.outputs.key }}
+          Llm__PricePerMillionInputTokens: ${{ vars.LLM_PRICE_INPUT }}
+          Llm__PricePerMillionOutputTokens: ${{ vars.LLM_PRICE_OUTPUT }}
+        run: |
+          dotnet test tests/AbsenceConcierge.Evals/AbsenceConcierge.Evals.csproj \
+            --configuration Release --no-build \
+            --logger "trx;LogFileName=first-judged-run.trx" --results-directory ./TestResults
+
+      - name: What the first judged run measured
+        if: success() || failure()
+        run: |
+          set -euo pipefail
+          report=./TestResults/eval-report-layer2.json
+
+          if [ ! -f "$report" ]; then
+            echo "::error::Layer 2 produced no report — the section above has the test output."
+            exit 1
+          fi
+
+          {
+            echo "## First judged run (D-9 closes here)"
+            echo
+            jq -r '
+              "Judge **\(.judgeVersion)** — rubrics `\(.rubricsHash)`, prompt `\(.promptHash)`, scope `\(.scope)`",
+              "Model that answered: `\(.model // "none")`",
+              "Tokens: \(.inputTokens) in, \(.outputTokens) out\(if .estimatedCostUsd != null then " — $\(.estimatedCostUsd)" else " — cost unknown (set LLM_PRICE_INPUT / LLM_PRICE_OUTPUT variables)" end)",
+              "",
+              "Calibration: \(.calibration.reason)",
+              "",
+              "| rubric | mean | threshold | lowest | ok |",
+              "|---|---|---|---|---|",
+              (.rubrics[] | "| \(.rubric) | \(.mean) | \(.threshold) | \(.lowest) | \(if .meetsThreshold and .meetsFloor then "yes" else "**no**" end) |")
+            ' "$report"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload the report
+        if: (success() || failure()) && hashFiles('TestResults/**') != ''
+        uses: actions/upload-artifact@v7
+        with:
+          name: first-judged-run
+          path: ./TestResults
+          retention-days: 90
+
+      # ── Wire the Fly demo, when its token is here to use ────────────────────
+      - uses: superfly/flyctl-actions/setup-flyctl@master
+
+      - name: Set the demo app's secrets on Fly
+        env:
+          FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
+          LLM_ENDPOINT: ${{ steps.deploy.outputs.endpoint }}
+          LLM_KEY: ${{ steps.key.outputs.key }}
+          COMPOSER: ${{ steps.deploy.outputs.composer }}
+          JUDGE: ${{ steps.deploy.outputs.judge }}
+          APPINSIGHTS: ${{ steps.deploy.outputs.appinsights_connection }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${FLY_API_TOKEN:-}" ]; then
+            {
+              echo "## Fly not wired"
+              echo
+              echo "\`FLY_API_TOKEN\` is not set on the \`azure\` environment, so the demo app's"
+              echo "secrets were not updated. To wire it by hand:"
+              echo
+              echo '```bash'
+              echo "flyctl secrets set --app ${FLY_APP} \\"
+              echo "  Llm__Provider=AzureOpenAI \\"
+              echo "  Llm__Endpoint=<endpoint> Llm__ApiKey=<key1> \\"
+              echo "  Llm__Model=composer Llm__JudgeModel=judge \\"
+              echo '  APPLICATIONINSIGHTS_CONNECTION_STRING=<connection string>'
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Skipped: no FLY_API_TOKEN."
+            exit 0
+          fi
+
+          # First provision can precede the first deploy; the app must exist
+          # before it can hold secrets. Creation is idempotent enough behind the
+          # existence check, and the deploy workflow remains the only thing that
+          # ever ships code to it.
+          if ! flyctl apps list --json | jq -e --arg app "$FLY_APP" '.[] | select(.Name == $app)' > /dev/null; then
+            echo "App $FLY_APP does not exist yet — creating it."
+            flyctl apps create "$FLY_APP"
+          fi
+
+          # --stage: recorded now, applied on the next deploy. A demo that is
+          # mid-conversation does not get restarted by a provisioning run.
+          flyctl secrets set --app "$FLY_APP" --stage \
+            "Llm__Provider=AzureOpenAI" \
+            "Llm__Endpoint=$LLM_ENDPOINT" \
+            "Llm__ApiKey=$LLM_KEY" \
+            "Llm__Model=$COMPOSER" \
+            "Llm__JudgeModel=$JUDGE" \
+            "APPLICATIONINSIGHTS_CONNECTION_STRING=$APPINSIGHTS"
+
+          {
+            echo "## Fly wired"
+            echo
+            echo "Secrets staged on \`${FLY_APP}\`: the composer's endpoint, key and deployment"
+            echo "names, and the trace sink's connection string. They apply on the next deploy"
+            echo "(tag a release, or run the Deploy workflow)."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # ── The nightly judge's credentials, stored or printed ──────────────────
+      - name: Store the judge credentials on the evals environment
+        env:
+          ADMIN_GH_TOKEN: ${{ secrets.ADMIN_GH_TOKEN }}
+          LLM_ENDPOINT: ${{ steps.deploy.outputs.endpoint }}
+          LLM_KEY: ${{ steps.key.outputs.key }}
+          JUDGE: ${{ steps.deploy.outputs.judge }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${ADMIN_GH_TOKEN:-}" ]; then
+            {
+              echo "## Nightly evals: one manual step remains"
+              echo
+              echo "The \`evals\` environment needs the judge's credentials for nightly.yml."
+              echo "Run these once (values are in this run's Azure resources, never in this log):"
+              echo
+              echo '```bash'
+              echo "gh api -X PUT repos/${REPO}/environments/evals > /dev/null"
+              echo "gh variable set LLM_ENDPOINT  --env evals --body '<the endpoint above>'"
+              echo "gh variable set LLM_JUDGE_MODEL --env evals --body 'judge'"
+              echo "gh secret  set LLM_API_KEY   --env evals   # paste key1 when prompted"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "Skipped: no ADMIN_GH_TOKEN. The step summary carries the commands."
+            exit 0
+          fi
+
+          export GH_TOKEN="$ADMIN_GH_TOKEN"
+          gh api -X PUT "repos/${REPO}/environments/evals" > /dev/null
+          gh variable set LLM_ENDPOINT --env evals --repo "$REPO" --body "$LLM_ENDPOINT"
+          gh variable set LLM_JUDGE_MODEL --env evals --repo "$REPO" --body "$JUDGE"
+          gh secret set LLM_API_KEY --env evals --repo "$REPO" --body "$LLM_KEY"
+
+          {
+            echo "## Nightly evals wired"
+            echo
+            echo "\`LLM_ENDPOINT\`, \`LLM_JUDGE_MODEL\` and \`LLM_API_KEY\` are set on the"
+            echo "\`evals\` environment. nightly.yml grades the full set from tonight."
+          } >> "$GITHUB_STEP_SUMMARY"
