@@ -55,6 +55,21 @@ The agent is the excuse. **The eval bench is the deliverable.**
 > and the constraint layer work. Language understanding is what the judge and the
 > keyed nightly run are for, and the two baselines are never merged.
 >
+> **The page and the live model.** One page, served by the agent service itself,
+> whose one interaction is the confirmation card — rendered from the structured
+> draft the service returns rather than parsed back out of the prose, because what
+> a human approves has to be what the agent is holding. With an access code a model
+> rewrites the reply; it cannot change a date, a decision, or whether anything was
+> submitted, because a composer runs after every step has already decided
+> ([SPEC §4.1](docs/SPEC.md#41-where-a-model-is-allowed-to-run)). **Never
+> deployed** — no Fly account is wired to this repository, and that is written down
+> rather than implied by a badge.
+>
+> **What the evals actually caught** is in [`docs/FINDINGS.md`](docs/FINDINGS.md),
+> numbers first, including the part that flatters nobody: eight defects, six of them
+> in the measuring instrument or the specification rather than in the agent, and
+> none found by the suite passing or failing on the agent itself.
+>
 > This README says which lines are built and which are planned. A README that
 > describes a system that does not exist is worse than no README (P14's corollary).
 
