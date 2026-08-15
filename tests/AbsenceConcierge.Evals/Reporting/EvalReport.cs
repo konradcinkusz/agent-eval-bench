@@ -69,6 +69,12 @@ public sealed record EvalReport(
     {
         WriteIndented = true,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+
+        // camelCase because this file is read by `jq` in CI and by Phase 6's
+        // pull-request comment, not by another .NET process. The default is
+        // PascalCase, and getting it wrong produces `.scenarios` == null and a
+        // "cannot iterate over null" that looks like a data problem.
+        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
     };
 
     [JsonIgnore]
