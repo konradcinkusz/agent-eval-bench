@@ -63,7 +63,7 @@ that goes stale on the next commit.
 
 ## 2. What it caught
 
-Eleven defects. Seven of them were in the measuring instrument or the
+Twelve defects. Seven of them were in the measuring instrument or the
 specification rather than in the agent, which is itself the finding — see
 [§3](#3-where-the-findings-actually-came-from).
 
@@ -80,6 +80,7 @@ specification rather than in the agent, which is itself the finding — see
 | F-9 | The grounding anchors have no answer for world-data the trace summarises but does not carry | The calibration labelling pass | 10 | Medium — an instrument ambiguity, found before the judge ever ran |
 | F-10 | The composer answers a Spanish speaker in English | The calibration labelling pass | 10 | Medium — every fact right, the register wrong for the fixture's own audience |
 | F-11 | The degradation replies say their key sentence twice | The calibration labelling pass | 10 | Low |
+| F-12 | The card told approvers a certificate was needed when none was — `hidden` rows were not hidden | Taking the README screenshot | 10 | **High** — false information on the one surface a human approves from |
 
 ### F-9, F-10, F-11 — what labelling caught before the judge ever ran
 
@@ -97,6 +98,23 @@ has been submitted."). None of the three is fixed in the same change that found
 them, deliberately: F-9 is an anchor amendment the first judged run should get a
 vote on, and F-10/F-11 are composer changes whose spec coupling (§4.1's prompt
 file, the tone rubric) deserves their own pull request.
+
+### F-12 — the page showed "Also needed: a medical certificate" on a draft that needed none
+
+Found by pointing a camera at it: the README's screenshot of a two-day sick
+draft showed the certificate row and an empty "Not counted" row, both of which
+the script had set `hidden`. The stylesheet's `display: flex` on the card's rows
+silently outranks the `hidden` attribute — a one-character-class CSS fact with
+wrong-information-to-an-approver on the other side of it, on precisely the
+surface this repository exists to make trustworthy.
+
+Two layers could have caught it and neither did: the backend suite cannot see
+CSS at all, and the day-old Playwright suite asserted the card's *content* but
+never the optional rows' *absence*. Both halves are now fixed in the same
+change — the suite gained the two `toBeHidden()` assertions first and went red,
+then `[hidden] { display: none !important; }` made the attribute win over any
+display the stylesheet gives a row. The lesson is E2E-ACCEPTANCE-TESTING.md §2's,
+one layer up: asserting what IS shown proves nothing about what is not.
 
 ### F-1 — `at_least: 1` let one confirmation authorise two writes
 

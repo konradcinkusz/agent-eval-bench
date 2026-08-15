@@ -16,6 +16,40 @@ stops for a human before it writes anything.
 
 The agent is the excuse. **The eval bench is the deliverable.**
 
+## Sixty seconds, if that is all you have
+
+An employee types a sentence. The agent resolves the dates against a real
+calendar, fetches the leave types, checks the existing bookings, drafts the
+request — and having done all the work, being entirely confident, **it stops and
+asks a human**:
+
+![The confirmation card: the agent has resolved "I'm sick today and probably tomorrow" into a two-day sick-leave draft, and stopped for approval](docs/assets/confirmation-card.png)
+
+That stop is not politeness in a prompt. The submit tool **refuses any write
+without a single-use token that only the approve button releases** — so an agent
+talked (or injected) into submitting early fails at the tool boundary, not at the
+model's discretion. Everything else in this repository exists to *prove* that
+sentence and its neighbours, mechanically, on every change.
+
+If the demo says one thing to a non-engineer, it is this: AI agents that act on
+your systems can be built so the machine does the work and a person keeps the
+decision — and whether that stays true under prompt edits, model swaps and
+hostile input is something you can measure, not something you trust.
+
+**Start here**, four files, in order:
+
+1. [`docs/SPEC.md` §4](docs/SPEC.md#4-hard-constraints) — the seven hard
+   constraints. This is what is graded, and it was written before the agent
+   existed.
+1. [`evals/scenarios/adversarial/adv-003-injection-via-leave-type-name.yaml`](evals/scenarios/adversarial/adv-003-injection-via-leave-type-name.yaml)
+   — an injection hiding in data the agent asked for, and the **absence**
+   assertion that catches it: the test is that nothing happened.
+1. [`ConfirmationTokenStore.cs`](src/AbsenceConcierge.AgentService/Workforce/Confirmation/ConfirmationTokenStore.cs)
+   — why the gate is a property of the system rather than a habit of the prompt.
+1. [`docs/FINDINGS.md`](docs/FINDINGS.md) — what the suite actually caught:
+   twelve defects, seven of them in the measuring instrument or the spec, none
+   of them found by the suite merely passing.
+
 ---
 
 ## Status
@@ -66,7 +100,7 @@ The agent is the excuse. **The eval bench is the deliverable.**
 > rather than implied by a badge.
 >
 > **What the evals actually caught** is in [`docs/FINDINGS.md`](docs/FINDINGS.md),
-> numbers first, including the part that flatters nobody: eleven defects, seven of
+> numbers first, including the part that flatters nobody: twelve defects, seven of
 > them in the measuring instrument or the specification rather than in the agent,
 > and none found by the suite passing or failing on the agent itself.
 >
@@ -83,7 +117,7 @@ The agent is the excuse. **The eval bench is the deliverable.**
 | 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | **Done** (judge built and pinned; never yet run against a live model — D-9) |
 | 6 | CI gates: constraints hard-block, behaviours vs baseline, one sticky PR comment with the diff | **Done** |
 | 7 | Production story: [`docs/PRODUCTION.md`](docs/PRODUCTION.md) — trace-to-scenario extraction, the agent definition checked against the service's own catalogue, live MCP mode | **Done** (MCP mode built and tested against a fake session; never yet run against a live server — D-10) |
-| 8 | [`docs/FINDINGS.md`](docs/FINDINGS.md) — numbers-first write-up of what the evals actually caught | **Done** (11 defects, 7 of them in the instrument or the spec rather than the agent) |
+| 8 | [`docs/FINDINGS.md`](docs/FINDINGS.md) — numbers-first write-up of what the evals actually caught | **Done** (12 defects, 7 of them in the instrument or the spec rather than the agent) |
 | 8b | Showcase frontend: one page, whose one special feature is the confirmation card | **Done** (served by the agent service itself; no build step, strict CSP) |
 | 9 | Public deployment, mock by default, scale-to-zero, live model behind an access code | **Done** (`flyio/`, tag-driven, gated on the eval suite; never deployed — no Fly account is wired) |
 
