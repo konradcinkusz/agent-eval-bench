@@ -60,12 +60,16 @@ on:
   pull_request:
     branches: [main]
   push:
-    # Feature branches are included deliberately. This repository is built phase
-    # by phase on `claude/**` branches, and lint feedback that only arrives when a
-    # pull request is opened is feedback that arrives after the work is finished.
-    # It is also what makes this workflow's own definition of done checkable:
-    # a workflow that has never executed is a claim, not a control.
-    branches: [main, 'claude/**']
+    # `main` only, deliberately — this used to include `claude/**`, and the
+    # reason it no longer does is written down rather than implied by the diff.
+    # A branch with an open pull request already gets a run on every push,
+    # through the `pull_request` trigger; the `claude/**` push event graded the
+    # same commit a second time, and what the duplicate bought (lint feedback
+    # before a pull request exists) stopped being worth the doubled runs once
+    # every phase landed via a pull request anyway. The post-merge run on
+    # `main` stays: it re-checks the suite on the exact merge commit, which no
+    # pull-request run ever saw.
+    branches: [main]
   workflow_dispatch:
 
 permissions:
