@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Text;
 using AbsenceConcierge.AgentService.Agent.Time;
 using AbsenceConcierge.AgentService.Telemetry;
-using AbsenceConcierge.AgentService.Workforce;
 
 namespace AbsenceConcierge.AgentService.Agent.Language;
 
@@ -286,7 +285,8 @@ public sealed class DeterministicReplyComposer : IReplyComposer
 
         if (weekend.Count > 0)
         {
-            parts.Add($"{string.Join(" and ", weekend.Select(Short))} {(weekend.Count == 1 ? "is a weekend day" : "are weekend days")}");
+            var days = string.Join(" and ", weekend.Select(day => Short(day.Date)));
+            parts.Add($"{days} {(weekend.Count == 1 ? "is a weekend day" : "are weekend days")}");
         }
 
         foreach (var holiday in holidays)
