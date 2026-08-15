@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.Net;
-using System.Net.Http.Json;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
@@ -66,8 +65,9 @@ public sealed class AzureOpenAiLlmProvider(HttpClient client, LlmOptions options
             .ConfigureAwait(false)
             ?? throw new InvalidOperationException("Azure OpenAI returned an empty body.");
 
-        var choice = completion.Choices?.FirstOrDefault()
-            ?? throw new InvalidOperationException("Azure OpenAI returned no choices.");
+        var choice = completion.Choices is { Count: > 0 } choices
+            ? choices[0]
+            : throw new InvalidOperationException("Azure OpenAI returned no choices.");
 
         return new LlmResponse(
             choice.Message?.Content ?? string.Empty,
