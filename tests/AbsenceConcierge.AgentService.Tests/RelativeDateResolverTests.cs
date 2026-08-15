@@ -236,17 +236,43 @@ public sealed class RelativeDateResolverTests
     }
 
     [Fact]
-    public void Seven_days_forward_is_seven_days_across_a_daylight_saving_change()
+    public void A_week_forward_across_a_daylight_saving_change_lands_on_the_right_local_day()
     {
-        // Europe/Madrid moves from +02:00 to +01:00 on 2026-10-25. Adding
-        // 7 × 24 hours to an instant lands an hour early in local terms; adding
-        // seven days to a calendar date does not, which is why this resolver never
-        // sees an instant at all.
-        var beforeTheChange = new DateOnly(2026, 10, 23);
+        // Europe/Madrid moves from +02:00 to +01:00 on 2026-10-25, and this is the
+        // scenario amb-004 exists for. The second half of the test is the point: it
+        // performs the arithmetic this design refuses to use, and shows it landing a
+        // day short. Without it, the first assertion passes under an implementation
+        // that has the bug and merely happens not to hit it.
+        var madrid = TimeZoneInfo.FindSystemTimeZoneById("Europe/Madrid");
+        var spokenOnFriday = new DateOnly(2026, 10, 23);
+
         var resolved = RelativeDateResolver.Resolve(
-            new NextWeekdayExpression(DayOfWeek.Friday),
-            beforeTheChange);
+            new WeekdayNextWeekExpression(DayOfWeek.Friday),
+            spokenOnFriday);
 
         Assert.Equal(new DateOnly(2026, 10, 30), resolved.Start);
+
+        // Local midnight on the day it was said, plus seven times twenty-four hours,
+        // read back in the same zone: 2026-10-29, not the 30th.
+        var localMidnight = new DateTimeOffset(2026, 10, 23, 0, 0, 0, TimeSpan.FromHours(2));
+        var naive = TimeZoneInfo.ConvertTime(localMidnight.AddHours(7 * 24), madrid);
+
+        Assert.Equal(new DateOnly(2026, 10, 29), DateOnly.FromDateTime(naive.DateTime));
+    }
+
+    [Fact]
+    public void Next_friday_said_on_the_day_amb_004_uses_is_still_ambiguous()
+    {
+        // The rule holds everywhere or it is not a rule. 2026-10-23 is a Friday, so
+        // "next Friday" said on it has the same two readings as amb-001's sentence —
+        // which is why amb-004 says "Friday next week" instead. This test is the one
+        // that caught the corpus defect: it was written the other way round first,
+        // and it failed.
+        var resolved = RelativeDateResolver.Resolve(
+            new NextWeekdayExpression(DayOfWeek.Friday),
+            new DateOnly(2026, 10, 23));
+
+        Assert.False(resolved.IsResolved);
+        Assert.Equal(DateAmbiguity.NextWeekdayOnTheSameWeekday, resolved.Ambiguity);
     }
 }
