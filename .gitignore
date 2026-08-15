@@ -129,6 +129,15 @@ evals/**/*.local.yaml
 .last-image-tag
 fly.toml.local
 
+# --- LaTeX build output (docs/papers/). PDFs are build output, never
+#     committed — see architecture-standards' 00-RESEARCH-DOCUMENTATION.md.
+#     Only the .tex source is tracked. ---
+docs/papers/*.pdf
+docs/papers/*.aux
+docs/papers/*.log
+docs/papers/*.out
+docs/papers/*.toc
+
 # --- Local scratch. Anything a session needs but the repo does not. ---
 scratch/
 tmp/
