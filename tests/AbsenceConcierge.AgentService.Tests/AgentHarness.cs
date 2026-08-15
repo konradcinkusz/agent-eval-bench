@@ -36,23 +36,44 @@ namespace AbsenceConcierge.AgentService.Tests;
 /// </summary>
 public sealed class AgentHarness : IDisposable
 {
+    /// <summary>
+    /// A span the harness opens around each turn, so everything the turn produces
+    /// shares one trace id.
+    ///
+    /// This exists because <c>ActivitySource</c> listeners are process-global: a
+    /// second <see cref="TracerProvider"/> alive at the same time receives every
+    /// activity this one does, and its exporter list would contain another test's
+    /// tool spans. Scoping reads to the harness's own trace ids makes each harness
+    /// correct on its own, which is what the Phase 4 eval harness will need when it
+    /// runs scenarios concurrently.
+    /// </summary>
+    private static readonly ActivitySource Scope = new(ScopeName);
+
+    private const string ScopeName = "AbsenceConcierge.Tests.Harness";
+
     private readonly TracerProvider _tracer;
+    private readonly List<Activity> _captured;
+    private readonly HashSet<ActivityTraceId> _mine = [];
 
     private AgentHarness(
         TracerProvider tracer,
-        List<Activity> exported,
+        List<Activity> captured,
         IAgentOrchestrator orchestrator,
         IWorkforceTools tools,
         WorkforceWorld world)
     {
         _tracer = tracer;
-        Exported = exported;
+        _captured = captured;
         Orchestrator = orchestrator;
         Tools = tools;
         World = world;
     }
 
-    public List<Activity> Exported { get; }
+    /// <summary>Spans this harness produced, and no others.</summary>
+    public IReadOnlyList<Activity> Exported =>
+        [.. _captured.Where(activity =>
+            _mine.Contains(activity.TraceId)
+            && !string.Equals(activity.Source.Name, ScopeName, StringComparison.Ordinal))];
 
     public IAgentOrchestrator Orchestrator { get; }
 
@@ -86,6 +107,7 @@ public sealed class AgentHarness : IDisposable
 
         var tracer = Sdk.CreateTracerProviderBuilder()
             .AddSource(AgentDiagnostics.ActivitySourceName)
+            .AddSource(ScopeName)
             .AddInMemoryExporter(exported)
             .Build()!;
 
@@ -133,20 +155,25 @@ public sealed class AgentHarness : IDisposable
         return new AgentHarness(tracer, exported, orchestrator, tools, world);
     }
 
-    public async Task<AgentTurnResult> SayAsync(string conversationId, string message)
-    {
-        var result = await Orchestrator.RunTurnAsync(AgentTurnRequest.User(conversationId, message));
-        _tracer.ForceFlush();
-        return result;
-    }
+    public Task<AgentTurnResult> SayAsync(string conversationId, string message) =>
+        RunAsync(AgentTurnRequest.User(conversationId, message));
 
-    public async Task<AgentTurnResult> DecideAsync(
+    public Task<AgentTurnResult> DecideAsync(
         string conversationId,
         ConfirmationDecision decision,
-        string message = "Yes")
+        string message = "Yes") =>
+        RunAsync(AgentTurnRequest.Confirmation(conversationId, message, decision));
+
+    private async Task<AgentTurnResult> RunAsync(AgentTurnRequest request)
     {
-        var result = await Orchestrator.RunTurnAsync(
-            AgentTurnRequest.Confirmation(conversationId, message, decision));
+        using var scope = Scope.StartActivity("test_turn")
+            ?? throw new InvalidOperationException(
+                $"The harness scope span was not sampled. The tracer provider must AddSource(\"{ScopeName}\"), "
+                + "or every read of the trace below will be filtered to nothing.");
+
+        _mine.Add(scope.TraceId);
+
+        var result = await Orchestrator.RunTurnAsync(request);
         _tracer.ForceFlush();
         return result;
     }
