@@ -91,7 +91,8 @@ public static class TraceNarrative
 
     private static string DescribeCall(ToolCallRecord call)
     {
-        var text = new StringBuilder(CultureInfo.InvariantCulture, $"tool `{call.Tool}` ({call.Kind})");
+        var text = new StringBuilder();
+        text.Append(CultureInfo.InvariantCulture, $"tool `{call.Tool}` ({call.Kind})");
 
         if (call.Arguments.Count > 0)
         {
