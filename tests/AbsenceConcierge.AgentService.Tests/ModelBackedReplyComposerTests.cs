@@ -4,7 +4,6 @@ using AbsenceConcierge.AgentService.Agent.Llm;
 using AbsenceConcierge.AgentService.Agent.Time;
 using AbsenceConcierge.AgentService.Demo;
 using AbsenceConcierge.AgentService.Telemetry;
-using AbsenceConcierge.AgentService.Workforce;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
 
