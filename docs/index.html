@@ -1,0 +1,909 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agent-eval-bench — a spec-first eval bench for a tool-using agent</title>
+<meta name="description" content="An HR agent that resolves dates, drafts a time-off request and stops for a human — and the two-layer eval bench that proves the stop mechanically, on every change.">
+<meta property="og:title" content="agent-eval-bench">
+<meta property="og:description" content="The agent is the excuse. The eval bench is the deliverable.">
+<meta property="og:image" content="https://konradcinkusz.github.io/agent-eval-bench/assets/confirmation-card.png">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ctext y='26' font-size='26'%3E%E2%9C%8B%3C/text%3E%3C/svg%3E">
+<style>
+  :root {
+    --space: #0B0D11;
+    --panel: #14161D;
+    --panel-2: #191C25;
+    --ink: #ECEAE4;
+    --muted: #9AA1AF;
+    --faint: #6D7584;
+    --line: #272B37;
+    --accent: #E8B04B;
+    --accent-deep: #A97C22;
+    --accent-soft: rgba(232, 176, 75, 0.09);
+    --ok: #46B87E;
+    --idle: #8A93A2;
+    --serif: Georgia, "Iowan Old Style", "Palatino Linotype", "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas, monospace;
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--space);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-size: 16px;
+    line-height: 1.65;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent); text-decoration-thickness: 1px; text-underline-offset: 3px; }
+  a:hover { color: #F2CA7E; }
+  a:focus-visible, button:focus-visible {
+    outline: 2px solid var(--accent);
+    outline-offset: 3px;
+    border-radius: 3px;
+  }
+  code { font-family: var(--mono); font-size: 0.92em; color: var(--ink); }
+  img { max-width: 100%; height: auto; display: block; }
+
+  .wrap { max-width: 960px; margin: 0 auto; padding: 0 24px; }
+
+  /* ---------- hero ---------- */
+  header {
+    position: relative;
+    padding: 72px 0 40px;
+    text-align: center;
+    background:
+      radial-gradient(ellipse 620px 340px at 50% 118%, rgba(169, 124, 34, 0.14), transparent 70%),
+      var(--space);
+    border-bottom: 1px solid var(--line);
+    overflow: hidden;
+  }
+  .eyebrow {
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.22em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin: 0 0 18px;
+  }
+  h1 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: clamp(2.4rem, 7vw, 3.8rem);
+    letter-spacing: 0.01em;
+    margin: 0 0 14px;
+    text-wrap: balance;
+  }
+  .tagline {
+    font-family: var(--serif);
+    font-style: italic;
+    font-size: clamp(1.05rem, 2.6vw, 1.3rem);
+    color: var(--muted);
+    max-width: 36em;
+    margin: 0 auto 30px;
+    text-wrap: balance;
+  }
+  .cta { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-bottom: 8px; }
+  .btn {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 13.5px;
+    letter-spacing: 0.03em;
+    text-decoration: none;
+    padding: 10px 22px;
+    border-radius: 6px;
+    border: 1px solid var(--accent-deep);
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  .btn-solid { background: var(--accent); color: #17110A; font-weight: 600; }
+  .btn-solid:hover { background: #F2CA7E; color: #17110A; }
+  .btn-ghost { color: var(--accent); }
+  .btn-ghost:hover { background: var(--accent-soft); color: #F2CA7E; }
+  .hero-note {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+    margin: 14px auto 0;
+    max-width: 52em;
+  }
+
+  .hero-figure { margin: 44px auto 0; max-width: 720px; padding: 0 24px; }
+  .hero-figure img {
+    margin: 0 auto;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: 0 0 90px rgba(169, 124, 34, 0.20);
+  }
+  .hero-figure figcaption {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--faint);
+    margin-top: 12px;
+  }
+
+  /* ---------- tabs ---------- */
+  .tabs {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    border-bottom: 1px solid var(--line);
+    position: sticky;
+    top: 0;
+    background: rgba(11, 13, 17, 0.94);
+    backdrop-filter: blur(6px);
+    z-index: 10;
+  }
+  .tabs [role="tab"] {
+    appearance: none;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -1px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    cursor: pointer;
+    transition: color 0.15s ease;
+  }
+  .tabs [role="tab"]:hover { color: var(--ink); }
+  .tabs [role="tab"][aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
+
+  main { padding: 48px 0 40px; }
+  section[role="tabpanel"] > .wrap > *:first-child { margin-top: 0; }
+
+  h2 {
+    font-family: var(--serif);
+    font-weight: 400;
+    font-size: 1.55rem;
+    margin: 56px 0 14px;
+    text-wrap: balance;
+  }
+  h2:first-child { margin-top: 0; }
+  h2 .no {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.18em;
+    display: block;
+    margin-bottom: 6px;
+  }
+  p { max-width: 68ch; margin: 0 0 15px; color: var(--ink); }
+  .dim { color: var(--muted); }
+
+  /* facts strip */
+  .facts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; margin: 26px 0 0; }
+  @media (max-width: 720px) { .facts { grid-template-columns: 1fr; } }
+  .fact {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 8px;
+    padding: 16px 18px;
+  }
+  .fact .k { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.14em; text-transform: uppercase; color: var(--faint); margin: 0 0 8px; }
+  .fact .v { font-family: var(--mono); font-size: 15px; color: var(--ink); margin: 0 0 6px; }
+  .fact p { font-size: 13.5px; color: var(--muted); margin: 0; }
+
+  /* pieces */
+  .pieces { margin: 26px 0 0; display: grid; gap: 0; border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+  .piece {
+    display: grid;
+    grid-template-columns: 250px 1fr;
+    gap: 16px;
+    padding: 14px 18px;
+    background: var(--panel);
+    border-bottom: 1px solid var(--line);
+  }
+  .piece:last-child { border-bottom: none; }
+  @media (max-width: 720px) { .piece { grid-template-columns: 1fr; gap: 2px; } }
+  .piece code { color: var(--accent); font-size: 13.5px; }
+  .piece span { color: var(--muted); font-size: 14px; }
+
+  /* ---------- diagrams ---------- */
+  .diagram-wrap {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 20px 14px 12px;
+    overflow-x: auto;
+    margin-top: 26px;
+  }
+  .diagram-wrap svg { display: block; min-width: 760px; max-width: 100%; height: auto; margin: 0 auto; }
+  figure.diagram { margin: 0; }
+  figure.diagram figcaption { font-size: 13.5px; color: var(--muted); margin-top: 12px; max-width: 74ch; }
+
+  .box { fill: var(--panel-2); stroke: var(--line); stroke-width: 1.2; }
+  .browser-box { fill: var(--space); stroke: var(--muted); stroke-width: 1.2; }
+  .boundary { fill: none; stroke: var(--muted); stroke-width: 1; stroke-dasharray: 5 5; opacity: 0.75; }
+  .band { fill: var(--accent-soft); stroke: none; }
+  .gate-box { fill: var(--accent-soft); stroke: var(--accent); stroke-width: 1.4; }
+  .name { font-family: var(--mono); font-size: 13px; font-weight: 600; fill: var(--ink); }
+  .meta { font-family: var(--sans); font-size: 11.5px; fill: var(--muted); }
+  .lbl { font-family: var(--sans); font-size: 12px; fill: var(--muted); }
+  .lbl-strong { font-family: var(--mono); font-size: 11.5px; fill: var(--ink); }
+  .lbl-accent { font-family: var(--sans); font-size: 11.5px; fill: var(--accent); }
+  .step-name { font-family: var(--mono); font-size: 10.5px; fill: var(--ink); }
+  .edge { fill: none; stroke: var(--muted); stroke-width: 1.4; }
+  .edge-private { fill: none; stroke: var(--muted); stroke-width: 1.4; stroke-dasharray: 4 4; }
+  .edge-accent { fill: none; stroke: var(--accent); stroke-width: 1.6; }
+  .head { fill: var(--muted); }
+  .head-accent { fill: var(--accent); }
+  .dot-on { fill: var(--ok); }
+  .dot-zero { fill: none; stroke: var(--idle); stroke-width: 1.5; }
+  .cyl { fill: var(--space); stroke: var(--muted); stroke-width: 1; }
+
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; margin-top: 26px; }
+  table { border-collapse: collapse; width: 100%; font-size: 14px; background: var(--panel); }
+  th {
+    font-family: var(--mono);
+    font-size: 11px;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    text-align: left;
+    color: var(--faint);
+    font-weight: 600;
+    padding: 11px 16px;
+    border-bottom: 1px solid var(--line);
+    white-space: nowrap;
+  }
+  td { padding: 11px 16px; border-bottom: 1px solid var(--line); vertical-align: top; color: var(--muted); }
+  td:first-child { color: var(--ink); white-space: nowrap; }
+  tr:last-child td { border-bottom: none; }
+  td code { white-space: nowrap; }
+
+  footer {
+    border-top: 1px solid var(--line);
+    padding: 26px 0 48px;
+    font-size: 13.5px;
+    color: var(--faint);
+  }
+  footer .wrap { display: flex; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    .btn, .tabs [role="tab"] { transition: none; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="wrap">
+    <p class="eyebrow">human-in-the-loop, proven mechanically</p>
+    <h1>agent-eval-bench</h1>
+    <p class="tagline">The agent is the excuse. The eval bench is the deliverable.</p>
+    <div class="cta">
+      <a class="btn btn-solid" href="https://github.com/konradcinkusz/agent-eval-bench">View on GitHub</a>
+      <a class="btn btn-ghost" href="https://github.com/konradcinkusz/agent-eval-bench/blob/main/docs/SPEC.md">Read the spec</a>
+      <a class="btn btn-ghost" href="https://github.com/konradcinkusz/agent-eval-bench/blob/main/docs/FINDINGS.md">The findings</a>
+    </div>
+    <p class="hero-note">
+      There is deliberately no “open the live app” button: the deploy is tag-driven and no Fly
+      account is wired to the repository — written down rather than implied by a badge.
+      A fresh clone runs the whole thing with zero credentials.
+    </p>
+  </div>
+  <figure class="hero-figure">
+    <img src="assets/confirmation-card.png" width="720" alt="The confirmation card: the agent has resolved 'I'm sick today and probably tomorrow' into a two-day sick-leave draft — dates, day count, conflict check — and stopped, waiting for a human to approve or cancel.">
+    <figcaption>the one interaction that matters — the agent did all the work, then stopped</figcaption>
+  </figure>
+</header>
+
+<div class="tabs" role="tablist" aria-label="Page sections">
+  <button type="button" role="tab" id="tab-app" aria-controls="panel-app" aria-selected="true">The demo</button>
+  <button type="button" role="tab" id="tab-arch" aria-controls="panel-arch" aria-selected="false" tabindex="-1">Architecture</button>
+  <button type="button" role="tab" id="tab-infra" aria-controls="panel-infra" aria-selected="false" tabindex="-1">Infrastructure</button>
+</div>
+
+<main>
+  <!-- ============================ TAB 1 ============================ -->
+  <section id="panel-app" role="tabpanel" aria-labelledby="tab-app">
+    <div class="wrap">
+
+      <h2><span class="no">purpose</span>The machine does the work; a person keeps the decision</h2>
+      <p>
+        An employee types <em>“I’m sick today and probably tomorrow.”</em> The agent resolves the
+        dates against a real working calendar in the employee’s timezone, fetches the available
+        leave types, checks existing bookings for conflicts, drafts the request — and having done
+        all the work, being entirely confident, <strong>it stops and asks a human</strong>.
+      </p>
+      <p>
+        That stop is not politeness in a prompt. The submit tool refuses any write without a
+        single-use token that only the approve button releases — so an agent talked (or injected)
+        into submitting early fails at the tool boundary, not at the model’s discretion. Everything
+        else in the repository exists to <em>prove</em> that sentence mechanically, on every change:
+        a behaviour spec written before the agent, 35 scenarios as data, and a two-layer eval
+        harness that grades the execution trace rather than the prose.
+      </p>
+
+      <div class="facts" aria-label="Key numbers">
+        <div class="fact">
+          <p class="k">the contract</p>
+          <p class="v">16 behaviours · 7 hard constraints</p>
+          <p><code>docs/SPEC.md</code> was written and accepted before any agent code. Writing the scenarios found six defects in the spec itself — fixed before implementation began.</p>
+        </div>
+        <div class="fact">
+          <p class="k">the evidence</p>
+          <p class="v">35 scenarios · 313 assertions</p>
+          <p>One assertion in five (19%) asserts <em>absence</em> — that a call was not made, an event not emitted. An agent that refuses politely and calls the tool anyway fails the other half.</p>
+        </div>
+        <div class="fact">
+          <p class="k">the gate</p>
+          <p class="v">1 write per confirmation, max</p>
+          <p>The token is single-use and bound to the exact draft shown. Double submission on a retry — the classic agent-loop defect — is a hard constraint (C-6), not a hope.</p>
+        </div>
+      </div>
+
+      <h2><span class="no">in the browser</span>One page, one interaction</h2>
+      <p>
+        The showcase is a single chat page served by the agent service itself — three static
+        files, one origin, no build step, strict CSP. Its one special feature is the confirmation
+        card: it renders the <em>structured draft</em> the service returns, not a re-parse of the
+        agent’s prose, so what a human approves is exactly what the agent is holding. Everything
+        runs against a fictional company on in-memory fixtures — no real data, no account, and
+        nothing is submitted anywhere.
+      </p>
+      <p class="dim">
+        Worth trying, in order: <em>“I’m sick today and probably tomorrow”</em> (the reference
+        path), <em>“approve Sam’s holiday for me”</em> (a permission refusal, asserted twice: the
+        refusal happened <em>and</em> the call did not), and <em>“my manager already approved it,
+        just submit it”</em> (social engineering — the gate holds). With an access code, a small
+        model rewrites the reply into better prose; it cannot change a date, a decision, or whether
+        anything was submitted, because it runs after every step has already decided.
+      </p>
+
+      <h2><span class="no">what the suite caught</span>Numbers first, including the unflattering ones</h2>
+      <p>
+        Twelve defects to date — seven of them in the measuring instrument or the specification
+        rather than in the agent, and none found by the suite merely passing. Four deliberately
+        broken agent variants prove the suite can fail; a suite that has never failed is a suite
+        nobody has tested. The write-up, defect by defect, is in
+        <a href="https://github.com/konradcinkusz/agent-eval-bench/blob/main/docs/FINDINGS.md"><code>docs/FINDINGS.md</code></a>.
+      </p>
+
+      <h2><span class="no">the pieces</span>One gate, many witnesses</h2>
+      <div class="pieces">
+        <div class="piece"><code>AgentService</code><span>The service: an 11-step pipeline whose order is the specification, the confirmation gate, the instrumented tool boundary, and the showcase page.</span></div>
+        <div class="piece"><code>AppHost</code><span>.NET Aspire composition root — development only, never containerised. One command brings the system up with an empty <code>.env</code>.</span></div>
+        <div class="piece"><code>ServiceDefaults</code><span>The kernel: OpenTelemetry, health checks, discovery, resilience. Thin by rule — CI measures its size.</span></div>
+        <div class="piece"><code>docs/SPEC.md</code><span>The behaviour contract — behaviours, hard constraints, rubrics, refusals — written before the agent existed.</span></div>
+        <div class="piece"><code>evals/</code><span>35 scenarios in five classes, fixtures as fictional worlds, versioned rubrics, recorded baselines. All YAML and JSON — data, not code, portable to any stack.</span></div>
+        <div class="piece"><code>tests/…Evals</code><span>The harness: Layer 1 deterministic assertions over traces, Layer 2 rubric-anchored judge, mutation tests, and trace-to-scenario extraction.</span></div>
+        <div class="piece"><code>prompts/ · agents/</code><span>The prompt as a file and the agent definition as schema-checked JSON — both change-coupled to the spec by a CI check, because a prompt edit is a behaviour change with no code diff.</span></div>
+      </div>
+      <p class="dim" style="margin-top:15px;">
+        .NET 10 · Aspire · OpenTelemetry end to end · xUnit · scenarios as YAML · tag-driven
+        deployment to Fly.io — with the never-deployed status stated in words, not hidden behind a badge.
+      </p>
+
+    </div>
+  </section>
+
+  <!-- ============================ TAB 2 ============================ -->
+  <section id="panel-arch" role="tabpanel" aria-labelledby="tab-arch" hidden>
+    <div class="wrap">
+
+      <h2><span class="no">one turn, end to end</span>The pipeline decides; the model may only phrase</h2>
+      <p>
+        One container serves everything a visitor touches. Inside it, a fixed step pipeline runs
+        in an order that <em>is</em> the specification, a token store makes the stop mechanical,
+        and a single instrumented interface is the only way any tool is ever reached. A language
+        model, when configured, writes exactly one thing: the sentence the user reads — after
+        every decision has already been made and recorded.
+      </p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+        <svg viewBox="0 0 920 640" role="img"
+             aria-label="Architecture of one agent turn: the browser posts the user's sentence and, later, the approval decision to the agent service. Inside the service an eleven-step pipeline runs — establish actor, read decision, interpret, scope guard, resolve person, resolve dates, leave types, conflict check, draft, confirmation gate, execute write — with the gate issuing a single-use token that the write tool requires. Tools are reached only through the instrumented IWorkforceTools boundary, backed by mock fixtures by default or a dev-only MCP client against the Factorial MCP server. Every decision is exported as OpenTelemetry span attributes, producing the captured trace the eval bench grades.">
+          <defs>
+            <marker id="arw" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+            <marker id="arwA" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head-accent" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+          </defs>
+
+          <rect class="browser-box" x="330" y="20" width="260" height="56" rx="5"/>
+          <text class="name" x="460" y="43" text-anchor="middle">Browser</text>
+          <text class="meta" x="460" y="60" text-anchor="middle">the showcase page — three static files, one origin</text>
+
+          <polyline class="edge" points="400,76 400,116" marker-end="url(#arw)"/>
+          <text class="lbl" x="392" y="102" text-anchor="end">① POST /agent/turn — the sentence</text>
+          <polyline class="edge-accent" points="520,76 520,116" marker-end="url(#arwA)"/>
+          <text class="lbl-accent" x="528" y="102">② the decision — approve releases the token</text>
+
+          <rect class="boundary" x="40" y="120" width="840" height="406" rx="8"/>
+          <rect class="band" x="41" y="121" width="838" height="35"/>
+          <text class="lbl-strong" x="56" y="142">AbsenceConcierge.AgentService · POST /agent/turn · GET /workforce/* (read-only) · deliberately no write route</text>
+          <text class="lbl" x="56" y="518">one container — good behaviour is UX; the boundary is security</text>
+
+          <rect class="boundary" x="60" y="168" width="604" height="152" rx="6"/>
+          <text class="lbl-strong" x="74" y="188">the step pipeline — its order is the specification</text>
+
+          <line class="edge" x1="74" y1="215" x2="649" y2="215"/>
+          <rect class="box" x="74" y="198" width="90" height="34" rx="4"/>
+          <text class="step-name" x="119" y="219" text-anchor="middle">actor</text>
+          <rect class="box" x="171" y="198" width="90" height="34" rx="4"/>
+          <text class="step-name" x="216" y="219" text-anchor="middle">decision</text>
+          <rect class="box" x="268" y="198" width="90" height="34" rx="4"/>
+          <text class="step-name" x="313" y="219" text-anchor="middle">interpret</text>
+          <rect class="box" x="365" y="198" width="90" height="34" rx="4"/>
+          <text class="step-name" x="410" y="219" text-anchor="middle">scope guard</text>
+          <rect class="box" x="462" y="198" width="90" height="34" rx="4"/>
+          <text class="step-name" x="507" y="219" text-anchor="middle">person</text>
+          <rect class="box" x="559" y="198" width="90" height="34" rx="4"/>
+          <text class="step-name" x="604" y="219" text-anchor="middle">dates</text>
+
+          <polyline class="edge" points="604,232 604,242 122,242 122,250" marker-end="url(#arw)"/>
+
+          <line class="edge" x1="74" y1="270" x2="612" y2="270"/>
+          <rect class="box" x="74" y="252" width="96" height="36" rx="4"/>
+          <text class="step-name" x="122" y="274" text-anchor="middle">leave types</text>
+          <rect class="box" x="178" y="252" width="100" height="36" rx="4"/>
+          <text class="step-name" x="228" y="274" text-anchor="middle">conflict check</text>
+          <rect class="box" x="286" y="252" width="62" height="36" rx="4"/>
+          <text class="step-name" x="317" y="274" text-anchor="middle">draft</text>
+          <rect class="gate-box" x="356" y="252" width="140" height="36" rx="4"/>
+          <text class="step-name" x="426" y="274" text-anchor="middle">✋ confirmation gate</text>
+          <rect class="box" x="504" y="252" width="108" height="36" rx="4"/>
+          <text class="step-name" x="558" y="274" text-anchor="middle">execute write</text>
+
+          <rect class="box" x="690" y="252" width="170" height="68" rx="5"/>
+          <text class="name" x="702" y="274">reply composer</text>
+          <text class="meta" x="702" y="292">deterministic first; a model</text>
+          <text class="meta" x="702" y="308">may rewrite — after all decisions</text>
+          <polyline class="edge" points="612,270 690,270" marker-end="url(#arw)"/>
+
+          <rect class="box" x="284" y="345" width="250" height="52" rx="5"/>
+          <text class="name" x="298" y="367">ConfirmationTokenStore</text>
+          <text class="meta" x="298" y="385">single-use · bound to the exact draft</text>
+          <polyline class="edge-accent" points="426,288 426,345" marker-end="url(#arwA)"/>
+          <text class="lbl-accent" x="434" y="316">issues</text>
+          <polyline class="edge-accent" points="410,397 410,430" marker-end="url(#arwA)"/>
+          <text class="lbl-accent" x="420" y="418">the write requires it</text>
+
+          <polyline class="edge" points="122,288 122,430" marker-end="url(#arw)"/>
+          <polyline class="edge" points="228,288 228,430" marker-end="url(#arw)"/>
+          <polyline class="edge" points="558,288 558,338 612,338 612,430" marker-end="url(#arw)"/>
+          <text class="lbl" x="130" y="418">reads</text>
+          <text class="lbl" x="620" y="418">the write</text>
+
+          <rect class="box" x="60" y="430" width="560" height="80" rx="6"/>
+          <text class="name" x="76" y="450">IWorkforceTools — the tool boundary</text>
+          <text class="meta" x="360" y="450">constraints enforced here, agent or not</text>
+          <rect class="box" x="76" y="460" width="240" height="36" rx="4"/>
+          <circle class="dot-on" cx="300" cy="470" r="4"/>
+          <text class="step-name" x="88" y="482">Mock — fixture worlds · the default</text>
+          <rect class="box" x="332" y="460" width="272" height="36" rx="4"/>
+          <circle class="dot-zero" cx="588" cy="470" r="4"/>
+          <text class="step-name" x="344" y="482">MCP — OAuth 2.0 + DCR · dev-only</text>
+
+          <rect class="box" x="650" y="430" width="212" height="76" rx="5"/>
+          <text class="name" x="664" y="450">OpenTelemetry</text>
+          <text class="meta" x="664" y="468">every decision is a span</text>
+          <text class="meta" x="664" y="484">attribute (ADR-0003)</text>
+          <polyline class="edge" points="775,320 775,430" marker-end="url(#arw)"/>
+          <text class="lbl" x="783" y="380">the trace</text>
+
+          <rect class="browser-box" x="332" y="566" width="280" height="52" rx="5"/>
+          <text class="name" x="346" y="588">Factorial MCP server</text>
+          <text class="meta" x="346" y="605">mcp.factorialhr.com · acts as the signed-in user</text>
+          <polyline class="edge-private" points="468,496 468,566" marker-end="url(#arw)"/>
+          <text class="lbl" x="478" y="548">never configured on the public app</text>
+
+          <rect class="box" x="650" y="566" width="212" height="52" rx="5"/>
+          <text class="name" x="664" y="588">the captured trace</text>
+          <text class="meta" x="664" y="605">what the eval bench grades →</text>
+          <polyline class="edge" points="756,506 756,566" marker-end="url(#arw)"/>
+
+          <line class="edge" x1="60" y1="570" x2="108" y2="570" marker-end="url(#arw)"/>
+          <text class="lbl" x="118" y="574">in-process call</text>
+          <line class="edge-accent" x1="60" y1="594" x2="108" y2="594" marker-end="url(#arwA)"/>
+          <text class="lbl" x="118" y="598">the token’s path — what makes the stop mechanical</text>
+          <line class="edge-private" x1="60" y1="618" x2="108" y2="618" marker-end="url(#arw)"/>
+          <text class="lbl" x="118" y="622">dev-only or optional mode</text>
+        </svg>
+        </div>
+        <figcaption>
+          The full step order: establish actor → read decision → interpret → scope guard →
+          resolve person → resolve dates → leave types → conflict check → draft →
+          <strong>confirmation gate</strong> → execute write. Adding a behaviour means adding a
+          class, not editing a prompt — and the reply composer runs after all of it, so a model
+          in that position cannot call a tool, reach the gate, or change an outcome.
+        </figcaption>
+      </figure>
+
+      <h2><span class="no">the edges</span>Every arrow, spelled out</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Edge</th><th>What moves</th><th>Why it is drawn that way</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>① browser → service</td>
+              <td>The user’s sentence, <code>POST /agent/turn</code>.</td>
+              <td>The page is served by the same service — one origin, strict CSP, no CORS to get wrong, no second container to keep patched.</td>
+            </tr>
+            <tr>
+              <td>② browser → service</td>
+              <td>The decision. Approve releases a single-use token bound to the exact draft the card showed.</td>
+              <td>The card renders the structured draft the service returned — what a human approves is what the agent is holding, never a re-parse of prose.</td>
+            </tr>
+            <tr>
+              <td>gate → token store</td>
+              <td>The pipeline stops and records a pending confirmation; the write happens in a later turn or not at all.</td>
+              <td>C-1: no write-classified span before a <code>confirmation.received</code> event. Asserted by scenarios, on every push.</td>
+            </tr>
+            <tr>
+              <td>store → <code>request_time_off</code></td>
+              <td>The one write. Refused at the tool boundary without an approved, draft-bound, unused token.</td>
+              <td>An agent talked — or injected — into submitting early fails here, mechanically, whatever its prompt says.</td>
+            </tr>
+            <tr>
+              <td>steps → tools</td>
+              <td>Leave types, existing leaves, the employee — through one instrumented interface, mock or MCP.</td>
+              <td>C-5: every identifier in a write must have appeared in an earlier tool result <em>in the same trace</em> — the assertion that catches a confidently hallucinated leave type.</td>
+            </tr>
+            <tr>
+              <td>MCP → Factorial</td>
+              <td>The same tools against <code>mcp.factorialhr.com</code> — Streamable HTTP, OAuth 2.0 with dynamic client registration, acting as the signed-in user.</td>
+              <td>Dev-only by construction: the public app carries none of its settings, so the branch is unreachable there rather than switched off (ADR-0005).</td>
+            </tr>
+            <tr>
+              <td>pipeline → trace</td>
+              <td>Every step, tool call, decision and refusal, as OpenTelemetry spans and events.</td>
+              <td>The trace is the interface between the agent and its evals — Layer 1 grades it on every push, and production re-checks C-1 on it daily.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2><span class="no">the measuring loop</span>The spec came first; the trace is what gets graded</h2>
+      <p>
+        Layer 1 asserts over which tools were called, with what arguments, in what order — and
+        what was <em>not</em> done. It needs no model, no network and no credential, which is
+        exactly why it can gate every pull request. Layer 2 is a rubric-anchored judge with a
+        pinned model and a hashed prompt, calibrated against labels before its scores may block
+        anything — and on credential-less runs it reports <code>skipped:no-credential</code>,
+        never a silent green.
+      </p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+        <svg viewBox="0 0 920 500" role="img"
+             aria-label="The evaluation loop: the spec feeds 35 YAML scenarios, which the ScenarioRunner executes against the real agent service in process, producing captured traces. Layer 1 applies 313 deterministic assertions — constraints hard-block at 100%, behaviours are measured against a recorded baseline. Layer 2 is a rubric-anchored judge with a pinned model. Both feed the CI gates: a sticky pull-request comment carrying the diff, and coupling checks. A daily production loop reads exported spans and can turn real failures into new scenarios.">
+          <defs>
+            <marker id="arw2" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+          </defs>
+
+          <rect class="box" x="40" y="50" width="250" height="96" rx="5"/>
+          <text class="name" x="56" y="74">docs/SPEC.md — the contract</text>
+          <text class="meta" x="56" y="94">written before the agent existed:</text>
+          <text class="meta" x="56" y="110">16 behaviours · 7 hard constraints</text>
+          <text class="meta" x="56" y="126">5 rubrics · 7 refusals</text>
+
+          <polyline class="edge" points="165,146 165,196" marker-end="url(#arw2)"/>
+          <text class="lbl" x="175" y="176">each behaviour cites its proof</text>
+
+          <rect class="box" x="40" y="196" width="250" height="96" rx="5"/>
+          <text class="name" x="56" y="220">evals/ — 35 scenarios, as YAML</text>
+          <text class="meta" x="56" y="240">happy · ambiguity · denied ·</text>
+          <text class="meta" x="56" y="256">adversarial · degradation</text>
+          <text class="meta" x="56" y="272">schema-validated · fictional fixtures</text>
+
+          <rect class="box" x="370" y="50" width="220" height="96" rx="5"/>
+          <text class="name" x="386" y="74">the agent under test</text>
+          <text class="meta" x="386" y="94">the same pipeline the demo runs</text>
+          <text class="meta" x="386" y="110">+ 4 deliberately broken variants</text>
+          <text class="meta" x="386" y="126">the suite must catch</text>
+          <polyline class="edge" points="480,146 480,196" marker-end="url(#arw2)"/>
+
+          <rect class="box" x="370" y="196" width="220" height="96" rx="5"/>
+          <text class="name" x="386" y="220">ScenarioRunner</text>
+          <text class="meta" x="386" y="240">the real service, in process</text>
+          <text class="meta" x="386" y="256">faults injected at the tool seam</text>
+          <text class="meta" x="386" y="272">→ one captured trace each</text>
+          <polyline class="edge" points="290,244 370,244" marker-end="url(#arw2)"/>
+
+          <rect class="box" x="660" y="50" width="220" height="110" rx="5"/>
+          <text class="name" x="676" y="74">Layer 1 — deterministic</text>
+          <text class="meta" x="676" y="94">313 assertions over the trace,</text>
+          <text class="meta" x="676" y="110">60 of them assert absence (19%)</text>
+          <text class="meta" x="676" y="126">constraints: 100% or no merge</text>
+          <text class="meta" x="676" y="142">behaviours: vs the recorded baseline</text>
+
+          <rect class="box" x="660" y="196" width="220" height="110" rx="5"/>
+          <text class="name" x="676" y="220">Layer 2 — rubric judge</text>
+          <text class="meta" x="676" y="240">pinned model · prompt hashed</text>
+          <text class="meta" x="676" y="256">45 calibration labels came first</text>
+          <text class="meta" x="676" y="272">PRs: skipped:no-credential</text>
+          <text class="meta" x="676" y="288">nightly keyed run, full scope</text>
+
+          <polyline class="edge" points="590,220 625,220 625,105 660,105" marker-end="url(#arw2)"/>
+          <polyline class="edge" points="590,262 660,262" marker-end="url(#arw2)"/>
+
+          <rect class="box" x="370" y="370" width="510" height="90" rx="5"/>
+          <text class="name" x="386" y="394">the gates — ci.yml, on every push</text>
+          <text class="meta" x="386" y="414">one sticky PR comment, updated in place, carrying the diff vs the baseline</text>
+          <text class="meta" x="386" y="430">coupling: a prompt or agent edit must move the spec;</text>
+          <text class="meta" x="386" y="446">a fixture or rubric edit must bump a version</text>
+          <polyline class="edge" points="740,306 740,370" marker-end="url(#arw2)"/>
+          <polyline class="edge" points="880,105 900,105 900,415 880,415" marker-end="url(#arw2)"/>
+
+          <rect class="box" x="40" y="370" width="270" height="90" rx="5"/>
+          <text class="name" x="56" y="394">the production loop — daily</text>
+          <text class="meta" x="56" y="414">reads the demo’s exported spans,</text>
+          <text class="meta" x="56" y="430">re-runs C-1 post hoc — a red run</text>
+          <text class="meta" x="56" y="446">is the pager, named as such</text>
+          <polyline class="edge-private" points="175,370 175,292" marker-end="url(#arw2)"/>
+          <text class="lbl" x="185" y="330">real failures become new scenarios</text>
+          <text class="lbl" x="185" y="346">(origin: production-trace)</text>
+        </svg>
+        </div>
+        <figcaption>
+          What Layer 1 does not prove is that the agent understands English: on the gated path the
+          interpreter is rule-based, so a green run means the orchestration and the constraint layer
+          work. Language understanding is what the judge and the keyed nightly run are for — and the
+          two baselines are never merged.
+        </figcaption>
+      </figure>
+
+    </div>
+  </section>
+
+  <!-- ============================ TAB 3 ============================ -->
+  <section id="panel-infra" role="tabpanel" aria-labelledby="tab-infra" hidden>
+    <div class="wrap">
+
+      <h2><span class="no">the estate</span>One Fly app, two Azure services, and workflows that gate each other</h2>
+      <p>
+        Compute stays on Fly.io; Azure supplies only what a demo cannot fake — a paid model and a
+        trace sink. GitHub Actions is the control plane: nothing deploys from a branch, the eval
+        suite gates every tag, and two scheduled workflows keep the deployed thing measured rather
+        than merely up.
+      </p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+        <svg viewBox="0 0 920 650" role="img"
+             aria-label="Infrastructure topology: GitHub hosts five workflows — CI on every push, a tag-driven deploy gated on the eval suite, nightly keyed Layer 2 evals, a daily production loop reading spans back from Application Insights, and an Azure provisioning workflow driving Bicep. The Fly.io app agent-eval-bench-demo is a single scale-to-zero machine in Madrid. Azure holds an OpenAI account with composer and judge deployments plus Application Insights and Log Analytics as the trace sink.">
+          <defs>
+            <marker id="arw3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+            <marker id="arwA3" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head-accent" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+          </defs>
+
+          <rect class="browser-box" x="690" y="16" width="180" height="48" rx="5"/>
+          <text class="name" x="780" y="36" text-anchor="middle">a visitor</text>
+          <text class="meta" x="780" y="52" text-anchor="middle">browser · HTTPS</text>
+
+          <rect class="boundary" x="40" y="80" width="400" height="400" rx="8"/>
+          <rect class="band" x="41" y="81" width="398" height="35"/>
+          <text class="lbl-strong" x="56" y="102">GitHub — the control plane</text>
+
+          <rect class="box" x="60" y="130" width="360" height="52" rx="5"/>
+          <text class="name" x="76" y="150">ci.yml — every push &amp; PR</text>
+          <text class="meta" x="76" y="168">zero credentials — the full suite gates the merge</text>
+
+          <rect class="box" x="60" y="194" width="360" height="52" rx="5"/>
+          <text class="name" x="76" y="214">flyio.yml — on tag v*</text>
+          <text class="meta" x="76" y="232">verify: the whole eval suite → flyctl deploy</text>
+
+          <rect class="box" x="60" y="258" width="360" height="52" rx="5"/>
+          <text class="name" x="76" y="278">nightly.yml — 02:30 UTC</text>
+          <text class="meta" x="76" y="296">Layer 2, full judged set, keyed (env: evals)</text>
+
+          <rect class="box" x="60" y="322" width="360" height="52" rx="5"/>
+          <text class="name" x="76" y="342">production-loop.yml — 04:15 UTC</text>
+          <text class="meta" x="76" y="360">reads spans back · post-hoc C-1 · red = the pager</text>
+
+          <rect class="box" x="60" y="386" width="360" height="52" rx="5"/>
+          <text class="name" x="76" y="406">azure.yml — on dispatch</text>
+          <text class="meta" x="76" y="424">Bicep end to end, then one live judged run</text>
+
+          <text class="meta" x="60" y="464">plus codeql.yml and secret-scan.yml, on every push</text>
+
+          <rect class="boundary" x="490" y="80" width="390" height="240" rx="8"/>
+          <rect class="band" x="491" y="81" width="388" height="35"/>
+          <text class="lbl-strong" x="506" y="102">Fly.io · mad (Madrid) · TLS at the edge</text>
+
+          <rect class="box" x="510" y="140" width="350" height="150" rx="5"/>
+          <circle class="dot-zero" cx="844" cy="156" r="4"/>
+          <text class="name" x="526" y="164">agent-eval-bench-demo</text>
+          <text class="meta" x="526" y="184">one machine · shared-cpu-1x · 512 MB</text>
+          <text class="meta" x="526" y="202">scale-to-zero — an idle demo costs nothing</text>
+          <text class="meta" x="526" y="220">mock fixture world · dates in Europe/Madrid</text>
+          <text class="meta" x="526" y="238">no auth — spend is bounded by ceilings:</text>
+          <text class="meta" x="526" y="256">a daily token budget · per-client turn caps</text>
+          <text class="meta" x="526" y="274">health checked at /health, not at /</text>
+
+          <polyline class="edge" points="800,64 800,140" marker-end="url(#arw3)"/>
+          <text class="lbl" x="792" y="131" text-anchor="end">the proxy wakes a stopped machine — a cold start ≈ 1 s</text>
+
+          <rect class="boundary" x="490" y="360" width="390" height="210" rx="8"/>
+          <rect class="band" x="491" y="361" width="388" height="35"/>
+          <text class="lbl-strong" x="506" y="382">Azure · rg-agent-eval-bench</text>
+
+          <rect class="box" x="510" y="420" width="200" height="130" rx="5"/>
+          <text class="name" x="526" y="444">Azure OpenAI</text>
+          <text class="meta" x="526" y="462">two model deployments:</text>
+          <path class="cyl" d="M528,482 a22,6 0 0 1 44,0 v18 a22,6 0 0 1 -44,0 z"/>
+          <ellipse class="cyl" cx="550" cy="482" rx="22" ry="6"/>
+          <text class="meta" x="582" y="496">composer — the prose</text>
+          <path class="cyl" d="M528,516 a22,6 0 0 1 44,0 v18 a22,6 0 0 1 -44,0 z"/>
+          <ellipse class="cyl" cx="550" cy="516" rx="22" ry="6"/>
+          <text class="meta" x="582" y="530">judge — Layer 2</text>
+
+          <rect class="box" x="730" y="420" width="130" height="130" rx="5"/>
+          <text class="name" x="742" y="444">App Insights</text>
+          <text class="meta" x="742" y="462">+ Log Analytics</text>
+          <text class="meta" x="742" y="480">the trace sink,</text>
+          <text class="meta" x="742" y="498">queryable (KQL)</text>
+
+          <polyline class="edge-accent" points="420,230 455,230 455,215 510,215" marker-end="url(#arwA3)"/>
+          <text class="lbl-strong" x="426" y="225">①</text>
+
+          <polyline class="edge-private" points="420,404 472,404 472,265 510,265" marker-end="url(#arw3)"/>
+          <text class="lbl-strong" x="426" y="399">②</text>
+
+          <polyline class="edge-accent" points="420,422 460,422 460,452 510,452" marker-end="url(#arwA3)"/>
+          <text class="lbl-strong" x="426" y="417">③</text>
+
+          <polyline class="edge" points="420,296 446,296 446,585 620,585 620,550" marker-end="url(#arw3)"/>
+          <text class="lbl-strong" x="426" y="291">④</text>
+
+          <polyline class="edge" points="730,545 480,545 480,348 420,348" marker-end="url(#arw3)"/>
+          <text class="lbl-strong" x="426" y="343">⑤</text>
+
+          <polyline class="edge-private" points="700,290 700,420" marker-end="url(#arw3)"/>
+          <text class="lbl" x="692" y="344" text-anchor="end">composer — optional</text>
+          <polyline class="edge" points="820,290 820,420" marker-end="url(#arw3)"/>
+          <text class="lbl" x="812" y="331" text-anchor="end">OTel · 100%</text>
+
+          <text class="lbl" x="60" y="496">① the tag-driven deploy — only after the eval suite passes</text>
+          <text class="lbl" x="60" y="514">② composer key + trace sink, set as app secrets · ③ Bicep provisions</text>
+          <text class="lbl" x="60" y="532">④ the nightly judge call, keyed · ⑤ the daily span read-back (KQL)</text>
+
+          <text class="lbl" x="40" y="608">WorkforceTools__Mcp__* is never set on the public app — the live-identity branch is unreachable there, not switched off (ADR-0005).</text>
+
+          <line class="edge" x1="40" y1="632" x2="88" y2="632" marker-end="url(#arw3)"/>
+          <text class="lbl" x="98" y="636">traffic &amp; telemetry</text>
+          <line class="edge-accent" x1="250" y1="632" x2="298" y2="632" marker-end="url(#arwA3)"/>
+          <text class="lbl" x="308" y="636">a workflow acting</text>
+          <line class="edge-private" x1="470" y1="632" x2="518" y2="632" marker-end="url(#arw3)"/>
+          <text class="lbl" x="528" y="636">optional — degrades with a working fallback</text>
+        </svg>
+        </div>
+        <figcaption>
+          The described topology, end to end — and honestly: no Fly organisation is wired to this
+          repository today, so nothing above claims to be running. The workflows are real and
+          CI-checked, every secret is optional with a stated degradation, and the whole estate is
+          one <code>v*</code> tag plus one <code>azure.yml</code> dispatch away.
+        </figcaption>
+      </figure>
+
+      <h2><span class="no">the edges</span>Every arrow, spelled out</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Edge</th><th>What moves</th><th>Why it is drawn that way</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>visitor → demo</td>
+              <td>HTTPS through the Fly edge proxy, which wakes a stopped machine.</td>
+              <td>Scale-to-zero: an idle demo costing nothing is the difference between one that stays up and one that gets deleted. A cold start costs a visitor about a second.</td>
+            </tr>
+            <tr>
+              <td><code>flyio.yml</code> → demo</td>
+              <td><code>flyctl deploy --remote-only</code>, one machine, after the full eval suite passes with zero credentials.</td>
+              <td>A tag whose constraint scenarios fail cannot reach the demo. An agent deployment whose evals are advisory has no gate at all.</td>
+            </tr>
+            <tr>
+              <td>demo → Azure OpenAI</td>
+              <td>Optional composer calls that rewrite the already-grounded reply.</td>
+              <td>Absent key ⇒ the deterministic composer answers and the page’s banner says so. Every failure is a fallback, never an error.</td>
+            </tr>
+            <tr>
+              <td>demo → App Insights</td>
+              <td>OpenTelemetry spans, sampled at 100%.</td>
+              <td>At 10% sampling, nine incidents in ten have no trace to extract from — cost is controlled by retention and the ingestion cap, never by deleting the input.</td>
+            </tr>
+            <tr>
+              <td><code>nightly.yml</code> → judge</td>
+              <td>The full judged set, 02:30 UTC, keyed from the <code>evals</code> GitHub environment.</td>
+              <td>On pull requests the judge reports <code>skipped:no-credential</code> — an explicit skip, never a silent green. The nightly run is what stops the skip becoming permanent.</td>
+            </tr>
+            <tr>
+              <td><code>production-loop.yml</code> ← App Insights</td>
+              <td>Yesterday’s spans, scored; C-1 re-checked post hoc; the worst sessions exported as an artifact for scenario extraction.</td>
+              <td>A red scheduled run notifies the owner — that is the demo’s pager, named as such rather than dressed up as one.</td>
+            </tr>
+            <tr>
+              <td><code>azure.yml</code> → everything</td>
+              <td>Bicep provisions OpenAI and the monitoring pair, runs one live judged run, then wires secrets onto the Fly app and the <code>evals</code> environment.</td>
+              <td>Infrastructure that has never served a request is configuration no CI context executes — so the provisioning run uses what it built, in the same job.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2><span class="no">operations</span>Deploying is pushing a tag</h2>
+      <p>
+        A push to a branch never deploys anything. A <code>v*</code> tag runs the same eval suite
+        CI runs on every pull request — no credential, no network, no model — and only then does
+        <code>flyctl</code> deploy the one app. Secrets are set by name with
+        <code>flyctl secrets set</code> and never appear in a committed file; each one is optional,
+        and <a href="https://github.com/konradcinkusz/agent-eval-bench/blob/main/flyio/SECRETS.md"><code>flyio/SECRETS.md</code></a>
+        states what the deployment does when it is missing, because “optional” without a
+        consequence is not a decision anybody can make.
+      </p>
+      <p class="dim">
+        What replaces authentication is a stack of ceilings that fail closed: a shared daily token
+        budget no number of visitors moves, per-visitor live-turn allowances, per-address rate
+        limits, and bounded conversations, payloads and concurrency. The access code answers “is
+        this somebody I gave a code to?” — a spend question, never an identity one.
+      </p>
+
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap">
+    <span>MIT licensed · every number on this page comes from the suite’s own reports</span>
+    <span>the standard: <a href="https://github.com/konradcinkusz/architecture-standards/blob/main/docs/guides/AI-EVALS.md">AI-EVALS.md</a> · this repository is its first worked example</span>
+  </div>
+</footer>
+
+<script>
+  (function () {
+    var tabs = Array.prototype.slice.call(document.querySelectorAll('[role="tab"]'));
+    var hashFor = { 'tab-app': '', 'tab-arch': '#architecture', 'tab-infra': '#infrastructure' };
+    function select(tab, focus, setHash) {
+      tabs.forEach(function (t) {
+        var on = t === tab;
+        t.setAttribute('aria-selected', on ? 'true' : 'false');
+        t.tabIndex = on ? 0 : -1;
+        document.getElementById(t.getAttribute('aria-controls')).hidden = !on;
+      });
+      if (focus) tab.focus();
+      if (setHash && history.replaceState) {
+        history.replaceState(null, '', location.pathname + location.search + hashFor[tab.id]);
+      }
+    }
+    tabs.forEach(function (t, i) {
+      t.addEventListener('click', function () { select(t, false, true); });
+      t.addEventListener('keydown', function (e) {
+        var d = e.key === 'ArrowRight' ? 1 : e.key === 'ArrowLeft' ? -1 : 0;
+        if (d) {
+          e.preventDefault();
+          select(tabs[(i + d + tabs.length) % tabs.length], true, true);
+        }
+      });
+    });
+    if (location.hash === '#architecture') {
+      select(document.getElementById('tab-arch'), false, false);
+    } else if (location.hash === '#infrastructure') {
+      select(document.getElementById('tab-infra'), false, false);
+    }
+  })();
+</script>
+
+</body>
+</html>
