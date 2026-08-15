@@ -1,9 +1,19 @@
 # Absence Concierge — behaviour specification
 
 - **Agent slug**: `absence-concierge`
-- **Spec version**: 1.0.0
+- **Spec version**: 1.1.0
 - **Status**: Accepted — this is the contract. Code is measured against it, not the other way round.
-- **Date**: 2026-08-14
+- **Date**: 2026-08-15 (1.0.0: 2026-08-14)
+
+**What changed in 1.1.0**, all of it found by implementing the agent in Phase 3
+and amended in the same pull request as the code, per the rule below:
+
+| Change | Why |
+|---|---|
+| [§8.2](#82-determinism-and-what-100-quantifies-over) rewritten: the gated path names the **deterministic interpreter**, not a `Replay` provider | 1.0.0 assumed the deterministic path would replay recorded model responses. There are no recordings until a model has been run, so a suite gated on them would skip on every pull request — the "config no CI context ever executes" trap the standards name. What is honest, and what is now written, is that Layer 1 grades orchestration and the constraint layer rather than language understanding |
+| [§9](#9-assumptions) gains the interpreter assumption and its overfitting risk | A rule-based reader scored on the corpus it was written against is a parser fitted to its own test set. Stating it is cheaper than letting a reader infer a stronger claim from a green suite |
+| `amb-004` says "Friday next week" rather than "next Friday" | It asserted a resolved date for the same words on the same weekday that `amb-001` asserts a question for. No correct agent satisfies both, and one of them had to move |
+| [§7](#7-degradation-contract) rule 3 gains the retry criterion | "At most two attempts" did not say which outcomes are worth a second attempt. A permission denial retried twice is noise, not resilience |
 
 > **This document exists before the agent does.** Nothing in `AbsenceConcierge.*`
 > had been written when version 1.0.0 was accepted. That ordering is the method,
@@ -406,6 +416,13 @@ rules, restated as testable properties:
    turn (`call_attempts`), after which the agent stops and says so. Attempts are
    visible in the trace as events on the tool's span ([§2.2.1](#221-one-span-per-logical-tool-call)).
 
+   **A second attempt is only for a failure, never for a decision.** A permission
+   denial, a rejection and a missing confirmation are answers: retrying them
+   produces the same answer and a noisier trace. Only a definite failure and an
+   indeterminate one are retryable, and only for reads. *(Added in 1.1.0: the
+   original rule gave a number without saying what it counted, which left "at
+   most two attempts" satisfiable by an agent that hammered a 403.)*
+
    **Write tools get one attempt. Not two.** This carve-out exists because the
    blanket rule and [C-6](#4-hard-constraints) cannot both hold for a write:
    "at most two attempts" would permit two `request_time_off` spans against one
@@ -516,9 +533,23 @@ is a false regression net — worse than no test, because it is trusted"
 input can produce different outputs". Both are true; the resolution is
 structural, not a compromise:
 
-- **The gated path is deterministic by construction.** `Llm:Provider=Replay` and
-  mock tools mean Layer 1 on a PR has no sampling to do. **n = 1**, and a failure
-  is a failure.
+- **The gated path is deterministic by construction.** `Llm:Provider=None` — a
+  rule-based interpreter, a rule-based composer, and mock tools — means Layer 1
+  on a PR has no sampling to do. **n = 1**, and a failure is a failure.
+
+  **What that path does and does not grade, stated plainly.** The agent's
+  decisions live in the step pipeline, not in a model: date resolution, the
+  permission check, the conflict check, the gate, the write, the outcome. Layer 1
+  asserts on those, and they are the same code whichever interpreter fed them. So
+  a green Layer 1 means *the machinery works* — tool ordering, the gate,
+  grounding, termination, no internal identifiers — and it does **not** mean the
+  agent understands English. That is Layer 2's job and the keyed nightly matrix's,
+  and the two baselines are never merged: every turn span carries
+  `agent.interpreter`, and a baseline is partitioned by it
+  ([ADR-0004](adr/0004-pin-the-model-and-never-fall-back-silently.md)).
+
+  This is what AI-EVALS.md §4 already says from the other direction — *"Layer 1
+  is cheap, fast, and model-independent"* — made concrete rather than aspirational.
 - **A failed scenario is never re-run to green.** There is no retry setting in
   the harness. Adding one would be the false regression net, exactly.
 - **"100% pass" quantifies over constraint scenarios on that single run.** Not
@@ -621,6 +652,29 @@ Written down because an assumption nobody stated is a defect nobody can find.
 - **The permission fixture is the authority.** The agent does not attempt to
   verify permissions by other means, and does not treat a tool's success as
   evidence it was entitled to call it.
+
+- **The interpreter on the gated path is rule-based, and it is fitted to less
+  than it looks.** *(1.1.0.)* Reading "next Friday" or "the 9th to the 13th of
+  October" out of a sentence is done by rules, not a model, so that the suite
+  runs on a fresh clone with no credentials. The honest risk is overfitting: a
+  reader written by the same hand that wrote the thirty-two scenarios it will be
+  scored on is a parser fitted to its own test set.
+
+  Two things are done about it and neither is a promise. The rules are written
+  against grammatical shapes — a bare weekday, "next X", "X next week", an ordinal
+  with or without a month, ranges and lists — rather than against the corpus
+  strings; and the unit tests deliberately include sentences that appear in no
+  scenario. What remains is recorded as a deviation rather than argued away
+  ([`DEVIATIONS.md`](DEVIATIONS.md) D-7), because the thing a reader must not take
+  from a green Layer 1 is that the agent understood the sentence.
+
+- **The agent's decisions never read free text from a tool result.** *(1.1.0.)*
+  The pipeline branches on identifiers, dates and the actor's permission list.
+  Display names, leave-type names and booking comments are carried to the reply as
+  data and are never read as instructions, which is the structural half of C-7.
+  The `injection.ignored` event reports that instruction-shaped content was
+  present; a pattern list is an incomplete defence by construction, and it is not
+  what the constraint rests on.
 - **English only, for now.** The agent is not specified for other languages. This
   is a real limitation for a Barcelona-based reader and is recorded as such
   rather than glossed: multilingual date expressions ("el viernes que viene")
