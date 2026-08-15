@@ -113,7 +113,10 @@ async function turn(text, decision) {
     });
 
     if (response.status === 429) {
-      append('service', 'Too many requests from this address. Wait a minute and try again.');
+      // The service says which ceiling was hit when it can — a conversation at its
+      // turn limit and an address sending too fast need different sentences.
+      const body = await response.json().catch(() => ({}));
+      append('service', body.error ?? 'Too many requests from this address. Wait a minute and try again.');
       return;
     }
 

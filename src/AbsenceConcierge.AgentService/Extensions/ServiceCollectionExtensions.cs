@@ -213,6 +213,16 @@ public static class ServiceCollectionExtensions
 
         services.TryAddSingleton(TimeProvider.System);
         services.AddSingleton<IDemoBudget, DemoBudget>();
+        services.AddSingleton<IDemoClientQuota, DemoClientQuota>();
+
+        // The body ceiling, applied at the server rather than per route: the routes
+        // accept three short strings, the framework default is thirty megabytes, and
+        // partial coverage is the recorded failure mode (SECURITY-REVIEW.md §9).
+        services.Configure<Microsoft.AspNetCore.Server.Kestrel.Core.KestrelServerOptions>(kestrel =>
+            kestrel.Limits.MaxRequestBodySize = Math.Max(
+                1024,
+                configuration.GetSection(DemoOptions.SectionName)
+                    .GetValue("MaxRequestBodyBytes", new DemoOptions().MaxRequestBodyBytes)));
 
         // Resilience from the kernel, not hand-rolled here (P2a). The named client
         // exists so the provider's timeouts and retries are the estate's, and so a
@@ -243,6 +253,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton(sp => new DemoAccess(
             sp.GetRequiredService<IOptions<DemoOptions>>(),
             sp.GetRequiredService<IDemoBudget>(),
+            sp.GetRequiredService<IDemoClientQuota>(),
             sp.GetRequiredService<LlmProviderHandle>().Provider));
 
         services.AddSingleton<IReplyComposer>(sp =>
@@ -297,16 +308,19 @@ public static class ServiceCollectionExtensions
         this IServiceCollection services,
         IConfiguration configuration)
     {
-        var perMinute = Math.Max(
-            1,
-            configuration.GetSection(DemoOptions.SectionName).GetValue("RequestsPerMinutePerClient", 20));
+        var demo = configuration.GetSection(DemoOptions.SectionName);
+        var perMinute = Math.Max(1, demo.GetValue("RequestsPerMinutePerClient", 20));
+        var concurrent = Math.Max(1, demo.GetValue("MaxConcurrentRequests", new DemoOptions().MaxConcurrentRequests));
 
         services.AddRateLimiter(limiter =>
         {
             limiter.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
+            // Partitioned by the SAME client key the live allowance uses. Behind
+            // Fly's proxy the socket peer is the proxy, and a limiter keyed on it
+            // would put every visitor on the internet into one bucket.
             limiter.AddPolicy(DemoRateLimitPolicy, http => RateLimitPartition.GetFixedWindowLimiter(
-                http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+                DemoClientKey.Resolve(http),
                 _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = perMinute,
@@ -317,6 +331,21 @@ public static class ServiceCollectionExtensions
                     // the honest answer to a rate limit is immediate.
                     QueueLimit = 0,
                 }));
+
+            // A process-wide in-flight ceiling under the per-client window. The
+            // window bounds one client's rate; this bounds what every client
+            // together can hold open on a 512 MB machine at once. Health probes are
+            // exempt — a probe that gets 429'd takes the machine down, which is the
+            // one outcome worse than the burst.
+            limiter.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(http =>
+                http.Request.Path.StartsWithSegments("/health")
+                || http.Request.Path.StartsWithSegments("/alive")
+                    ? RateLimitPartition.GetNoLimiter("probes")
+                    : RateLimitPartition.GetConcurrencyLimiter("everything-else", _ => new ConcurrencyLimiterOptions
+                    {
+                        PermitLimit = concurrent,
+                        QueueLimit = 0,
+                    }));
         });
 
         return services;
