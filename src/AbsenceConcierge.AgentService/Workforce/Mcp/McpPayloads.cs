@@ -25,7 +25,7 @@ public sealed class McpPayloadException : Exception
 }
 
 /// <summary>
-/// Foreign JSON in, <see cref="WorkforceModels"/> out. This is the anti-corruption
+/// Foreign JSON in, <see cref="WorkforceUser"/> and its neighbours out. This is the anti-corruption
 /// layer's actual work (P11) — the interface above it is just where the seam is drawn.
 ///
 /// <para>

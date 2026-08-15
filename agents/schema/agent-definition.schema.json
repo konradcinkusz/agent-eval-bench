@@ -1,0 +1,129 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/konradcinkusz/agent-eval-bench/agents/schema/agent-definition.schema.json",
+  "title": "Agent definition",
+  "description": "The agent as code, in the format AZURE-AI-FOUNDRY-AGENTS.md §6 describes, extended with an `mcp` tool type (proposed back to the standard as E-2 in docs/DEVIATIONS.md). Strict: `additionalProperties` is false at every level, so a mistyped key is an error rather than a field a provisioner silently ignores. That strictness is the point — this file is behaviour with no code diff, and the edit that regresses an agent without anything going red is an edit to a key nobody validated.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "slug",
+    "displayName",
+    "version",
+    "model",
+    "instructions",
+    "tools",
+    "metadata"
+  ],
+  "properties": {
+    "slug": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "description": "Stable identifier. Must match the directory this file lives in."
+    },
+    "displayName": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "description": "Moves with docs/SPEC.md. The Layer 1 baseline is recorded against a version, so a behaviour change that did not move this is a comparison across a measuring stick that changed length."
+    },
+    "model": {
+      "type": ["string", "null"],
+      "minLength": 1,
+      "description": "Explicitly nullable, and null means unchosen rather than default. A provisioner reading null MUST refuse; substituting a default is a behaviour change with no diff."
+    },
+    "temperature": {
+      "type": ["number", "null"],
+      "minimum": 0,
+      "maximum": 2
+    },
+    "instructions": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The system prompt. Under the change-coupling rule, editing this without touching docs/SPEC.md fails CI."
+    },
+    "tools": {
+      "type": "array",
+      "minItems": 1,
+      "description": "An agent with no tools is a chat box, and this repository's whole subject is what happens when a model can act.",
+      "items": {
+        "type": "object",
+        "required": ["type"],
+        "properties": {
+          "type": {
+            "enum": ["mcp", "function", "file_search", "code_interpreter"]
+          }
+        },
+        "allOf": [
+          {
+            "if": {
+              "properties": { "type": { "const": "mcp" } },
+              "required": ["type"]
+            },
+            "then": {
+              "additionalProperties": false,
+              "required": ["type", "serverLabel", "serverUrl", "allowedTools", "requireApproval"],
+              "properties": {
+                "type": { "const": "mcp" },
+                "serverLabel": { "type": "string", "minLength": 1 },
+                "serverUrl": {
+                  "type": "string",
+                  "pattern": "^\\$\\{[A-Z][A-Z0-9_]*\\}$",
+                  "description": "A placeholder, never a URL. A committed endpoint is a committed piece of somebody's infrastructure, and the substitution happens at provisioning time from the environment."
+                },
+                "allowedTools": {
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "type": "string", "minLength": 1 },
+                  "description": "An allow-list, not a description. The validator checks it against the tool catalogue in the service's own source, so a tool added to the code without being added here is caught."
+                },
+                "requireApproval": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["never", "always"],
+                  "description": "The read/write split from docs/SPEC.md §2.1, encoded where a provisioner can enforce it — a third layer, independent of the prompt and of the tool implementation.",
+                  "properties": {
+                    "never": {
+                      "type": "array",
+                      "uniqueItems": true,
+                      "items": { "type": "string", "minLength": 1 }
+                    },
+                    "always": {
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": { "type": "string", "minLength": 1 }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        ]
+      }
+    },
+    "metadata": {
+      "type": "object",
+      "additionalProperties": true,
+      "required": ["purpose", "tier", "specVersion", "specPath", "evalSuite"],
+      "description": "Free-form by design, with five keys this repository treats as load-bearing. Additional keys are prose explaining a decision the format cannot express, which is where reasoning belongs when the artefact is JSON.",
+      "properties": {
+        "purpose": { "type": "string", "minLength": 1 },
+        "tier": {
+          "enum": ["standard", "sensitive", "critical"],
+          "description": "AZURE-AI-FOUNDRY-AGENTS.md §6. Drives review depth and the eval gate this agent must clear."
+        },
+        "specVersion": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+          "description": "Checked against both `version` above and the specification document itself. Three places, one number, and CI is what keeps them the same number."
+        },
+        "specPath": { "type": "string", "minLength": 1 },
+        "evalSuite": { "type": "string", "minLength": 1 }
+      }
+    }
+  }
+}
