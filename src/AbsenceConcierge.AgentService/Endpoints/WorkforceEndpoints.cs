@@ -1,4 +1,6 @@
+using AbsenceConcierge.AgentService.Extensions;
 using AbsenceConcierge.AgentService.Workforce;
+using Microsoft.AspNetCore.RateLimiting;
 
 namespace AbsenceConcierge.AgentService.Endpoints;
 
@@ -17,7 +19,12 @@ public static class WorkforceEndpoints
     public static WebApplication MapWorkforceEndpoints(this WebApplication app)
     {
         var group = app.MapGroup("/workforce")
-            .WithTags("Workforce");
+            .WithTags("Workforce")
+
+            // The same policy as the agent's route. "Rate limiting present in most
+            // services" is the recorded failure mode (SECURITY-REVIEW.md §9), and
+            // these are reads a stranger can reach.
+            .RequireRateLimiting(ServiceCollectionExtensions.DemoRateLimitPolicy);
 
         group.MapGet("/me", async (IWorkforceTools tools, CancellationToken ct) =>
         {

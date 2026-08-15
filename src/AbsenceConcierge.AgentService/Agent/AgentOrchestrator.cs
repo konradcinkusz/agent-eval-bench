@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using AbsenceConcierge.AgentService.Agent.Language;
 using AbsenceConcierge.AgentService.Agent.Time;
 using AbsenceConcierge.AgentService.Telemetry;
@@ -122,9 +123,44 @@ public sealed class AgentOrchestrator(
         // said stop, and the one where the turn threw. A reply produced by a step
         // that a `Stop` skipped would leave the user with silence on exactly the
         // turns that most need an explanation.
-        var reply = composer.Compose(context, outcome);
+        var reply = await composer.ComposeAsync(context, outcome, cancellationToken).ConfigureAwait(false);
 
-        return new AgentTurnResult(outcome, termination, reply);
+        return new AgentTurnResult(
+            outcome,
+            termination,
+            reply,
+            CardFor(context, outcome),
+            context.Degradations.Count == 0 ? null : context.Degradations);
+    }
+
+    /// <summary>
+    /// The draft, structured, and only on the turn that stopped at the gate.
+    ///
+    /// <para>
+    /// Gated on the outcome rather than on <c>context.Draft is not null</c>. A draft
+    /// exists on the turn that executes the write too, and returning a card there
+    /// would let a client render "approve this?" beside a request that has already
+    /// been submitted — which is the confirmation gate turned into decoration.
+    /// </para>
+    /// </summary>
+    private static ConfirmationCard? CardFor(AgentTurnContext context, string outcome)
+    {
+        if (!string.Equals(outcome, AgentDiagnostics.TurnOutcomes.ConfirmationPending, StringComparison.Ordinal)
+            || context.Draft is not { } draft)
+        {
+            return null;
+        }
+
+        return new ConfirmationCard(
+            draft.LeaveType.Name,
+            draft.StartDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            draft.EndDate.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture),
+            draft.WorkingDays,
+            [.. draft.ExcludedDays.Select(day => string.Create(
+                CultureInfo.InvariantCulture,
+                $"{day.Date:yyyy-MM-dd} — {day.Label ?? day.Reason}"))],
+            draft.AttachmentRequired,
+            draft.ConflictCheck);
     }
 
     private static async ValueTask<StepSignal> RunStepAsync(

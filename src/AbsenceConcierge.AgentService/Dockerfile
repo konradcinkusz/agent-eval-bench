@@ -23,11 +23,13 @@ RUN dotnet restore src/AbsenceConcierge.AgentService/AbsenceConcierge.AgentServi
 COPY src/AbsenceConcierge.ServiceDefaults/ src/AbsenceConcierge.ServiceDefaults/
 COPY src/AbsenceConcierge.AgentService/ src/AbsenceConcierge.AgentService/
 
-# The world and the agent definition are linked into the build from outside the
-# project directory, so they must be present in the context. .dockerignore
-# re-includes exactly these two paths after excluding everything around them.
+# The world, the agent definition and the prompts are linked into the build from
+# outside the project directory, so they must be present in the context.
+# .dockerignore re-includes exactly these three paths after excluding everything
+# around them.
 COPY evals/fixtures/ evals/fixtures/
 COPY agents/ agents/
+COPY prompts/ prompts/
 
 RUN dotnet publish src/AbsenceConcierge.AgentService/AbsenceConcierge.AgentService.csproj \
       --configuration Release \

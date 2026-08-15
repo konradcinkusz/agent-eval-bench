@@ -61,5 +61,11 @@ LICENSE
 !evals/fixtures/
 !evals/fixtures/**
 
+# …and the prompts, which the live composer reads at runtime. Excluded by the `*.md`
+# rule above and re-included here for the same reason as the fixtures: one copy, in
+# the directory the change-coupling check watches.
+!prompts/
+!prompts/**
+
 # ─── Aspire AppHost: a development-time composition root (P1), never containerized ──
 src/AbsenceConcierge.AppHost/

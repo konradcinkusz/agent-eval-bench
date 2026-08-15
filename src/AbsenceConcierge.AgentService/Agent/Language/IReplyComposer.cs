@@ -17,5 +17,14 @@ namespace AbsenceConcierge.AgentService.Agent.Language;
 /// </summary>
 public interface IReplyComposer
 {
-    string Compose(AgentTurnContext context, string outcome);
+    /// <summary>
+    /// Asynchronous because one implementation calls a model over a network. The
+    /// deterministic one completes synchronously and pays nothing for the signature;
+    /// the alternative — a synchronous interface with a model behind it — is a
+    /// blocked thread pool under the only load this service will ever see.
+    /// </summary>
+    ValueTask<string> ComposeAsync(
+        AgentTurnContext context,
+        string outcome,
+        CancellationToken cancellationToken = default);
 }
