@@ -1,10 +1,14 @@
 # Calibrating the judge
 
-> **Current position: zero human labels. The judge's scores are reported and
-> trended, and they gate nothing.**
+> **Current position: 45 labels across 21 scenarios exist — written by an AI
+> rater, before the judge had ever produced a score anywhere. The judge's scores
+> are still reported and trended, and they gate nothing**: κ is computed on the
+> first keyed run, and the gate additionally waits for human labels under the
+> owner's own handle (see "Who labelled first, and why that is disclosed").
 >
-> That sentence is printed by every run and asserted by a test. It is the honest
-> state, not a placeholder — and stating it plainly is the point of this document.
+> That gating state is printed by every run and asserted by a test. It is the
+> honest state, not a placeholder — and stating it plainly is the point of this
+> document.
 
 [`AI-EVALS.md`](https://github.com/konradcinkusz/architecture-standards/blob/main/docs/guides/AI-EVALS.md)
 §5 requires an LLM judge to be calibrated against human labels before its scores
@@ -107,6 +111,50 @@ deterministic properties of a trace and need no judge at all.
 The numbers are deliberately modest — roughly an hour of one person's attention. A
 threshold nobody will ever reach is a threshold that quietly becomes permission to
 skip calibration entirely, which is the outcome this document exists to prevent.
+
+## Who labelled first, and why that is disclosed
+
+The first 45 labels (2026-08-15, handle `claude-fable-5`) were written by an AI
+assistant — Anthropic's Claude, a different model family from the judge — working
+from the exact transcripts the judge reads (`TestResults/narratives/`, dumped by
+`NarrativeDumpTests`) against the anchors in `judge.yaml`. The one unbreakable
+rule was satisfiable by construction: when they were written, the judge had never
+produced a score anywhere, so there was nothing to be anchored by.
+
+What that set is evidence of, and what it is not:
+
+- **It is** the protocol demonstrated end to end — the format, the dump utility,
+  the κ arithmetic wired to real labels — and it is a real second reading of
+  every transcript, from a rater with no stake in the judge agreeing.
+- **It is not** a human label set, and `AI-EVALS.md` §5 says *human*. So the
+  numeric gate above (40 / 8 / κ ≥ 0.6) is necessary but no longer sufficient:
+  **judge scores do not gate until labels under the owner's own handle exist**,
+  appended to the same file under the same rules. An AI-calibrated AI judge
+  would be turtles most of the way down, and saying so here is cheaper than a
+  reader discovering it.
+
+The labelling itself surfaced three findings before any judge ever ran — which is
+the protocol earning its keep on its first use (the disagreements were supposed
+to be the interesting part, and they were, even with only one rater):
+
+1. **The holiday's name is not in the trace.** `hap-006`'s reply says "Monday 12
+   October (National Day, a company holiday)"; the trace's `excluded_days` says
+   `2026-10-12=holiday` and never names it. Labelled `grounding: 2` — the
+   strictest reading of the anchor — and left for the judge to disagree with:
+   whichever way the first keyed run scores it, the anchor's wording about
+   world-data the trace summarises but does not carry needs a sentence.
+   `amb-008` ("Assumption") is the same case and was labelled the same way.
+1. **The composer answers Spanish in English.** `hap-007`, `hap-008` and
+   `amb-009` carry `locale: es-ES`, the interpreter reads the Spanish, and the
+   deterministic reply comes back in English. Every fact is right; the register
+   is wrong for the stated audience. Labelled `tone: 1` on all three. The
+   composer is the one component the locale does not yet reach, and that is now
+   a known gap with a number attached rather than a surprise.
+1. **The degradation replies repeat themselves.** `deg-001` ends "Nothing has
+   been submitted — please try again shortly. Nothing has been submitted." and
+   `deg-002` states the unverified conflict check twice. Honesty anchors were
+   met (labelled 3); the padding is a composer defect the tone rubric would have
+   caught had those scenarios carried it.
 
 ## Known limits
 

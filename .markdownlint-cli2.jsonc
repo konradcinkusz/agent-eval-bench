@@ -19,6 +19,13 @@
     // Same reasoning for the agent's own prompts. These are shipped into the image
     // and read verbatim by a model; the numbering is part of what the model is being
     // told, not a Markdown style choice.
-    "prompts/**"
+    "prompts/**",
+
+    // Test output, gitignored but present after a local run. The labelling dumps
+    // (TestResults/narratives/) are transcripts the judge reads, not documentation.
+    "TestResults/**",
+
+    // Playwright's failure artifacts carry generated error-context Markdown.
+    "tests/e2e/.artifacts/**"
   ]
 }
