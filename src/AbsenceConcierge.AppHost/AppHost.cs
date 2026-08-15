@@ -21,8 +21,12 @@ var builder = DistributedApplication.CreateBuilder(args);
 var agentService = builder.AddProject<Projects.AbsenceConcierge_AgentService>("agent")
     .WithHttpHealthCheck("/health");
 
-// Phase 8b adds the showcase frontend here, referencing the agent service so the
-// browser only ever talks to its own origin (FRONTEND-BFF).
+// The showcase page is NOT a second resource. It is three static files served by
+// the agent service itself, so the browser only ever talks to one origin: there is
+// no CORS configuration to get wrong, no second container to keep patched, and the
+// content security policy can be `default-src 'none'` with `connect-src 'self'`.
+// FRONTEND-BFF's separation buys something when a frontend aggregates several
+// services; this one talks to a single endpoint on the host it was served from.
 _ = agentService;
 
 builder.Build().Run();
