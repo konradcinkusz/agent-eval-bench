@@ -27,11 +27,13 @@ A decision recorded in two places drifts in one of them.
 |---|---|---|---|
 | [0001](0001-record-architecture-decisions.md) | Record architecture decisions in this repository | Accepted | 2026-08-14 |
 | [0002](0002-mock-first-zero-credential-default.md) | Mock-first: the demonstrated path runs with zero credentials | Accepted | 2026-08-14 |
+| [0003](0003-agent-decisions-are-trace-attributes.md) | The agent's decision is a trace attribute, not prose | Accepted | 2026-08-14 |
+| [0004](0004-pin-the-model-and-never-fall-back-silently.md) | Pin the agent model and the judge model separately, and never fall back silently | Accepted | 2026-08-15 |
+| [0005](0005-the-mcp-sdk-lives-behind-a-one-method-session.md) | The Model Context Protocol SDK lives behind a one-method session | Accepted | 2026-08-15 |
 
 Later phases add their own. The decisions already settled and awaiting the phase
-that implements them — the MCP anti-corruption boundary, the LLM replay strategy,
-the judge pinning, the public-demo budget ceiling — are listed in the README's
-phase plan and get an ADR when they are built, not before.
+that implements them — the public-demo budget ceiling among them — are listed in
+the README's phase plan and get an ADR when they are built, not before.
 
 ## Format
 
