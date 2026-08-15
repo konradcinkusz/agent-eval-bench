@@ -59,9 +59,10 @@ public sealed class ScenarioFixture
     public Dictionary<string, ToolBehaviour> ToolBehaviour { get; set; } = [];
 }
 
-/// <param name="Outcome">success · timeout · http_500 · http_429 · http_403 · empty · malformed.</param>
+/// <summary>Fault injection for one tool, from a scenario's <c>tool_behaviour</c> block.</summary>
 public sealed class ToolBehaviour
 {
+    /// <summary>success · timeout · http_500 · http_429 · http_403 · empty · malformed.</summary>
     public string Outcome { get; set; } = "success";
 
     /// <summary>Succeed this many times first, then fail. Models the tool that dies mid-conversation.</summary>
