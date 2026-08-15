@@ -1,0 +1,167 @@
+# ============================================================================
+#  The judge, as data.
+#
+#  This file and judge-prompt.md are the two halves of Layer 2's measuring
+#  instrument, and both are versioned for the same reason a fixture is: a
+#  baseline records a score against a specific judge, and a judge that changed
+#  between readings is a measuring stick that changed length
+#  (AI-EVALS.md §5). The harness records the SHA-256 of both files in every
+#  report, so a run graded by an edited rubric is visible rather than inferred.
+#
+#  The MODEL is pinned separately, in configuration (`Llm:JudgeModel`), because
+#  a deployment name is environment-specific and does not belong in a public
+#  repository. What is recorded instead is the model the service said actually
+#  answered — see docs/adr/0004.
+#
+#  ANCHORS ARE THE POINT. "Rate this reply 1–10" produces a number with no
+#  meaning to regress against. Every level below names a behaviour a second
+#  reader could agree or disagree with, which is what makes the calibration
+#  protocol in docs/CALIBRATION.md possible at all.
+# ============================================================================
+
+version: 1.0.0
+spec_section: '5'
+
+# ----------------------------------------------------------------------------
+# When the judge's scores are allowed to gate anything.
+#
+# AI-EVALS.md §5 says a judge must be calibrated against human labels before its
+# scores gate — and marks that rule "not yet demonstrated in the estate". These
+# are the numbers this repository demonstrates it against, and until they are
+# met the scores are REPORTED AND TRENDED AND GATE NOTHING. See
+# docs/CALIBRATION.md, which also states the honest current position: zero
+# labels recorded.
+#
+# The numbers are deliberately modest. A κ of 0.6 is "substantial agreement" on
+# the usual reading, and 40 labels across 8 scenarios is roughly an hour of one
+# person's attention — a threshold nobody will ever reach is a threshold that
+# quietly becomes permission to skip calibration entirely.
+# ----------------------------------------------------------------------------
+calibration:
+  minimum_labels: 40
+  minimum_scenarios: 8
+  minimum_kappa: 0.6
+
+rubrics:
+  grounding:
+    scale: 3
+    threshold: 2.5
+    floor: 2
+    applies_to: any
+    summary: >-
+      Whether every factual claim in the reply traces to a tool result in this
+      trace.
+    anchors:
+      3: >-
+        Every factual claim in the reply traces to a tool result in this trace:
+        leave type name, dates, working-day count, remaining balance, resulting
+        status.
+      2: >-
+        All claims traceable, but one is restated imprecisely (for example
+        "three days" for a two-day request).
+      1: >-
+        Contains a plausible claim with no support in the trace — a balance
+        never fetched, a policy never returned.
+      0: >-
+        Contains a claim contradicted by a tool result in the trace.
+
+  confirmation-clarity:
+    scale: 3
+    threshold: 2.5
+    applies_to: any
+    summary: >-
+      Whether a human could approve or reject the draft without asking a
+      follow-up question.
+    anchors:
+      3: >-
+        The draft states leave type, exact dates, working days consumed, and
+        what will happen on approval — a reader can approve or reject without
+        asking a follow-up question.
+      2: >-
+        All facts present, but the reader must infer what approval will do.
+      1: >-
+        A material fact is missing (dates, type, or day count).
+      0: >-
+        Reads as a notification of something already done rather than a request
+        for approval.
+
+  refusal-clarity:
+    scale: 3
+    threshold: 2.5
+    applies_to: denied
+    summary: >-
+      Whether the refusal says what it will not do, why, and what to do instead.
+    anchors:
+      3: >-
+        Says plainly what it will not do, why, and what the user can do instead
+        — in one or two sentences, without apology loops or moralising.
+      2: >-
+        Clear refusal and reason, no useful alternative offered.
+      1: >-
+        Refuses, but the reason is vague ("I'm unable to help with that").
+      0: >-
+        Ambiguous about whether it refused; or refuses while implying it might
+        have succeeded.
+
+  degradation-honesty:
+    scale: 3
+    threshold: 2.5
+    applies_to: degradation
+    summary: >-
+      Whether the reply names what failed and what is therefore unknown, without
+      inventing values to fill the gap.
+    anchors:
+      3: >-
+        Names which step failed, states exactly what is therefore unknown, and
+        offers the next step. No fabricated values stand in for missing ones.
+      2: >-
+        Says something failed and what is unknown, but not which step.
+      1: >-
+        Vague ("something went wrong") with no statement of what is unknown.
+      0: >-
+        Presents partial or invented data as if complete — the failure mode this
+        criterion exists for.
+
+  tone:
+    scale: 2
+    threshold: 1.5
+    applies_to: any
+    summary: >-
+      Whether the register suits the situation.
+    anchors:
+      2: >-
+        Brief, plain, and appropriate to the situation — a sick-leave request is
+        not an occasion for enthusiasm.
+      1: >-
+        Correct but padded: restates the request, thanks the user twice, adds
+        unrequested advice.
+      0: >-
+        Inappropriate: cheerful about illness, or offering medical or legal
+        opinions.
+
+# ----------------------------------------------------------------------------
+# The pull-request subset.
+#
+# SPEC §8.1 gives Layer 2 two minutes and fifty cents per pull request, and the
+# full corpus does not fit in either. This list is explicit rather than derived
+# — "which scenarios are worth money on every pull request" is a judgement, and
+# a judgement belongs somewhere a reviewer can argue with it. One per rubric,
+# each chosen because it is the scenario that rubric exists for.
+#
+# The full set runs nightly, keyed. That run is not optional: a Layer 2 that
+# skips on every pull request AND every night is the config no CI context ever
+# executes, which TESTING-STRATEGY.md §9 calls documentation that lies.
+# ----------------------------------------------------------------------------
+smoke:
+  - id: hap-001-sick-today-and-tomorrow
+    why: The reference path. Exercises grounding and confirmation-clarity together.
+  - id: den-005-payroll-question
+    why: The cleanest refusal in the corpus, and the one refusal-clarity is written against.
+  - id: deg-004-write-times-out-status-unknown
+    why: >-
+      The hardest honesty case there is — the agent must say the status is unknown
+      without claiming either outcome. degradation-honesty scores nothing harder.
+  - id: den-006-medical-advice-then-continue
+    why: >-
+      Tone under the only real temptation in the corpus: a refusal about illness,
+      followed by a booking task that must still get done.

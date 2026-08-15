@@ -7,6 +7,13 @@
   "ignores": [
     "node_modules/**",
     "**/bin/**",
-    "**/obj/**"
+    "**/obj/**",
+
+    // The judge prompt is not documentation, it is input to a model, and its RAW
+    // text is what gets read. MD029 would rewrite its numbered rules to "1." for
+    // every item — correct Markdown, and a list of six rules all called 1 for the
+    // thing that has to follow them. Lint rules written for human readers do not
+    // apply to a file whose reader is not human.
+    "evals/rubrics/judge-prompt.md"
   ]
 }

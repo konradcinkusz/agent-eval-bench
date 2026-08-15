@@ -375,6 +375,36 @@ jobs:
             fi
           } >> "$GITHUB_STEP_SUMMARY"
 
+          # Layer 2 runs in the same `dotnet test` pass and, with no credential on a
+          # pull request, reports skipped:no-credential for every judged scenario.
+          # That is legitimate here and nowhere else — the keyed run is nightly.yml,
+          # and a test asserts that file exists and passes the key.
+          layer2=./TestResults/eval-report-layer2.json
+
+          if [ -f "$layer2" ]; then
+            {
+              echo
+              echo "## Layer 2 evals (${GITHUB_REF_NAME})"
+              echo
+              jq -r '
+                "Judge **\(.judgeVersion)** — rubrics `\(.rubricsHash)`, prompt `\(.promptHash)`, scope `\(.scope)`",
+                "",
+                "Model: `\(.model // "none — no credential on a pull request")`",
+                "",
+                "Calibration: \(.calibration.reason)"
+              ' "$layer2"
+
+              graded=$(jq -r '[.scenarios[] | select(.status == "pass")] | length' "$layer2")
+
+              if [ "$graded" != "0" ]; then
+                echo
+                echo "| rubric | mean | threshold | lowest | ok |"
+                echo "|---|---|---|---|---|"
+                jq -r '.rubrics[] | "| \(.rubric) | \(.mean) | \(.threshold) | \(.lowest) | \(if .meetsThreshold and .meetsFloor then "yes" else "**no**" end) |"' "$layer2"
+              fi
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
+
       # hashFiles is the guard for the honest case: when the BUILD fails, no test
       # ever ran and there is nothing to upload. `if-no-files-found: error` stays,
       # because a run that produced a results directory and no results in it is a
