@@ -237,7 +237,7 @@ jobs:
 
       - name: Upload the report
         if: (success() || failure()) && hashFiles('TestResults/**') != ''
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: first-judged-run
           path: ./TestResults
