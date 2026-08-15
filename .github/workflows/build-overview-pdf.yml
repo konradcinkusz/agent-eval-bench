@@ -1,0 +1,71 @@
+name: Build Overview PDF
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Renders the LaTeX presentation of docs/OVERVIEW.md (docs/papers/*.tex) to a
+#  PDF, on demand.
+#
+#  Manually triggered only — deliberately. This is a presentation of the living
+#  overview document, not a versioned release artifact: there is no tag, no
+#  changelog entry, and nobody depends on a specific build of it existing
+#  anywhere. Regenerate it when the source changes and someone wants the file.
+#
+#  PDFs are build output (architecture-standards' 00-RESEARCH-DOCUMENTATION.md
+#  §"PDFs are build output"): nothing this workflow produces is committed —
+#  see .gitignore's "LaTeX build output" block. It is uploaded as a run
+#  artifact instead, downloaded from the Actions run itself.
+#
+#  The pattern follows the estate's one working precedent for this exact
+#  problem — copilot-scope's build-research-pdf.yml — reusing its
+#  xu-cheng/latex-action build step, stripped of the two parts that do not
+#  apply here: no tag trigger (nothing in this repository's docs is versioned
+#  by tag) and no GitHub Release (this produces a build artifact, not a
+#  release asset — `contents: read` is enough, and stays that way).
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-overview-pdf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build PDF
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build PDF
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: agent-eval-bench-overview.tex
+          working_directory: docs/papers
+
+      - name: Rename PDF
+        run: mv docs/papers/agent-eval-bench-overview.pdf AgentEvalBench_Overview.pdf
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: AgentEvalBench_Overview_PDF
+          path: AgentEvalBench_Overview.pdf
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          {
+            echo "## Overview PDF built"
+            echo
+            echo "Rendered from \`docs/papers/agent-eval-bench-overview.tex\`, the LaTeX"
+            echo "presentation of \`docs/OVERVIEW.md\`."
+            echo
+            echo "Download **AgentEvalBench_Overview_PDF** from this run's Artifacts"
+            echo "section below."
+          } >> "$GITHUB_STEP_SUMMARY"

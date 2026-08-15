@@ -21,6 +21,13 @@ demo, the complete architecture and the infrastructure as diagrams, with every
 arrow spelled out. Serve it with GitHub Pages (`main`, `/docs`) or open the file
 locally; nothing on it claims to be running anywhere it is not.
 
+**One document, if you prefer words:** [`docs/OVERVIEW.md`](docs/OVERVIEW.md) —
+business context through engineering values, in a single linear read, for
+whoever would rather not open eight files to get the whole shape of this
+repository. A polished PDF rendering of it is built on demand, never committed,
+by the **Build Overview PDF** GitHub Action — see
+[`docs/OVERVIEW.md` §17](docs/OVERVIEW.md#17-getting-the-pdf).
+
 ## Sixty seconds, if that is all you have
 
 An employee types a sentence. The agent resolves the dates against a real
@@ -245,6 +252,7 @@ agents/
   schema/           the agent-definition contract, as strict JSON Schema
   absence-concierge/definition.json the agent as code, with the MCP tool extension
 docs/
+  OVERVIEW.md       everything in one document — business context through values
   SPEC.md           the behaviour contract — behaviours, constraints, rubrics
   PRODUCTION.md     what changes when it runs somewhere real, and what breaks quietly
   CALIBRATION.md    how judge scores are checked against human labels
@@ -252,6 +260,7 @@ docs/
   COMPLIANCE.md     both checklists, worked through, including the items that fail
   adr/              architecture decision records
   DEVIATIONS.md     where this repo departs from the standards — dated and reasoned
+  papers/           LaTeX presentation of OVERVIEW.md, built to PDF on demand
 evals/
   schema/           the scenario contract, as strict JSON Schema
   fixtures/         shared fictional worlds; scenarios write only the delta
