@@ -1,3 +1,7 @@
+using AbsenceConcierge.AgentService.Agent;
+using AbsenceConcierge.AgentService.Agent.Language;
+using AbsenceConcierge.AgentService.Agent.Llm;
+using AbsenceConcierge.AgentService.Agent.Steps;
 using AbsenceConcierge.AgentService.Telemetry;
 using AbsenceConcierge.AgentService.Workforce;
 using AbsenceConcierge.AgentService.Workforce.Confirmation;
@@ -75,9 +79,57 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<TimeProvider>());
 
             // Decoration, not inheritance (P10). Every implementation gets the same
-            // trace shape because every implementation goes through this wrapper.
-            return new InstrumentedWorkforceTools(tools);
+            // trace shape because every implementation goes through this wrapper —
+            // including the attempt loop, which must live inside the span so that
+            // one logical call stays one span (SPEC §2.2.1).
+            var attempts = new ToolAttemptPolicy(
+                sp.GetRequiredService<IOptions<AgentOptions>>().Value.MaxReadAttempts);
+
+            return new InstrumentedWorkforceTools(tools, attempts);
         });
+
+        return services;
+    }
+
+    /// <summary>
+    /// Registers the agent: its options, its two language seams, its conversation
+    /// state, and the step pipeline.
+    ///
+    /// <para>
+    /// <b>The pipeline's order is the specification</b>, and this is where it is
+    /// written down. It is a reviewable list rather than a model deciding what to do
+    /// next, which is what makes every constraint in SPEC §4 a property of the code
+    /// instead of a hope about a prompt. Adding a behaviour means adding a class and
+    /// a line here (P10).
+    /// </para>
+    /// </summary>
+    public static IServiceCollection AddAbsenceConciergeAgent(
+        this IServiceCollection services,
+        IConfiguration configuration)
+    {
+        services.Configure<AgentOptions>(configuration.GetSection(AgentOptions.SectionName));
+        services.Configure<LlmOptions>(configuration.GetSection(LlmOptions.SectionName));
+
+        // The default path has no model, no credential and no network (ADR-0002).
+        // The model-backed implementations register over these when one is configured.
+        services.TryAddSingleton<IUtteranceInterpreter, DeterministicUtteranceInterpreter>();
+        services.TryAddSingleton<IReplyComposer, DeterministicReplyComposer>();
+
+        services.TryAddSingleton<IAgentConversationStore, InMemoryAgentConversationStore>();
+
+        services.AddSingleton<IAgentStep, EstablishActorStep>();
+        services.AddSingleton<IAgentStep, ConfirmationDecisionStep>();
+        services.AddSingleton<IAgentStep, InterpretUtteranceStep>();
+        services.AddSingleton<IAgentStep, ScopeGuardStep>();
+        services.AddSingleton<IAgentStep, ResolvePersonStep>();
+        services.AddSingleton<IAgentStep, ResolveDatesStep>();
+        services.AddSingleton<IAgentStep, LeaveTypeStep>();
+        services.AddSingleton<IAgentStep, ConflictCheckStep>();
+        services.AddSingleton<IAgentStep, DraftStep>();
+        services.AddSingleton<IAgentStep, ConfirmationGateStep>();
+        services.AddSingleton<IAgentStep, ExecuteWriteStep>();
+
+        services.AddSingleton<IAgentOrchestrator, AgentOrchestrator>();
 
         return services;
     }

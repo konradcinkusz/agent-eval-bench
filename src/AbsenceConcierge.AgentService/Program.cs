@@ -10,9 +10,10 @@ using AbsenceConcierge.AgentService.Extensions;
 //  and a step pipeline, against 399 for the one doing the same job inline — and
 //  the second is the harder file to change.
 //
-//  Phase 2 wires the skeleton: telemetry end to end, health, and the mock
-//  workforce tools behind their anti-corruption interface. The agent loop itself
-//  arrives in Phase 3, against the contract already written in docs/SPEC.md.
+//  Phase 2 wired the skeleton: telemetry end to end, health, and the mock
+//  workforce tools behind their anti-corruption interface. Phase 3 adds the agent
+//  itself — a step pipeline whose order is the specification, running against the
+//  behaviour contract in docs/SPEC.md and with no model configured by default.
 // ─────────────────────────────────────────────────────────────────────────────
 
 var builder = WebApplication.CreateBuilder(args);
@@ -26,6 +27,9 @@ builder.Services.AddAgentTelemetry();
 // The workforce tool surface: one interface, mock by default, zero credentials.
 builder.Services.AddWorkforceTools(builder.Configuration);
 
+// The agent: a step pipeline, an injected clock, and no model unless one is configured.
+builder.Services.AddAbsenceConciergeAgent(builder.Configuration);
+
 var app = builder.Build();
 
 // /health (readiness) and /alive (liveness).
@@ -35,6 +39,9 @@ app.MapDefaultEndpoints();
 // demonstrable before the agent exists — and what the integration test drives to
 // prove a tool-call span reaches an exporter.
 app.MapWorkforceEndpoints();
+
+// One turn of the agent. The only route to a write, and it runs through the gate.
+app.MapAgentEndpoints();
 
 await app.RunAsync();
 

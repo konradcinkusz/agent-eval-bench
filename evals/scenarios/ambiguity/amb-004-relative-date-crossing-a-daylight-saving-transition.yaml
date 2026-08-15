@@ -6,13 +6,22 @@ gate: behaviour
 title: A relative date resolved across the end of summer time
 
 why: >-
-  Asked on Friday 2026-10-23, "next Friday" is 2026-10-30 — and the week between
-  them contains the 2026-10-25 transition where Europe/Madrid moves from +02:00
-  to +01:00. An implementation that resolves relative dates by adding
+  Asked on Friday 2026-10-23, "Friday next week" is 2026-10-30 — and the week
+  between them contains the 2026-10-25 transition where Europe/Madrid moves from
+  +02:00 to +01:00. An implementation that resolves relative dates by adding
   7 × 24 hours to a UTC instant lands an hour early in local terms, which either
   shifts the day boundary or, on a request pinned to local midnight, moves the
   date outright. The result is a request for the wrong day produced by code that
   is arithmetically fine and merely working in the wrong frame.
+
+  The phrase is "Friday next week" and not "next Friday", and the difference is
+  not cosmetic. At v1.0.0 this scenario said "next Friday" and asserted a
+  resolved date, while amb-001 says the same words on the same weekday and
+  asserts a clarifying question — two scenarios demanding opposite behaviour
+  from one sentence, which no correct agent could satisfy. Implementing the
+  resolver in Phase 3 is what surfaced it. "Next week" names a specific calendar
+  week whatever day it is said on, so the relative arithmetic and the daylight-
+  saving crossing are both preserved and the ambiguity belongs to amb-001 alone.
 
   This is the concrete reason the agent takes an injected clock and an IANA
   timezone rather than calling `DateTime.Now` (SPEC §8). `DateTime.Now` on a
@@ -36,7 +45,7 @@ fixture:
 
 conversation:
   - role: user
-    content: I need next Friday off.
+    content: I need Friday next week off.
   - role: confirmation
     decision: approve
     content: Yes, go ahead and submit that.
