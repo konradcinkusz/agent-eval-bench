@@ -276,6 +276,11 @@ public sealed class DeterministicReplyComposer : IReplyComposer
         return text.ToString();
     }
 
+    /// <summary>
+    /// Names the days that were not counted, and why. B-11 asks for exactly this:
+    /// the reader is approving a number, and a number they cannot reconstruct is a
+    /// number they cannot query.
+    /// </summary>
     private static string ExcludedSentence(IReadOnlyList<ExcludedDay> excluded)
     {
         var weekend = excluded.Where(day => day.Reason == WorkingCalendar.WeekendReason).ToList();
@@ -285,16 +290,27 @@ public sealed class DeterministicReplyComposer : IReplyComposer
 
         if (weekend.Count > 0)
         {
-            var days = string.Join(" and ", weekend.Select(day => Short(day.Date)));
-            parts.Add($"{days} {(weekend.Count == 1 ? "is a weekend day" : "are weekend days")}");
+            parts.Add($"{Join(weekend.Select(day => Short(day.Date)))} (the weekend)");
         }
 
         foreach (var holiday in holidays)
         {
-            parts.Add($"{Short(holiday.Date)} is {DisplayText.Name(holiday.Label)}, a company holiday");
+            parts.Add($"{Short(holiday.Date)} ({DisplayText.Name(holiday.Label)}, a company holiday)");
         }
 
-        return $"I have not counted {string.Join("; ", parts)}.";
+        return $"I have not counted {Join(parts)}.";
+    }
+
+    private static string Join(IEnumerable<string> items)
+    {
+        var list = items.ToList();
+
+        return list.Count switch
+        {
+            0 => string.Empty,
+            1 => list[0],
+            _ => $"{string.Join(", ", list.Take(list.Count - 1))} or {list[^1]}",
+        };
     }
 
     /// <summary>
