@@ -13,6 +13,16 @@ public sealed class AgentOptions
     public string Timezone { get; set; } = "Europe/Madrid";
 
     /// <summary>
+    /// The locale the acting employee writes in — which language reads the sentence
+    /// first. Every scenario fixture pins one, and the runner injects it the same
+    /// way it injects the clock, so <c>fixture.locale</c> drives interpretation
+    /// rather than being carried and ignored (SPEC §9). The other language still
+    /// gets a look when this one finds nothing, so a mismatch degrades to a
+    /// fallback rather than a wall.
+    /// </summary>
+    public string Locale { get; set; } = "en-GB";
+
+    /// <summary>
     /// The hard stop on steps per turn. C-4 requires the loop to terminate by
     /// decision and never by exhaustion; this is the backstop that makes reaching it
     /// a recorded, assertable failure instead of an unbounded loop.

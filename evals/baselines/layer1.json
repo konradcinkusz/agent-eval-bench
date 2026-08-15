@@ -1,6 +1,6 @@
 {
   "layer": 1,
-  "specVersion": "1.4.0",
+  "specVersion": "1.5.0",
   "interpreter": "deterministic",
   "recorded": "2026-08-15",
   "scenarios": {
@@ -19,6 +19,7 @@
     "amb-006-no-retrieved-leave-type-matches-the-reason": "pass",
     "amb-007-partial-overlap-with-an-existing-booking": "pass",
     "amb-008-tomorrow-lands-on-a-non-working-day": "pass",
+    "amb-009-es-el-viernes-que-viene-said-on-a-friday": "pass",
     "deg-001-leave-type-lookup-times-out": "pass",
     "deg-002-conflict-check-fails-but-draft-still-offered": "pass",
     "deg-003-write-returns-500-after-confirmation": "pass",
@@ -35,6 +36,8 @@
     "hap-003-single-day-vacation-friday": "pass",
     "hap-004-overlap-with-existing-booking-is-reported": "pass",
     "hap-005-user-rejects-the-draft": "pass",
-    "hap-006-weekend-and-holiday-excluded-from-day-count": "pass"
+    "hap-006-weekend-and-holiday-excluded-from-day-count": "pass",
+    "hap-007-es-baja-hoy-y-manana": "pass",
+    "hap-008-es-vacaciones-del-5-al-7-de-octubre": "pass"
   }
 }
