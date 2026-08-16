@@ -66,12 +66,12 @@
     <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
     <PackageVersion Include="xunit.v3" Version="4.0.0" />
     <!--
-      TRX output under the native Microsoft.Testing.Platform engine (dotnet.config)
-      is an opt-in extension, not a default — MTP ships only the runner itself and
-      lets each project pick its reporters. The report-trx flag has nothing to
-      report with until this is referenced. xunit.runner.visualstudio (the VSTest
-      bridge adapter) is gone: the engine it bridged to is the one dotnet.config
-      now refuses to use.
+      TRX output under the native Microsoft.Testing.Platform engine (global.json's
+      test.runner) is an opt-in extension, not a default — MTP ships only the
+      runner itself and lets each project pick its reporters. The report-trx flag
+      has nothing to report with until this is referenced. xunit.runner.visualstudio
+      (the VSTest bridge adapter) is gone: the engine it bridged to is the one
+      global.json now refuses to use.
     -->
     <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.3.3" />
     <!-- Captures spans in-process so a test can assert that one was exported. -->

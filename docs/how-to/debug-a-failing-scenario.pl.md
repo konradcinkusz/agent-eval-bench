@@ -20,7 +20,7 @@ Warstwa 1 asertuje nad spanami i zdarzeniami, nigdy nad prozą. Odpowiedź mówi
 Ci, że coś się stało, nie jest dowodem, że się stało.
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer1"
+dotnet test --filter-query "/*/*/*Layer1*/*"
 ```
 
 Komunikat nazywa scenariusz, asercję i to, co ślad faktycznie zawierał.

@@ -79,6 +79,13 @@ export default defineConfig({
       '--project', join(repoRoot, 'src', 'AbsenceConcierge.AgentService'),
       '--configuration', 'Release',
       '--no-build',
+      // Without this, `dotnet run` applies Properties/launchSettings.json's
+      // "AbsenceConcierge.AgentService" profile — ASPNETCORE_ENVIRONMENT=Development
+      // and applicationUrl https://localhost:62378;http://localhost:62379 — over
+      // the env block below. The server comes up fine on those ports; Playwright
+      // polls baseURL (127.0.0.1:E2E_PORT) and never sees it, so every run times
+      // out at 120s with a server that was never actually broken.
+      '--no-launch-profile',
     ].join(' '),
     url: `${baseURL}/health`,
     reuseExistingServer: false,

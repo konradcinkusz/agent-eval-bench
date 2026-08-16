@@ -17,7 +17,7 @@ to samo, co zielony wynik w CI.
 Warstwa 1 asertuje nad śladem wykonania. To ta szybka.
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer1"
+dotnet test --filter-query "/*/*/*Layer1*/*"
 ```
 
 ## Tylko przebieg mutacyjny
@@ -26,13 +26,13 @@ Uruchamia cztery celowo zepsute agenty i sprawdza, czy każdy zostaje złapany p
 scenariusz wskazany jako jego łapacz.
 
 ```bash
-dotnet test --filter "FullyQualifiedName~MutationTests"
+dotnet test --filter-query "/*/*/*MutationTests*/*"
 ```
 
 ## Tylko sędzia
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer2"
+dotnet test --filter-query "/*/*/*Layer2*/*"
 ```
 
 Bez danych dostępowych każdy oceniany scenariusz raportuje
@@ -44,7 +44,7 @@ się uruchomił, zobacz [Włączenie sędziego](enable-the-judge.pl.md).
 Nazwy scenariuszy pojawiają się w wyjściu testów. Filtruj po identyfikatorze:
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer1"
+dotnet test --filter-query "/*/*/*Layer1*/*"
 ```
 
 a potem poszukaj identyfikatora w wyjściu. Nie ma filtra „na scenariusz", bo

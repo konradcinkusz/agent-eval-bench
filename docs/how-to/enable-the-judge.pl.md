@@ -26,7 +26,7 @@ działa.
 Następnie:
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer2"
+dotnet test --filter-query "/*/*/*Layer2*/*"
 ```
 
 ## W CI
