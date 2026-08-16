@@ -153,6 +153,17 @@ needs no credentials. 🇵🇱 [Wersja polska](docs/START-HERE.pl.md).
 
 ## Why this exists
 
+This repository was built in response to a specific job posting — Factorial's
+[AI Engineer, API & Integrations Team](https://careers.factorialhr.com/job_posting/ai-engineer-api-integrations-team-307535)
+role — and it integrates against
+[Factorial's public MCP server](https://mcp.factorialhr.com) because that is the
+platform the role is about ([the business context](#the-business-context) spells
+out the mapping). What is *in* here is not specific to that: the bench is the
+first worked example of a repository-agnostic
+[eval standard](https://github.com/konradcinkusz/architecture-standards/blob/main/docs/guides/AI-EVALS.md)
+I wrote before this project existed, and the HR agent is the specimen it is
+demonstrated on — a subject to measure, not the thing being offered.
+
 Prompts get edited the way configuration gets edited — casually. A change to a
 prompt, a model version, or a tool description can regress an agent's behaviour
 with **no diff in your code**, and the usual defence is one good transcript pasted
