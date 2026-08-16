@@ -1,8 +1,9 @@
 # Agent Eval Bench — Comprehensive Project Documentation
 
-**A spec-first evaluation bench for tool-using agents, demonstrated on an HR
-Absence Concierge: an agent that books time off, and stops for a human before it
-writes anything.**
+**A measuring instrument for tool-using agents — spec-first, two-layer, gated in
+CI — demonstrated on an HR Absence Concierge: an agent that books time off, and
+stops for a human before it writes anything. The agent is the specimen; the bench
+is the deliverable.**
 
 - **Status**: all ten phases complete — see §14.
 - **Companion documents**: [`SPEC.md`](SPEC.md) (the contract) ·
@@ -11,7 +12,9 @@ writes anything.**
   [`DEVIATIONS.md`](DEVIATIONS.md) (where this repo departs from the standards) ·
   [`COMPLIANCE.md`](COMPLIANCE.md) (both checklists, worked through) ·
   [`CALIBRATION.md`](CALIBRATION.md) (judge-vs-human protocol) ·
-  [`adr/`](adr/) (five architecture decision records).
+  [`adr/`](adr/) (six architecture decision records) ·
+  [`DIAGRAMS.md`](DIAGRAMS.md) (21 Mermaid diagrams, each also a standalone file
+  in [`diagrams/`](diagrams/), CI-checked to stay identical).
 - **PDF**: this document has a polished LaTeX rendering, in English and
   Polish, at
   [`docs/papers/agent-eval-bench-overview.tex`](papers/agent-eval-bench-overview.tex),
@@ -34,7 +37,7 @@ writes anything.**
 ## Contents
 
 1. [Executive summary](#1-executive-summary)
-1. [Why this exists](#2-why-this-exists)
+1. [Why this exists — and what an eval actually is](#2-why-this-exists--and-what-an-eval-actually-is)
 1. [The business context](#3-the-business-context)
 1. [The agent, in one paragraph](#4-the-agent-in-one-paragraph)
 1. [Architecture](#5-architecture)
@@ -56,28 +59,42 @@ writes anything.**
 
 ## 1. Executive summary
 
-Agent Eval Bench is a demonstration that an AI agent allowed to act on real
-systems can be built so that **the machine does the work and a person keeps the
-decision** — and that whether that property survives a prompt edit, a model swap,
-or hostile input is something you can *measure*, not something you have to trust.
+**This is not an HR application. It is a measuring instrument for a developer.**
 
-The vehicle is narrow on purpose: an HR "Absence Concierge" that turns a sentence
-like *"I'm sick today and probably tomorrow"* into a correctly-dated, correctly-typed
-leave request, and then — having done all the work and being entirely confident —
-**stops and asks a human before it submits anything.** The submit tool refuses any
-write without a single-use token that only an explicit approval releases, so an
-agent talked, or prompt-injected, into submitting early fails at the tool boundary,
-not at the model's discretion.
+The product of this repository is an **evaluation bench** — a tool for checking AI
+agents while they are being built. For such an instrument to have anything to
+measure, it needs a specimen, and the specimen here is an HR "Absence Concierge"
+that turns a sentence like *"I'm sick today and probably tomorrow"* into a
+correctly-dated, correctly-typed leave request, and then — having done all the work
+and being entirely confident — **stops and asks a human before it submits
+anything.**
 
-The agent is deliberately the smaller half of the repository. **The eval bench is
-the deliverable**: a behaviour specification written before any agent code existed
-(`SPEC.md`, 16 behaviours, 7 hard constraints, 5 rubrics, 7 stated refusals); a
-35-scenario dataset across five classes, written as data; a two-layer harness —
-deterministic trace assertions plus a calibrated LLM judge — that grades the agent
-against that spec on every pull request; CI gates that hard-block on constraint
-violations and diff behaviour against a recorded baseline; and a findings report
-that names twelve defects the suite actually caught, seven of them in the measuring
+That agent was not chosen at random. It has an irreversible write to a system, it
+must do date arithmetic, it must respect permissions, and it obviously requires a
+human's consent. Ideal study material. But it is the Petri dish, not the main
+course — hence the repository's own slogan: *the agent is the excuse; the eval bench
+is the deliverable.*
+
+The problem the instrument exists for is that an AI agent can be broken **without
+anyone seeing it**. A fix in the code, in a prompt, or in a tool description does
+not break the build and does not look dangerous in code review — yet it can quietly
+change what the agent does with real data. An ordinary unit test does not catch
+that, because the question is not whether a function returned 2 instead of 3. The
+question is whether the agent asked the human at all before it wrote something —
+the *course of a behaviour*, not a single value.
+
+The answer built here: a behaviour specification written before any agent code
+existed (`SPEC.md`, 857 lines, v1.5.0 — 16 behaviours, 7 hard constraints, 5
+rubrics, 7 stated refusals); a 35-scenario dataset across five classes, written as
+data; the production agent replayed in-process on every change; an execution trace
+as the thing that gets graded; and a merge gate. Around that sit a two-layer
+harness — deterministic trace assertions plus a rubric-anchored LLM judge — and a
+findings report that names twelve defects, seven of them in the measuring
 instrument or the specification rather than in the agent (`FINDINGS.md`).
+
+The submit tool refuses any write without a single-use token that only an explicit
+approval releases, so an agent talked — or prompt-injected — into submitting early
+fails at the tool boundary, not at the model's discretion.
 
 Everything is built to run with **zero credentials**: mock tools, a deterministic
 interpreter, and a full Layer 1 suite that runs green offline in about half a
@@ -88,14 +105,57 @@ those integrations have never been exercised against anything live, and that is
 recorded as an open, dated, reasoned fact (`DEVIATIONS.md`) rather than implied by
 a green badge.
 
-## 2. Why this exists
+## 2. Why this exists — and what an eval actually is
 
 Prompts get edited the way configuration gets edited — casually. A change to a
 prompt, a model version, or a tool description can regress an agent's behaviour
 with **no diff in your code**, and the usual defence against that is one good
 transcript pasted into a channel after something goes wrong.
 
-This repository is the answer the author holds their own projects to, built end to
+**Working definition**: evals are regression tests for probabilistic systems.
+Tests protect you against changes to the **code**; evals protect you against
+changes to the **behaviour**. Put in one line:
+
+> Tests answer *"does the code do what I wrote?"*
+> Evals answer *"does the system do what I specified?"*
+
+### 2.1 The trigger is not "a code change"
+
+This is the correction that surprises people. Behaviour is shaped by six things,
+and a classical test guards only the first:
+
+1. `src/` — the code itself
+1. `prompts/` — the wording the model is given
+1. tool descriptions — what the model believes a tool does
+1. `agents/` — the agent definition
+1. the model version and its parameters
+1. RAG data — what gets retrieved and grounded against
+
+And there is a seventh case that is worse than all six, because nothing was
+touched at all: **the provider swaps the model underneath you.** That is why
+ADR-0004 pins the agent model and the judge model separately and forbids a silent
+fallback — *a missing run is an honest gap; a substituted one is a wrong answer
+wearing the right label.*
+
+### 2.2 Four places the measurement is consumed
+
+An eval is not "tests in CI". It is one measurement, consumed in four different
+places, which is what makes it worth building once:
+
+| Where | What it answers | What it costs |
+|---|---|---|
+| The developer loop | "did my change do what I meant?" — used like TDD, before a commit | seconds, no network, no key |
+| The CI change gate | "may this merge?" — constraints at 100%, behaviours against a recorded baseline | ~5 seconds per pull request, zero dollars |
+| Model selection | "is the cheaper model good enough here?" — the same corpus as a benchmark | the price of one matrix run |
+| Production | "is it still holding up?" — live sessions scored on the same trace schema | sampling and retention |
+
+The offline layers answer *may this ship*; the production loop answers *is it
+holding up*. Both read the same trace schema, which is why a production failure can
+become a scenario mechanically rather than by hand-reconstruction (§10).
+
+### 2.3 Why this repository exists at all
+
+This is the answer the author holds their own projects to, built end to
 end so it can be judged rather than described. It exists as the reference
 implementation of a repository-agnostic AI-evaluation standard — five behaviour
 spec sections, two grading layers, CI gates, a production feedback loop — that
