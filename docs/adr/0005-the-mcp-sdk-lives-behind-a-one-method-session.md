@@ -50,13 +50,22 @@ ValueTask<McpToolReply> CallAsync(
     CancellationToken cancellationToken = default);
 ```
 
-`McpClientSession` implements it and is the only file in `src/` that names
+`McpClientSession` implements it and is the only file in `src/` that **imports**
 `ModelContextProtocol`. Everything else — mapping payloads into the workforce
 model, redeeming the token, filtering the reply, classifying the failure — is
 ordinary code that a forty-line fake exercises in milliseconds.
 
-`grep -r ModelContextProtocol src/` returning exactly one file is the check, and
-it is one anybody can run.
+```console
+$ grep -rl '^using ModelContextProtocol' src/
+src/AbsenceConcierge.AgentService/Workforce/Mcp/McpClientSession.cs
+```
+
+That is the check, and it is one anybody can run. It matches on the `using`
+directive rather than on the bare string deliberately: a plain
+`grep -r ModelContextProtocol src/` also finds the package reference in the
+`.csproj`, the prose in `IMcpToolSession.cs` explaining this seam, and every
+build artefact under `obj/` and `bin/`. The rule is about which file may name
+the vendor's types, so the `using` is what the check should look at.
 
 ## Alternatives considered
 
