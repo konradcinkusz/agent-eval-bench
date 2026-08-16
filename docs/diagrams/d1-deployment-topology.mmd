@@ -1,0 +1,31 @@
+flowchart TB
+    visitor["Visitor"]
+
+    subgraph github["GitHub — the control plane"]
+        ci["ci.yml"]
+        fly["flyio.yml"]
+        nightly["nightly.yml"]
+        prod["production-loop.yml"]
+        azw["azure.yml"]
+    end
+
+    subgraph flyio["Fly.io · mad · scale-to-zero"]
+        app["agent-eval-bench-demo<br/>one machine · shared-cpu-1x · 512 MB<br/>mock fixture world · no auth"]
+    end
+
+    subgraph azure["Azure · rg-agent-eval-bench"]
+        composer["Azure OpenAI — composer"]
+        judge["Azure OpenAI — judge"]
+        appi["Application Insights<br/>+ Log Analytics"]
+    end
+
+    visitor -->|"HTTPS — the proxy wakes<br/>a stopped machine"| app
+    fly -->|"only after the suite passes"| app
+    app -.->|"optional — absent key means<br/>the deterministic composer answers"| composer
+    app -->|"spans, 100%"| appi
+    nightly --> judge
+    appi --> prod
+    azw --> azure
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class app star

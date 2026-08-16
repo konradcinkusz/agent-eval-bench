@@ -1,0 +1,19 @@
+flowchart TD
+    dev["Developer<br/>edits code, prompt,<br/>agent definition"]
+    gha["GitHub Actions"]
+    bench["<b>agent-eval-bench</b><br/>the instrument"]
+    agent["Absence Concierge<br/>the specimen"]
+    visitor["Visitor<br/>showcase page"]
+    mcp["Factorial MCP server"]
+    obs["Azure OpenAI<br/>Application Insights"]
+
+    dev --> gha
+    gha -- "on every change" --> bench
+    bench -- "replays and grades" --> agent
+    visitor -- "HTTPS" --> agent
+    agent -. "dev-only" .-> mcp
+    agent -- "spans, 100%" --> obs
+    obs -- "yesterday's spans" --> gha
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class bench star

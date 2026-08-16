@@ -1,0 +1,36 @@
+sequenceDiagram
+    autonumber
+    actor U as Employee
+    participant P as Browser page
+    participant S as AgentService
+    participant T as TokenStore
+    participant W as IWorkforceTools
+
+    rect rgb(245, 245, 248)
+    Note over U,W: Turn 1 — all the work, then a full stop
+    U->>P: "I'm sick today and probably tomorrow"
+    P->>S: POST /agent/turn
+    S->>W: list_leave_types
+    W-->>S: leave types — ids recorded on the span
+    S->>W: list_leaves
+    W-->>S: existing bookings
+    S->>S: resolve dates in the actor's timezone,<br/>count working days, draft
+    S->>T: Issue(draft)
+    T-->>S: token — not yet valid for a write
+    Note over S: emit confirmation.shown
+    S-->>P: confirmation_pending + the structured draft
+    P-->>U: the card, with Approve and Cancel
+    end
+
+    rect rgb(253, 240, 213)
+    Note over U,W: Turn 2 — only now can anything be written
+    U->>P: clicks Approve
+    P->>S: POST /agent/turn with Decision=approve
+    S->>T: Approve(token)
+    Note over S: emit confirmation.received
+    S->>W: request_time_off carrying the token
+    W->>T: TryRedeem(token, submitted)
+    T-->>W: ok — single use, entry removed
+    W-->>S: written
+    S-->>P: completed
+    end

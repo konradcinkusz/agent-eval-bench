@@ -113,6 +113,14 @@ jobs:
       - name: Check for broken relative links
         run: npm run lint:links
 
+      # Every diagram lives twice on purpose: inline in docs/DIAGRAMS.md, which
+      # is the only form GitHub renders, and as a standalone .mmd, which is the
+      # only form anyone can reuse. Two copies is a drift surface, and this
+      # repository's answer to a drift surface is a check rather than a
+      # convention — the same reasoning as the agent-definition validator.
+      - name: Diagrams agree with their standalone sources
+        run: npm run lint:diagrams
+
       # The eval harness does not exist until Phase 4. This step is what stops
       # the scenario corpus being, for three phases, a directory of YAML that no
       # CI context executes — "an unreferenced test config is not a latent

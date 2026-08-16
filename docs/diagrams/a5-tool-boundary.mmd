@@ -1,0 +1,44 @@
+classDiagram
+    class IWorkforceTools {
+        <<interface>>
+        +GetCurrentUserAsync() read
+        +ListLeaveTypesAsync() read
+        +ListLeavesAsync() read
+        +RequestTimeOffAsync(request) WRITE
+    }
+
+    class InstrumentedWorkforceTools {
+        opens one span per logical call
+        sets workforce.tool.kind from the catalogue
+        records workforce.tool.result_ids
+        emits attempt events, never sibling spans
+    }
+
+    class FaultInjectingWorkforceTools {
+        scenarios only
+        timeout, error, empty, malformed
+    }
+
+    class MockWorkforceTools {
+        the default
+        reads the fixture world
+    }
+
+    class McpWorkforceTools {
+        dev-only
+        speaks to the live server
+    }
+
+    class IConfirmationTokenStore {
+        <<interface>>
+        +Issue(draft) token
+        +Approve(token) bool
+        +TryRedeem(token, submitted) bool
+    }
+
+    IWorkforceTools <|.. InstrumentedWorkforceTools
+    InstrumentedWorkforceTools o-- FaultInjectingWorkforceTools
+    FaultInjectingWorkforceTools o-- MockWorkforceTools
+    FaultInjectingWorkforceTools o-- McpWorkforceTools
+    MockWorkforceTools ..> IConfirmationTokenStore : the write redeems a token
+    McpWorkforceTools ..> IConfirmationTokenStore : the write redeems a token

@@ -1,0 +1,13 @@
+sequenceDiagram
+    autonumber
+    actor U as Employee
+    participant S as AgentService
+    participant T as TokenStore
+    participant W as IWorkforceTools
+
+    Note over U,W: …the draft has been shown, exactly as in B1
+    U->>S: POST /agent/turn with Decision=reject
+    Note over S: emit confirmation.rejected
+    S--xW: request_time_off is never called
+    S->>T: the token is simply never approved
+    S-->>U: cancelled — nothing has been submitted
