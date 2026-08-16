@@ -27,7 +27,7 @@ is the deliverable.**
 - **What this document is for**: every file listed above answers one question
   precisely and in depth. This one answers "what is this, why does it exist, and
   does it work" in a single sitting, for a reader who is not going to open six
-  files to find out — a recruiter, an engineering manager, or a future version of
+  files to find out — an engineering manager, a reviewer, or a future version of
   the author who wants the whole shape back without re-deriving it. It introduces
   no fact the linked documents do not already contain; where a number appears
   here, the document it was measured in is named next to it.
@@ -38,7 +38,7 @@ is the deliverable.**
 
 1. [Executive summary](#1-executive-summary)
 1. [Why this exists — and what an eval actually is](#2-why-this-exists--and-what-an-eval-actually-is)
-1. [The business context](#3-the-business-context)
+1. [The integration target](#3-the-integration-target)
 1. [The agent, in one paragraph](#4-the-agent-in-one-paragraph)
 1. [Architecture](#5-architecture)
 1. [The spec-first workflow](#6-the-spec-first-workflow)
@@ -163,19 +163,16 @@ otherwise reads as a design document with no proof it survives contact with a re
 agent. This repository is that proof, or is exactly as honest as it can be about
 the parts that are not yet proof (§10, §11).
 
-## 3. The business context
+## 3. The integration target
 
-*(First person here follows the source README, because the context is personal:
-this repository was built for a specific purpose, and pretending otherwise would
-be less accurate, not more professional.)*
+The domain is HR time off, and the platform is
+[Factorial](https://factorialhr.com) — a Barcelona-based HR and
+business-management SaaS company. An agent that books leave is a good specimen
+precisely because the write is consequential: it commits a person's days off in
+a system of record their manager and payroll both read. A demo that books
+nothing real is a demo whose confirmation gate costs nothing to get wrong.
 
-I am applying to [Factorial](https://factorialhr.com) — a Barcelona-based HR and
-business-management SaaS company — for the role **AI Engineer, API & Integrations
-Team**. This repository is built against that role's own vocabulary, because the
-fastest way to answer "can this person do the job" is to do a slice of it in
-public.
-
-| What the role asks for | Where this repository answers it |
+| What this repository demonstrates | Where it is demonstrated |
 |---|---|
 | **Spec Driven Development** — define expected behaviours, constraints and success criteria before shipping, and use them to guide implementation, iteration and evaluation | `SPEC.md` was written and accepted before any agent code existed: 16 behaviours, 7 hard constraints, 5 rubrics, 7 refusals, each citing the scenarios that prove it. Writing the scenarios then found six defects **in the spec itself**, fixed before implementation began. |
 | **AI Skills** — reusable, well-scoped capabilities that automate and take actions *safely* | One capability, scoped narrowly: request time off. "Safely" is the confirmation gate, and it is a hard constraint with a trace event, not a prompt instruction. |
@@ -184,10 +181,12 @@ public.
 | **Human-in-the-loop agentic workflows** — combine LLMs, rules and user oversight, keeping humans in control of critical decisions | The agent drafts, shows a summary, and **stops**. The write happens in a later turn, only after an explicit confirmation event. |
 | **Stack-agnostic engineering** — solid fundamentals in any language; what you built matters more than the stack | Built in .NET because that is my stack. Every eval artifact — spec, scenarios, rubrics, baselines — is stack-neutral YAML, JSON and Markdown, and would port to Ruby or TypeScript unchanged. |
 
-Factorial's own engineering runs on Ruby on Rails and React. **This is not a
-contribution to their codebase** — it is an external client of their platform,
-which is precisely what an API and integrations team exists to enable. The
-integration target is Factorial's public
+**This is not a contribution to Factorial's codebase** — it is an external
+client of their platform. Building against somebody else's real, published
+surface is a deliberate constraint rather than a convenience: it fixes the tool
+contract outside this repository, so the payload mapping cannot quietly be
+redefined to whatever makes a scenario pass. The integration target is
+Factorial's public
 [MCP server](https://mcp.factorialhr.com) (Streamable HTTP, OAuth 2.0 with dynamic
 client registration), which acts as the authenticated user and enforces that
 user's permissions on every call. The write this agent is built around — request

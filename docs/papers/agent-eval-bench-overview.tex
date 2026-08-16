@@ -261,30 +261,31 @@ about the instrument:
     worth anything.
 \end{itemize}
 
-\subsection*{Business context}
+\subsection*{The integration target}
 
-This repository was built while applying to Factorial, a Barcelona-based HR
-and business-management SaaS company, for the role of AI Engineer on its API
-and Integrations team, and it is written against that role's own stated
-vocabulary rather than a generic one: Spec Driven Development; AI Skills that
-act safely; evaluation both automated and human-in-the-loop; RAG and grounding
-against deterministic sources of truth; human-in-the-loop agentic workflows;
-and stack-agnostic engineering. The integration target is Factorial's public
-MCP server at \texttt{mcp.factorialhr.com}, reached over Streamable HTTP with
-OAuth 2.0 and dynamic client registration, acting as the authenticated user
-and enforcing that user's own permissions --- and the one write this agent is
-built around is that server's time-off request tool. This is not a
-contribution to Factorial's codebase. It is an external client of their
-platform, which is exactly what an API and integrations team exists to enable.
-Table~\ref{tab:rolemap} maps each phrase in the advertisement to the place in
-the repository that answers it.
+The domain is HR time off and the platform is Factorial, a Barcelona-based HR
+and business-management SaaS company. An agent that books leave is a good
+specimen precisely because the write is consequential: it commits a person's
+days off in a system of record that their manager and payroll both read, and a
+demo that books nothing real is a demo whose confirmation gate costs nothing to
+get wrong. The integration target is Factorial's public MCP server at
+\texttt{mcp.factorialhr.com}, reached over Streamable HTTP with OAuth 2.0 and
+dynamic client registration, acting as the authenticated user and enforcing
+that user's own permissions --- and the one write this agent is built around is
+that server's time-off request tool. This is not a contribution to Factorial's
+codebase. It is an external client of their platform. Building against somebody
+else's real, published surface is a deliberate constraint rather than a
+convenience: it fixes the tool contract outside this repository, so the payload
+mapping cannot quietly be redefined into whatever makes a scenario pass.
+Table~\ref{tab:capmap} maps what the repository demonstrates to the place that
+demonstrates it.
 
 \begin{table}[htbp]
 \centering
 \small
 \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{4.6cm}X@{}}
 \toprule
-\textbf{What the role asks for} & \textbf{Where this repository answers it} \\
+\textbf{What this repository demonstrates} & \textbf{Where it is demonstrated} \\
 \midrule
 Spec Driven Development &
 \repopath{docs/SPEC.md}: 857 lines, version 1.5.0, status Accepted, written
@@ -320,9 +321,9 @@ stack-neutral YAML, JSON and Markdown, and would port to Ruby or TypeScript
 unchanged. Only the harness is .NET. \\
 \bottomrule
 \end{tabularx}
-\caption{The role advertisement's vocabulary, and the artifact in this
-repository that answers each line of it.}
-\label{tab:rolemap}
+\caption{What this repository demonstrates, and the artifact that
+demonstrates each line of it.}
+\label{tab:capmap}
 \end{table}
 
 \section{What an eval is, and when it runs}

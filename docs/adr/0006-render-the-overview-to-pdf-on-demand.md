@@ -17,8 +17,8 @@ By Phase 9 this repository's documentation was genuinely comprehensive —
 eight separate files, on GitHub, for a reader willing to navigate between them.
 That is the right shape for a contributor. It is the wrong shape for a reader
 who wants the whole project in one sitting without opening a repository at
-all — a recruiter reading the business context in `README.md` §"The business
-context" among them.
+all — someone handed a link and half an hour, rather than a clone and an
+afternoon.
 
 `architecture-standards` already prescribes a house LaTeX style for exactly
 this need — "when a result needs to travel outside the repository... it
@@ -36,7 +36,7 @@ defines narrowly on purpose.
 ## Decision
 
 Add `docs/OVERVIEW.md` as the single synthesizing document — collecting the
-business context, architecture, spec-first workflow, evaluation methodology,
+integration target, architecture, spec-first workflow, evaluation methodology,
 findings and values already recorded elsewhere into one linear read — and a
 LaTeX presentation of it at `docs/papers/agent-eval-bench-overview.tex`,
 reusing the house preamble verbatim for visual consistency with the rest of

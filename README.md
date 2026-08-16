@@ -153,16 +153,15 @@ needs no credentials. 🇵🇱 [Wersja polska](docs/START-HERE.pl.md).
 
 ## Why this exists
 
-This repository was built in response to a specific job posting — Factorial's
-[AI Engineer, API & Integrations Team](https://careers.factorialhr.com/job_posting/ai-engineer-api-integrations-team-307535)
-role — and it integrates against
-[Factorial's public MCP server](https://mcp.factorialhr.com) because that is the
-platform the role is about ([the business context](#the-business-context) spells
-out the mapping). What is *in* here is not specific to that: the bench is the
-first worked example of a repository-agnostic
+The bench is the first worked example of a repository-agnostic
 [eval standard](https://github.com/konradcinkusz/architecture-standards/blob/main/docs/guides/AI-EVALS.md)
-I wrote before this project existed, and the HR agent is the specimen it is
-demonstrated on — a subject to measure, not the thing being offered.
+I wrote before this project existed. The HR agent is the specimen it is
+demonstrated on — something real enough to measure, not the thing being offered
+— and it integrates against
+[Factorial's public MCP server](https://mcp.factorialhr.com) because a live,
+permission-enforcing MCP surface is a harder and more honest target than one
+invented for the demo ([the integration target](#the-integration-target) spells
+out what that means in practice).
 
 Prompts get edited the way configuration gets edited — casually. A change to a
 prompt, a model version, or a tool description can regress an agent's behaviour
@@ -192,15 +191,15 @@ The standard itself is repository-agnostic and lives in
 Its closing note currently says the first full worked example is under
 construction. This repository is that example.
 
-## The business context
+## The integration target
 
-I am applying to [Factorial](https://factorialhr.com) — a Barcelona-based HR and
-business-management SaaS company — for the role
-[AI Engineer, API & Integrations Team](https://careers.factorialhr.com/job_posting/ai-engineer-api-integrations-team-307535).
-This repository is built against that role's own vocabulary, because the fastest
-way to answer "can this person do the job" is to do a slice of it in public.
+The domain is HR time off, and the platform is
+[Factorial](https://factorialhr.com) — a Barcelona-based HR and
+business-management SaaS company. An agent that books leave is a good specimen
+precisely because the write is consequential: it commits a person's days off in
+a system of record their manager and payroll both read.
 
-| What the role asks for | Where this repository answers it |
+| What this repository demonstrates | Where it is demonstrated |
 |---|---|
 | **Spec Driven Development** — define expected behaviours, constraints and success criteria before shipping, and use them to guide implementation, iteration and evaluation | [`docs/SPEC.md`](docs/SPEC.md) was written and accepted before any agent code: 16 behaviours, 7 hard constraints, 5 rubrics, 7 refusals, each citing the scenarios that prove it. Writing the scenarios then found six defects **in the spec**, fixed before implementation began |
 | **AI Skills** — reusable, well-scoped capabilities that automate and take actions *safely* | One capability, scoped narrowly: request time off. "Safely" is the confirmation gate, and it is a hard constraint with a trace event, not a prompt instruction |
@@ -209,14 +208,18 @@ way to answer "can this person do the job" is to do a slice of it in public.
 | **Human-in-the-loop agentic workflows** — combine LLMs, rules and user oversight, keeping humans in control of critical decisions | The agent drafts, shows a summary, and **stops**. The write happens in a later turn, only after an explicit confirmation event |
 | **Stack-agnostic engineering** — solid fundamentals in any language; what you built matters more than the stack | Built in .NET because that is my stack. Every eval artifact — spec, scenarios, rubrics, baselines — is stack-neutral YAML, JSON and Markdown, and would port to Ruby or TypeScript unchanged |
 
-Factorial's engineering runs on Ruby on Rails and React. **This is not a
-contribution to their codebase** — it is an external client of their platform,
-which is precisely what an API and integrations team exists to enable. The
-integration target is their public
+**This is not a contribution to Factorial's codebase** — it is an external client
+of their platform. The integration target is their public
 [MCP server](https://mcp.factorialhr.com) (Streamable HTTP, OAuth 2.0 with dynamic
 client registration), which acts as the authenticated user and enforces that
 user's permissions on every call. The write this agent is built around is their
 time-off request tool.
+
+Building against somebody else's real, published surface is a deliberate
+constraint rather than a convenience: it fixes the tool contract outside this
+repository, so the payload mapping cannot quietly be redefined to whatever makes
+a scenario pass. What that has *not* bought yet is honest to state — no live
+server has ever answered this client ([D-10](docs/DEVIATIONS.md)).
 
 ## The agent, in one paragraph
 

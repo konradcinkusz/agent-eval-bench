@@ -258,31 +258,33 @@ przyrząd:
     celowo zaatakować, zanim jej zieleń będzie cokolwiek warta.
 \end{itemize}
 
-\subsection*{Kontekst biznesowy}
+\subsection*{Cel integracji}
 
-To repozytorium powstało w trakcie aplikowania do Factorial, barcelońskiej
-firmy SaaS z obszaru kadr i zarządzania przedsiębiorstwem, na stanowisko AI
-Engineer w zespole API i Integracji, i napisane jest w słownictwie deklarowanym
-przez samo to ogłoszenie, a nie w ogólnikowym: Spec Driven Development;
-umiejętności AI działające bezpiecznie; ewaluacja zarówno automatyczna, jak i z
-udziałem człowieka w pętli; RAG i ugruntowanie względem deterministycznych
-źródeł prawdy; przepływy agentowe z człowiekiem w pętli; oraz inżynieria
-niezależna od stosu technologicznego. Celem integracji jest publiczny serwer
-MCP Factorial pod adresem \texttt{mcp.factorialhr.com}, osiągany przez
-Streamable HTTP z OAuth 2.0 i dynamiczną rejestracją klienta, działający w
-imieniu uwierzytelnionego użytkownika i egzekwujący jego własne uprawnienia ---
-a jedynym zapisem, wokół którego zbudowano tego agenta, jest narzędzie tego
-serwera do składania wniosków urlopowych. Nie jest to wkład do bazy kodu
-Factorial. To zewnętrzny klient ich platformy, a właśnie po to istnieje zespół
-API i integracji. Tabela~\ref{tab:rolemap} przypisuje każdemu sformułowaniu z
-ogłoszenia miejsce w repozytorium, które na nie odpowiada.
+Dziedziną są urlopy pracownicze, a platformą Factorial --- barcelońska firma
+SaaS z obszaru kadr i zarządzania przedsiębiorstwem. Agent rezerwujący urlop
+jest dobrym obiektem badawczym właśnie dlatego, że jego zapis niesie
+konsekwencje: utrwala dni wolne konkretnej osoby w systemie ewidencji, który
+czytają zarówno jej przełożony, jak i dział płac. Demo, które nie rezerwuje
+niczego prawdziwego, to demo, w którym pomyłka bramki potwierdzenia nic nie
+kosztuje. Celem integracji jest publiczny serwer MCP Factorial pod adresem
+\texttt{mcp.factorialhr.com}, osiągany przez Streamable HTTP z OAuth 2.0 i
+dynamiczną rejestracją klienta, działający w imieniu uwierzytelnionego
+użytkownika i egzekwujący jego własne uprawnienia --- a jedynym zapisem, wokół
+którego zbudowano tego agenta, jest narzędzie tego serwera do składania
+wniosków urlopowych. Nie jest to wkład do bazy kodu Factorial. To zewnętrzny
+klient ich platformy. Budowanie wobec cudzej, prawdziwej i opublikowanej
+powierzchni jest świadomym ograniczeniem, a nie wygodą: umocowuje kontrakt
+narzędzia poza tym repozytorium, więc mapowania ładunków nie da się po cichu
+przedefiniować na takie, przy którym scenariusz przechodzi.
+Tabela~\ref{tab:capmap} przypisuje temu, co repozytorium demonstruje, miejsce,
+w którym to demonstruje.
 
 \begin{table}[htbp]
 \centering
 \small
 \begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{4.6cm}X@{}}
 \toprule
-\textbf{Czego wymaga stanowisko} & \textbf{Gdzie repozytorium na to odpowiada} \\
+\textbf{Co repozytorium demonstruje} & \textbf{Gdzie to demonstruje} \\
 \midrule
 Spec Driven Development &
 \repopath{docs/SPEC.md}: 857 linii, wersja 1.5.0, status Accepted, spisana i
@@ -320,9 +322,9 @@ Każdy artefakt ewaluacyjny --- specyfikacja, scenariusze, rubryki, wyniki bazow
 przenieść do Ruby lub TypeScriptu. Tylko uprząż jest w .NET. \\
 \bottomrule
 \end{tabularx}
-\caption{Słownictwo ogłoszenia o pracę i artefakt w tym repozytorium, który
-odpowiada na każdy jego wiersz.}
-\label{tab:rolemap}
+\caption{Co demonstruje to repozytorium i artefakt, który demonstruje
+każdy z tych wierszy.}
+\label{tab:capmap}
 \end{table}
 
 \section{Czym jest ewaluacja i kiedy się uruchamia}
