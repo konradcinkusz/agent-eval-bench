@@ -129,13 +129,29 @@ public sealed class AzureOpenAiLlmProvider(HttpClient client, LlmOptions options
                 break;
             }
 
+            // A 429 means the token bucket is empty, not that it refills instantly —
+            // retrying in the same instant just spends the second attempt on the same
+            // empty bucket. Azure sends Retry-After on throttling responses; when it
+            // doesn't, five seconds is a reasonable guess for a per-minute TPM window.
+            var delay = response.Headers.RetryAfter?.Delta
+                ?? (response.Headers.RetryAfter?.Date is { } retryAfterDate
+                    ? retryAfterDate - DateTimeOffset.UtcNow
+                    : (TimeSpan?)null)
+                ?? TimeSpan.FromSeconds(5);
+
             if (logger.IsEnabled(LogLevel.Warning))
             {
                 logger.LogWarning(
-                    "Azure OpenAI returned {Status}; retrying once (attempt {Attempt} of {MaxAttempts}).",
+                    "Azure OpenAI returned {Status}; retrying in {Delay} (attempt {Attempt} of {MaxAttempts}).",
                     (int)response.StatusCode,
+                    delay,
                     attempt,
                     MaxAttempts);
+            }
+
+            if (delay > TimeSpan.Zero)
+            {
+                await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
             }
         }
 
