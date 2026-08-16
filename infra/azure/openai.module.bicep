@@ -59,8 +59,8 @@ resource composer 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' 
   properties: {
     model: {
       format: 'OpenAI'
-      name: 'gpt-4o-mini'
-      version: '2024-07-18'
+      name: 'gpt-4.1-mini'
+      version: '2025-04-14'
     }
     versionUpgradeOption: 'NoAutoUpgrade'
   }
