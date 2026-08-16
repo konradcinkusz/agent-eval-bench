@@ -13,7 +13,7 @@ is the deliverable.**
   [`COMPLIANCE.md`](COMPLIANCE.md) (both checklists, worked through) ·
   [`CALIBRATION.md`](CALIBRATION.md) (judge-vs-human protocol) ·
   [`adr/`](adr/) (six architecture decision records) ·
-  [`DIAGRAMS.md`](DIAGRAMS.md) (21 Mermaid diagrams, each also a standalone file
+  [`DIAGRAMS.md`](DIAGRAMS.md) (22 Mermaid diagrams, each also a standalone file
   in [`diagrams/`](diagrams/), CI-checked to stay identical).
 - **PDF**: this document has a polished LaTeX rendering, in English and
   Polish, at

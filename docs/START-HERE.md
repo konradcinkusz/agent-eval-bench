@@ -86,7 +86,7 @@ steps.
 
 | Document | What it explains |
 |---|---|
-| [`DIAGRAMS.md`](DIAGRAMS.md) | The whole system as 21 diagrams — architecture, user flows, the eval loop, delivery |
+| [`DIAGRAMS.md`](DIAGRAMS.md) | The whole system as 22 diagrams — architecture, user flows, the eval loop, delivery |
 | [`dokumentacja.pl.html`](dokumentacja.pl.html) 🇵🇱 | The complete technical documentation, 26 sections in 7 parts |
 | [`index.html`](index.html) / [`index.pl.html`](index.pl.html) 🇵🇱 | The one-pagers — the argument, for a first-time reader |
 | [`FINDINGS.md`](FINDINGS.md) | What the suite actually caught: twelve defects, seven of them in the instrument |

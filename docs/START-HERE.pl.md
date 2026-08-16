@@ -85,7 +85,7 @@ Zorientowane na zrozumienie. Czytaj, gdy chcesz uzasadnienia, a nie kroków.
 
 | Dokument | Co wyjaśnia |
 |---|---|
-| [`DIAGRAMS.md`](DIAGRAMS.md) 🇬🇧 | Cały system jako 21 diagramów — architektura, przepływy, pętla ewaluacji, dostarczanie |
+| [`DIAGRAMS.md`](DIAGRAMS.md) 🇬🇧 | Cały system jako 22 diagramy — architektura, przepływy, pętla ewaluacji, dostarczanie |
 | [`dokumentacja.pl.html`](dokumentacja.pl.html) | Pełna dokumentacja techniczna, 26 sekcji w 7 częściach |
 | [`index.pl.html`](index.pl.html) / [`index.html`](index.html) 🇬🇧 | One-pagery — argument, dla czytelnika po raz pierwszy |
 | [`FINDINGS.md`](FINDINGS.md) 🇬🇧 | Co zestaw naprawdę wyłapał: dwanaście defektów, siedem w samym przyrządzie |
