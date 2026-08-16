@@ -760,6 +760,15 @@ Rysunek~\ref{fig:card} pokazuje to, co widzi w tym miejscu zatrzymania człowiek
 
 Poligon ewaluacyjny mierzy zachowanie w dwóch warstwach, a ten podział nie jest kwestią wygody. Jedna warstwa odpowiada na pytania mające rozstrzygalną odpowiedź --- czy zapis nastąpił przed zdarzeniem potwierdzenia, czy identyfikator w argumencie zapisu pojawił się we wcześniejszym wyniku narzędzia --- i odpowiada na nie bez żadnych poświadczeń, bez wywołania sieciowego i bez ani jednego tokenu wyjścia modelu. Druga odpowiada na pytania wymagające czytania tekstu w języku naturalnym --- czy ta odmowa jest jasna, czy ten szkic da się zatwierdzić bez pytania uzupełniającego --- i nie można jej ufać, dopóki nie zostanie skalibrowana względem człowieka. To właśnie ich rozdzielenie pozwala pierwszej twardo blokować scalenie, podczas gdy druga pozostaje --- uczciwie --- raportowana i bezczynna.
 
+Rysunek~\ref{fig:c6-both-layers} pokazuje obie warstwy na jednej stronie, a to jedyny widok, z którego widać trzy rzeczy niewidoczne na rozdzielonych diagramach. Sam scenariusz decyduje, które warstwy go dotyczą: \texttt{gate:} kieruje go do twardej blokady albo do porównania z zapisanym wynikiem bazowym, a \texttt{rubrics:} decyduje o tym, czy sędzia jest w ogóle pytany. Obie warstwy nie spotykają się już po śladzie --- czytają ten sam artefakt i nie dzielą nic więcej, a to właśnie pozwala jednej z nich blokować scalenie, podczas gdy druga nigdy nie oceniła żywego modelu. Asymetria na dole jest zaś całym projektem: lewa ścieżka kosztuje pull requesta około pięciu sekund i zero dolarów, prawa kosztuje poświadczenie, którego publiczne repozytorium nie posiada.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{../diagrams/rendered/c6-both-layers.pdf}
+\caption{Obie warstwy i wszystko, czym oceniany jest jeden przechwycony ślad. Warstwa 1 czyta ślad dwunastoma rodzajami asercji i twardo blokuje każdy pull request; Warstwa 2 renderuje ten sam ślad do transkrypcji, pyta przypięty model o pięć zakotwiczonych rubryk i nie blokuje niczego, dopóki nie przejdzie kalibracja. Rodzina asercji nieobecności i twarda blokada są wyróżnione: to ta połowa, której większość zestawów testów nie ma.}
+\label{fig:c6-both-layers}
+\end{figure}
+
 \subsection{Warstwa 1: deterministyczne asercje na śladzie}
 
 Warstwa 1 uruchamia agenta przeciwko atrapom narzędzi opartym na danych testowych w YAML i interpreterowi regułowemu. Nie wykonuje ani jednego wywołania modelu i nie potrzebuje żadnych poświadczeń, co ma dwie konsekwencje ważniejsze niż oszczędność kosztów. Pierwsza jest taka, że działa na pull requeście z forka, na laptopie bez skonfigurowanych sekretów i w pierwszym zadaniu procesu wdrożeniowego. Druga jest taka, że jest deterministyczna: $n=1$ jest rozstrzygające. Nie ma budżetu na testy niestabilne, nie ma ,,uruchom trzy razy i weź większość'', nie ma progu statystycznego udającego decyzję. Scenariusz albo przechodzi, albo nie, a jeśli zmienia werdykt między dwoma uruchomieniami tego samego commita, jest to defekt w oprzyrządowaniu --- i dokładnie w ten sposób znaleziono \finding{F-6}.

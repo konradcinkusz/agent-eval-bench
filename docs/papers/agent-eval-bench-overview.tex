@@ -989,6 +989,15 @@ could reach.
 
 The bench measures behaviour in two layers, and the split is not a convenience. One layer answers questions that have a decidable answer --- did a write happen before a confirmation event, did an identifier in a write argument appear in an earlier tool result --- and answers them without a credential, a network call or a token of model output. The other answers questions that require reading English --- is this refusal clear, is this draft approvable without a follow-up question --- and cannot be trusted until it has been calibrated against a person. Keeping them apart is what lets the first one hard-block a merge while the second one is still, honestly, reported and inert.
 
+Figure~\ref{fig:c6-both-layers} puts both layers on one page, which is the only view that shows three things the split-up diagrams cannot. The scenario itself decides which layers apply to it: \texttt{gate:} routes it to the hard block or to the baseline comparison, and \texttt{rubrics:} decides whether the judge is asked at all. The two layers never meet again after the trace --- they read the same artefact and share nothing else, which is precisely what lets one of them gate a merge while the other has never scored a live model. And the asymmetry at the bottom is the design: the left path costs a pull request about five seconds and zero dollars, the right path costs a credential a public repository does not have.
+
+\begin{figure}[p]
+\centering
+\includegraphics[width=\linewidth]{../diagrams/rendered/c6-both-layers.pdf}
+\caption{Both layers, and everything one captured trace is graded by. Layer 1 reads the trace with twelve assertion kinds and hard-blocks every pull request; Layer 2 renders the same trace to a transcript, asks a pinned model against five anchored rubrics, and gates nothing until calibration clears. The absence family and the hard block are highlighted: they are the half most suites do not have.}
+\label{fig:c6-both-layers}
+\end{figure}
+
 \subsection{Layer 1: deterministic trace assertions}
 
 Layer 1 runs the agent against mock tools backed by YAML fixtures and a rule-based interpreter. It makes zero model calls and needs zero credentials, which has two consequences that matter more than the cost saving. The first is that it runs on a fork's pull request, on a laptop with no secrets configured, and in the first job of the deploy workflow. The second is that it is deterministic: $n=1$ is definitive. There is no flake budget, no ``run it three times and take the majority'', no statistical threshold standing in for a decision. A scenario either passes or it does not, and if it changes verdict between two runs of the same commit, that is a defect in the harness --- which is exactly how \finding{F-6} was found.
