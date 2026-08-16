@@ -49,8 +49,18 @@
       P14 puts reasoning in docs/, not in a comment on every property — and the
       estate's recorded failure is credentials pasted into XML doc comments as
       "documentation of each property's value".
+
+      CA1848 (use LoggerMessage delegates) and CA1000 (no static members on generic
+      types) off too: both are AnalysisLevel=latest-recommended promotions that only
+      show up once the resolved SDK crosses into a newer feature band (the Fly
+      Dockerfile's floating `dotnet/sdk:10.0` tag drifted to 10.0.400 while local
+      machines and CI sat on earlier bands, so the same source built clean everywhere
+      until the image moved). CA1848 is a hot-path logging micro-optimisation this
+      service's call volumes don't need; CA1000 flags a shape the codebase doesn't
+      use deliberately. Suppressing keeps `TreatWarningsAsErrors` from turning a
+      floating base-image tag into an unpredictable build break.
     -->
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <NoWarn>$(NoWarn);CS1591;CA1848;CA1000</NoWarn>
     <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
     <Deterministic>true</Deterministic>
   </PropertyGroup>
