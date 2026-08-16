@@ -27,25 +27,67 @@ demonstrated on an HR **Absence Concierge**: an agent that books time off, and s
 for a human before it writes anything. The agent is the excuse.
 **The eval bench is the deliverable.**
 
-## The machine does the work; a person keeps the decision
+## How the bench works
 
-An employee types *"I'm sick today and probably tomorrow."* The agent resolves the
-dates against a real working calendar in the employee's timezone, fetches the available
-leave types, checks the existing bookings for conflicts, drafts the request — and
-having done all the work, being entirely confident, **it stops and asks a human**:
+The spec came first; the trace is what gets graded. Everything else is plumbing around
+those two facts.
 
-![The confirmation card: the agent has resolved "I'm sick today and probably tomorrow" into a two-day sick-leave draft, and stopped for approval](docs/assets/confirmation-card.png)
+```mermaid
+flowchart TD
+    spec["<b>docs/SPEC.md</b> — the contract<br/><i>written before the agent</i>"]
+    scen["evals/ — scenarios as YAML<br/>happy · ambiguity · denied ·<br/>adversarial · degradation"]
+    runner["ScenarioRunner<br/>the REAL service, in-process<br/>faults injected at the tool seam"]
+    trace["One captured trace per scenario"]
+    l1["<b>Layer 1</b> — deterministic<br/>no model, no network, no credential"]
+    l2["<b>Layer 2</b> — rubric judge<br/>pinned model, hashed prompt"]
+    gate["CI gates<br/>constraints 100%<br/>behaviours vs baseline"]
 
-That stop is not politeness in a prompt. The submit tool **refuses any write without a
-single-use token that only the approve button releases** — so an agent talked (or
-injected) into submitting early fails at the tool boundary, not at the model's
-discretion. Everything else in this repository exists to *prove* that sentence and its
-neighbours, mechanically, on every change.
+    spec -->|"each behaviour cites its proof"| scen
+    scen --> runner
+    runner --> trace
+    trace --> l1
+    trace --> l2
+    l1 --> gate
+    l2 --> gate
 
-If the demo says one thing to a non-engineer, it is this: AI agents that act on your
-systems can be built so the machine does the work and a person keeps the decision — and
-whether that stays true under prompt edits, model swaps and hostile input is something
-you can measure, not something you trust.
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class gate star
+```
+
+Top to bottom, that is the whole repository:
+
+1. **The contract, before the code.** [`docs/SPEC.md`](docs/SPEC.md) states the
+   behaviours, the hard constraints and the refusals, and every behaviour cites the
+   scenarios that prove it. It was written and accepted before any agent existed, which
+   is what stops the specification from being back-fitted to whatever got built.
+1. **The dataset is data, not code.** The 35 scenarios under `evals/scenarios/` are
+   YAML — five classes, a shared fictional world plus a per-scenario delta, validated
+   against a [strict JSON Schema](evals/schema/scenario.schema.json) on every push.
+   Nothing in the dataset is .NET-specific; [`evals/README.md`](evals/README.md) is the
+   tour.
+1. **The run is the real service.** `ScenarioRunner` executes the actual agent
+   in-process and injects faults at the tool seam, so a degradation scenario exercises
+   the same code path a real timeout would.
+1. **What gets graded is the trace, never the prose.** One captured trace per scenario:
+   spans, events, tool calls, arguments. That is the interface both layers read, and it
+   is why a green run means something whether a deterministic composer or a language
+   model wrote the sentence.
+1. **Two layers, deliberately unequal.** Layer 1 is deterministic — which tools were
+   called, with what arguments, in what order, and what was **not** done. It needs no
+   model, no network and no credential, which is exactly why it can gate every pull
+   request. Layer 2 is a rubric-anchored judge with a pinned model and a hashed prompt,
+   calibrated against labels before its scores may block anything; on credential-less
+   runs it reports `skipped:no-credential`, never a silent green.
+1. **The gate is where a measurement becomes a decision.** Constraint scenarios
+   hard-block at 100%; behaviour scenarios are compared against a recorded baseline; the
+   pull request gets one comment carrying the diff rather than a dashboard.
+
+That loop is the deliverable. [`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) takes it apart into
+22 diagrams — including [C2](docs/DIAGRAMS.md#c2-layer-1--what-a-deterministic-assertion-actually-reads)
+and [C3](docs/DIAGRAMS.md#c3-layer-2--the-judge-and-why-it-is-pinned) for each layer's
+internals, and
+[C6](docs/DIAGRAMS.md#c6-both-layers-on-one-page--everything-the-trace-is-graded-by)
+for both on one page.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -61,6 +103,39 @@ you can measure, not something you trust.
 Every count above is recomputed in [`docs/FINDINGS.md`](docs/FINDINGS.md), which is the
 one place counts live — a number copied into prose is a number that goes stale on the
 next commit.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## The specimen: an agent that stops
+
+A bench needs something to measure. This one measures an HR **Absence Concierge**,
+chosen because it concentrates every hard property at once: an irreversible write, date
+arithmetic across timezones and holidays, permission rules, a hostile-input surface, and
+an obvious need for a human to say yes.
+
+A user says *"I'm sick today and probably tomorrow"* — or *"book me Friday off"*. The
+agent resolves the dates in the user's timezone, fetches the available leave types,
+checks existing leaves for conflicts, drafts the request, shows a summary and **stops
+for explicit human confirmation**:
+
+![The confirmation card: the agent has resolved "I'm sick today and probably tomorrow" into a two-day sick-leave draft, and stopped for approval](docs/assets/confirmation-card.png)
+
+Only then does it execute the write, and it reports the outcome grounded in what the
+tools actually returned. Denied paths — no permission, unknown leave type, a request
+that is out of scope — refuse cleanly and are asserted twice: the refusal happened,
+*and* the call did not. Tool failures degrade into partial output with a note, never a
+fabricated result and never a silent retry loop.
+
+That stop is not politeness in a prompt. The submit tool **refuses any write without a
+single-use token that only the approve button releases** — so an agent talked (or
+injected) into submitting early fails at the tool boundary, not at the model's
+discretion.
+
+And that is precisely why the agent is the excuse rather than the point. "It stops for a
+human" is a claim, and a claim about agent behaviour is worth exactly what its
+measurement is worth. Everything above this section exists to hold that sentence — and
+every other behaviour the spec states — to a number, on every change, under prompt
+edits, model swaps and hostile input.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -210,21 +285,6 @@ rather than a convenience: it fixes the tool contract outside this repository, s
 payload mapping cannot quietly be redefined to whatever makes a scenario pass. What
 that has *not* bought yet is honest to state — no live server has ever answered this
 client ([D-10](docs/DEVIATIONS.md)).
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
-## The agent, in one paragraph
-
-A user says *"I'm sick today and probably tomorrow"* — or *"book me Friday off"*. The
-agent resolves the dates in the user's timezone, fetches the available leave types,
-checks existing leaves for conflicts, drafts the request, shows a summary and **stops
-for explicit human confirmation**. Only then does it execute the write, and it reports
-the outcome grounded in what the tools actually returned. Denied paths — no permission,
-unknown leave type, a request that is out of scope — refuse cleanly and are asserted
-twice: the refusal happened, *and* the call did not. Tool failures degrade into partial
-output with a note, never a fabricated result and never a silent retry loop.
-
-Everything interesting is in the second half of that paragraph.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
