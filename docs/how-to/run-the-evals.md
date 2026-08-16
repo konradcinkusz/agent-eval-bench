@@ -17,7 +17,7 @@ CI.
 Layer 1 asserts over the trace. It is the fast one.
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer1"
+dotnet test --filter-query "/*/*/*Layer1*/*"
 ```
 
 ## Just the mutation pass
@@ -26,13 +26,13 @@ Runs the four deliberately broken agents and checks each is caught by the
 scenario named as its catcher.
 
 ```bash
-dotnet test --filter "FullyQualifiedName~MutationTests"
+dotnet test --filter-query "/*/*/*MutationTests*/*"
 ```
 
 ## Just the judge
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer2"
+dotnet test --filter-query "/*/*/*Layer2*/*"
 ```
 
 Without a credential every judged scenario reports `skipped:no-credential` and
@@ -44,7 +44,7 @@ the test is skipped, not passed. To make it actually run, see
 Scenario names appear in the test output. Filter on the id:
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer1" --logger "console;verbosity=detailed"
+dotnet test --filter-query "/*/*/*Layer1*/*"
 ```
 
 then search the output for the id. There is no per-scenario test filter, because

@@ -428,7 +428,7 @@ jobs:
 
       - name: Test
         if: steps.detect.outputs.found == 'true'
-        run: dotnet test --configuration Release --no-build --logger "trx;LogFileName=test-results.trx" --results-directory ./TestResults
+        run: dotnet test --configuration Release --no-build --report-trx --report-trx-filename test-results.trx --results-directory ./TestResults
 
       # The eval suite runs as part of `dotnet test` above — it is a test project,
       # and TESTING-STRATEGY.md §9 is blunt about a suite CI does not run not being

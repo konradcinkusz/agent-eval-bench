@@ -108,7 +108,7 @@ jobs:
         run: |
           dotnet test tests/AbsenceConcierge.Evals/AbsenceConcierge.Evals.csproj \
             --configuration Release --no-build \
-            --logger "trx;LogFileName=nightly.trx" --results-directory ./TestResults
+            --report-trx --report-trx-filename nightly.trx --results-directory ./TestResults
 
       - name: Summary
         if: steps.judge.outputs.configured == 'true' && (success() || failure())

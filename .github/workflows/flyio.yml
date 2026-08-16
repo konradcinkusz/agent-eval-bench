@@ -47,8 +47,10 @@ jobs:
       - run: dotnet build --configuration Release --no-restore
 
       # No credential, no network, no model — which is exactly why this can be a
-      # release gate rather than a nightly hope (ADR-0002).
-      - run: dotnet test --configuration Release --no-build --logger "console;verbosity=normal"
+      # release gate rather than a nightly hope (ADR-0002). No --logger: the native
+      # Microsoft.Testing.Platform engine (global.json) prints per-test results to
+      # the console by default, without needing VSTest's logger flag.
+      - run: dotnet test --configuration Release --no-build
 
   deploy:
     name: Deploy the demo
