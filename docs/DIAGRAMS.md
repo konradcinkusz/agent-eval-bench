@@ -638,6 +638,106 @@ That is not yet a test, because a test says what the agent **should** do. Two
 things it can never recover, and both need a person: the world behind the tool
 results, and the judgement of whether the behaviour was right.
 
+### C6. Both layers on one page — everything the trace is graded by
+
+C1 shows the loop, C2 the inside of Layer 1, C3 the inside of Layer 2. This is
+the one that puts all three together, for the question the other three each
+answer only half of: *given one trace, what actually reads it, and which half of
+the reading can stop a merge?*
+
+```mermaid
+flowchart TD
+    scen["A scenario, as YAML<br/>declares <b>gate:</b> constraint or behaviour<br/>and the <b>rubrics:</b> that apply"]
+    trace["<b>One captured trace</b><br/>spans · events · tool calls · arguments"]
+
+    scen --> trace
+    trace --> eval
+    trace --> narr
+
+    subgraph one["LAYER 1 — deterministic · no model, no network, no credential"]
+        eval["AssertionEvaluator<br/><i>reads the trace, never the reply text</i>"]
+
+        subgraph presence["Presence — did it happen"]
+            a1["tool_called"]
+            a2["event_emitted"]
+            a3["tool_called_with"]
+            a4["span_attribute"]
+            a5["call_attempts"]
+        end
+
+        subgraph absence["Absence — did it NOT happen"]
+            b1["tool_not_called"]
+            b2["event_not_emitted"]
+        end
+
+        subgraph shape["Shape of the run"]
+            c1["order — where C-1 lives"]
+            c2["argument_grounded — C-5"]
+            c3["outcome"]
+            c4["termination — C-4"]
+            c5["output_excludes_internal_ids — C-3"]
+        end
+
+        eval --> presence
+        eval --> absence
+        eval --> shape
+    end
+
+    subgraph two["LAYER 2 — rubric judge · pinned model · keyed"]
+        narr["TraceNarrative<br/>trace becomes plain text"]
+        rub["evals/rubrics/judge.yaml<br/>an anchor per level"]
+        tmpl["evals/rubrics/judge-prompt.md"]
+        prompt["JudgeConfiguration.BuildPrompt<br/>both files hashed into every report"]
+        model["Pinned model — separate from the agent's"]
+        parse["RubricJudge.Parse<br/><i>strict: prose, a decimal, a missing<br/>criterion or an unasked one all fail</i>"]
+        cal["Calibration gate<br/>labels · scenarios · kappa"]
+
+        subgraph rubrics["A score and a justification per rubric"]
+            direction LR
+            r1["grounding<br/><i>any class</i>"]
+            r2["confirmation-clarity<br/><i>any class</i>"]
+            r3["refusal-clarity<br/><i>denied</i>"]
+            r4["degradation-honesty<br/><i>degradation</i>"]
+            r5["tone<br/><i>any class</i>"]
+        end
+
+        narr --> prompt
+        rub --> prompt
+        tmpl --> prompt
+        rub --> cal
+        prompt --> model --> parse --> rubrics
+    end
+
+    one ~~~ two
+
+    hard["<b>Hard block, every pull request</b><br/>constraints at 100 percent · behaviours at<br/>or above evals/baselines/layer1.json"]
+    soft["<b>Reported and trended, blocks nothing</b><br/>on a pull request: skipped:no-credential"]
+
+    presence --> hard
+    absence --> hard
+    shape --> hard
+    rubrics --> soft
+    cal -->|"must clear before any score may gate"| soft
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class absence,hard star
+
+    classDef warn fill:#eceff4,stroke:#8a93a2,color:#2b303b
+    class parse,soft warn
+```
+
+Three things are only visible when both layers are drawn at once. The **scenario
+decides which layers apply to it** — `gate:` routes it to the hard block or to
+the baseline comparison, and `rubrics:` decides whether the judge is asked at
+all; a constraint scenario with no rubrics is graded by Layer 1 alone, which is
+correct for most of them. The **two layers never meet after the trace**: they
+read the same artefact and nothing else is shared, which is what lets one of
+them be a merge gate while the other has never scored a live model. And the
+asymmetry at the bottom is the whole design — the left path costs a pull request
+about five seconds and zero dollars, the right path costs a credential the
+public repository does not have, so the left path gates and the right path
+reports.
+
 ---
 
 ## Part D — Infrastructure and delivery
@@ -806,6 +906,7 @@ model that produced it.
 | C3 | `Judging/`, `evals/rubrics/judge.yaml`, [`CALIBRATION.md`](CALIBRATION.md) |
 | C4 | `Mutations/BrokenAgents.cs` |
 | C5 | `.github/workflows/production-loop.yml`, `Extraction/ScenarioExtractor.cs` |
+| C6 | The sources for C2 and C3 together, plus `evals/schema/scenario.schema.json` for `gate` and `rubrics` |
 | D1–D3 | `.github/workflows/`, `flyio/demo.fly.toml`, `infra/azure/` |
 
 If a diagram and its source disagree, the source is right. Fixing the diagram in
