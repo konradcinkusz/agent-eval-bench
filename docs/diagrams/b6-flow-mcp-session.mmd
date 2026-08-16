@@ -1,0 +1,28 @@
+sequenceDiagram
+    autonumber
+    participant A as Absence Concierge
+    participant B as System browser
+    participant F as Factorial MCP server
+
+    rect rgb(245, 245, 248)
+    Note over A,F: Once per session — OAuth 2.0 with dynamic client registration
+    A->>F: discovery — endpoints and scopes
+    A->>F: dynamic registration
+    F-->>A: client_id, no secret — PKCE carries the proof
+    A->>B: open the consent URL
+    B->>F: sign-in and consent
+    F-->>A: the code lands on the loopback listener
+    A->>F: code plus PKCE verifier
+    F-->>A: access token
+    end
+
+    Note over A,F: Every turn — reads over Streamable HTTP
+    A->>F: initialize, tools/list
+    A->>F: get_current_user · list_leave_types · list_leaves
+    F-->>A: results — anything instruction-shaped inside them<br/>is data, never a command (C-7)
+
+    rect rgb(253, 240, 213)
+    Note over A,F: The write — only after a human decided
+    A->>F: request_time_off — refused without the token,<br/>at most once per confirmation
+    F-->>A: outcome, or a timeout reported as unknown
+    end

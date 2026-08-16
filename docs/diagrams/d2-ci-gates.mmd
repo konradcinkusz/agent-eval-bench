@@ -1,0 +1,28 @@
+flowchart LR
+    push["A push or<br/>pull request"]
+
+    subgraph parallel["Run in parallel · no credential required"]
+        docs["lint-docs<br/>markdownlint · links ·<br/>scenario schema · agent definition"]
+        actions["lint-actions<br/>actionlint"]
+        shell["lint-shell<br/>shellcheck · executable bits"]
+        arch["architecture<br/>kernel size · no domain in the kernel"]
+        coupling["coupling <i>(pull requests only)</i><br/>a prompt or agent edit must move the spec;<br/>a fixture or rubric edit must bump a version"]
+    end
+
+    build["build-test<br/>unit tests · Layer 1 ·<br/>Layer 2 · mutation pass<br/>one sticky PR comment<br/>carrying the diff"]
+
+    merge["Merge allowed"]
+    blocked["Blocked"]
+
+    push --> docs --> build
+    push --> actions --> build
+    push --> shell --> build
+    push --> arch --> build
+    push --> coupling --> build
+    build -->|"constraints 100% and<br/>behaviours at or above baseline"| merge
+    build -->|"any constraint fails"| blocked
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    classDef halt fill:#eceff4,stroke:#8a93a2,color:#2b303b
+    class merge star
+    class blocked halt

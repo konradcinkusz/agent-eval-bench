@@ -21,6 +21,12 @@ demo, the complete architecture and the infrastructure as diagrams, with every
 arrow spelled out. Serve it with GitHub Pages (`main`, `/docs`) or open the file
 locally; nothing on it claims to be running anywhere it is not.
 
+**Diagrams that render right here on GitHub:**
+[`docs/DIAGRAMS.md`](docs/DIAGRAMS.md) — context, architecture, the step
+pipeline, the token state machine, six user flows, the eval loop, the mutation
+pass, and the delivery topology, as Mermaid. Each one is also a standalone file
+in [`docs/diagrams/`](docs/diagrams/), and a CI check keeps the two identical.
+
 ## Sixty seconds, if that is all you have
 
 An employee types a sentence. The agent resolves the dates against a real

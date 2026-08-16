@@ -9,9 +9,10 @@
     "node": ">=20"
   },
   "scripts": {
-    "lint": "npm run lint:md && npm run lint:links && npm run validate:scenarios && npm run validate:agents",
+    "lint": "npm run lint:md && npm run lint:links && npm run lint:diagrams && npm run validate:scenarios && npm run validate:agents",
     "lint:md": "markdownlint-cli2",
     "lint:links": "node scripts/check-links.mjs",
+    "lint:diagrams": "node scripts/check-diagrams.mjs",
     "validate:scenarios": "node scripts/validate-scenarios.mjs",
     "validate:agents": "node scripts/validate-agent-definitions.mjs",
     "test:e2e": "playwright test --config tests/e2e/playwright.config.mjs"
