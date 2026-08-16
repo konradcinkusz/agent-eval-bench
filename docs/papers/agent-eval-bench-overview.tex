@@ -268,15 +268,17 @@ and business-management SaaS company. An agent that books leave is a good
 specimen precisely because the write is consequential: it commits a person's
 days off in a system of record that their manager and payroll both read, and a
 demo that books nothing real is a demo whose confirmation gate costs nothing to
-get wrong. The integration target is Factorial's public
-MCP server at \texttt{mcp.factorialhr.com}, reached over Streamable HTTP with
-OAuth 2.0 and dynamic client registration, acting as the authenticated user
-and enforcing that user's own permissions --- and the one write this agent is
-built around is that server's time-off request tool. This is not a
-contribution to Factorial's codebase. It is an external client of their
-platform, which is exactly what an API and integrations team exists to enable.
-Table~\ref{tab:capmap} maps what the repository demonstrates to the place
-that demonstrates it.
+get wrong. The integration target is Factorial's public MCP server at
+\texttt{mcp.factorialhr.com}, reached over Streamable HTTP with OAuth 2.0 and
+dynamic client registration, acting as the authenticated user and enforcing
+that user's own permissions --- and the one write this agent is built around is
+that server's time-off request tool. This is not a contribution to Factorial's
+codebase. It is an external client of their platform. Building against somebody
+else's real, published surface is a deliberate constraint rather than a
+convenience: it fixes the tool contract outside this repository, so the payload
+mapping cannot quietly be redefined into whatever makes a scenario pass.
+Table~\ref{tab:capmap} maps what the repository demonstrates to the place that
+demonstrates it.
 
 \begin{table}[htbp]
 \centering
@@ -319,8 +321,8 @@ stack-neutral YAML, JSON and Markdown, and would port to Ruby or TypeScript
 unchanged. Only the harness is .NET. \\
 \bottomrule
 \end{tabularx}
-\caption{The role advertisement's vocabulary, and the artifact in this
-repository that answers each line of it.}
+\caption{What this repository demonstrates, and the artifact that
+demonstrates each line of it.}
 \label{tab:capmap}
 \end{table}
 

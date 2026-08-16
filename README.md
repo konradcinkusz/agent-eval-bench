@@ -155,8 +155,13 @@ needs no credentials. 🇵🇱 [Wersja polska](docs/START-HERE.pl.md).
 
 The bench is the first worked example of a repository-agnostic
 [eval standard](https://github.com/konradcinkusz/architecture-standards/blob/main/docs/guides/AI-EVALS.md)
-I wrote before this project existed, and the HR agent is the specimen it is
-demonstrated on — a subject to measure, not the thing being offered.
+I wrote before this project existed. The HR agent is the specimen it is
+demonstrated on — something real enough to measure, not the thing being offered
+— and it integrates against
+[Factorial's public MCP server](https://mcp.factorialhr.com) because a live,
+permission-enforcing MCP surface is a harder and more honest target than one
+invented for the demo ([the integration target](#the-integration-target) spells
+out what that means in practice).
 
 Prompts get edited the way configuration gets edited — casually. A change to a
 prompt, a model version, or a tool description can regress an agent's behaviour
@@ -188,11 +193,11 @@ construction. This repository is that example.
 
 ## The integration target
 
-The platform is [Factorial](https://factorialhr.com) — a Barcelona-based HR and
-business-management SaaS company — and the domain is time off. An agent that
-books leave is a good specimen precisely because the write is consequential: it
-commits a person's days off in a system of record that their manager and payroll
-both read.
+The domain is HR time off, and the platform is
+[Factorial](https://factorialhr.com) — a Barcelona-based HR and
+business-management SaaS company. An agent that books leave is a good specimen
+precisely because the write is consequential: it commits a person's days off in
+a system of record their manager and payroll both read.
 
 | What this repository demonstrates | Where it is demonstrated |
 |---|---|
@@ -203,14 +208,18 @@ both read.
 | **Human-in-the-loop agentic workflows** — combine LLMs, rules and user oversight, keeping humans in control of critical decisions | The agent drafts, shows a summary, and **stops**. The write happens in a later turn, only after an explicit confirmation event |
 | **Stack-agnostic engineering** — solid fundamentals in any language; what you built matters more than the stack | Built in .NET because that is my stack. Every eval artifact — spec, scenarios, rubrics, baselines — is stack-neutral YAML, JSON and Markdown, and would port to Ruby or TypeScript unchanged |
 
-Factorial's engineering runs on Ruby on Rails and React. **This is not a
-contribution to their codebase** — it is an external client of their platform,
-which is precisely what an API and integrations team exists to enable. The
-integration target is their public
+**This is not a contribution to Factorial's codebase** — it is an external client
+of their platform. The integration target is their public
 [MCP server](https://mcp.factorialhr.com) (Streamable HTTP, OAuth 2.0 with dynamic
 client registration), which acts as the authenticated user and enforces that
 user's permissions on every call. The write this agent is built around is their
 time-off request tool.
+
+Building against somebody else's real, published surface is a deliberate
+constraint rather than a convenience: it fixes the tool contract outside this
+repository, so the payload mapping cannot quietly be redefined to whatever makes
+a scenario pass. What that has *not* bought yet is honest to state — no live
+server has ever answered this client ([D-10](docs/DEVIATIONS.md)).
 
 ## The agent, in one paragraph
 

@@ -36,7 +36,7 @@ defines narrowly on purpose.
 ## Decision
 
 Add `docs/OVERVIEW.md` as the single synthesizing document — collecting the
-business context, architecture, spec-first workflow, evaluation methodology,
+integration target, architecture, spec-first workflow, evaluation methodology,
 findings and values already recorded elsewhere into one linear read — and a
 LaTeX presentation of it at `docs/papers/agent-eval-bench-overview.tex`,
 reusing the house preamble verbatim for visual consistency with the rest of

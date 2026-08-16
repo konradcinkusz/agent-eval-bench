@@ -165,12 +165,12 @@ the parts that are not yet proof (§10, §11).
 
 ## 3. The integration target
 
-The platform is [Factorial](https://factorialhr.com) — a Barcelona-based HR and
-business-management SaaS company — and the domain is time off. An agent that
-books leave is a good specimen precisely because the write is consequential: it
-commits a person's days off in a system of record that their manager and
-payroll both read, and a demo that books nothing real is a demo whose
-confirmation gate costs nothing to get wrong.
+The domain is HR time off, and the platform is
+[Factorial](https://factorialhr.com) — a Barcelona-based HR and
+business-management SaaS company. An agent that books leave is a good specimen
+precisely because the write is consequential: it commits a person's days off in
+a system of record their manager and payroll both read. A demo that books
+nothing real is a demo whose confirmation gate costs nothing to get wrong.
 
 | What this repository demonstrates | Where it is demonstrated |
 |---|---|
@@ -181,10 +181,12 @@ confirmation gate costs nothing to get wrong.
 | **Human-in-the-loop agentic workflows** — combine LLMs, rules and user oversight, keeping humans in control of critical decisions | The agent drafts, shows a summary, and **stops**. The write happens in a later turn, only after an explicit confirmation event. |
 | **Stack-agnostic engineering** — solid fundamentals in any language; what you built matters more than the stack | Built in .NET because that is my stack. Every eval artifact — spec, scenarios, rubrics, baselines — is stack-neutral YAML, JSON and Markdown, and would port to Ruby or TypeScript unchanged. |
 
-Factorial's own engineering runs on Ruby on Rails and React. **This is not a
-contribution to their codebase** — it is an external client of their platform,
-which is precisely what an API and integrations team exists to enable. The
-integration target is Factorial's public
+**This is not a contribution to Factorial's codebase** — it is an external
+client of their platform. Building against somebody else's real, published
+surface is a deliberate constraint rather than a convenience: it fixes the tool
+contract outside this repository, so the payload mapping cannot quietly be
+redefined to whatever makes a scenario pass. The integration target is
+Factorial's public
 [MCP server](https://mcp.factorialhr.com) (Streamable HTTP, OAuth 2.0 with dynamic
 client registration), which acts as the authenticated user and enforces that
 user's permissions on every call. The write this agent is built around — request
