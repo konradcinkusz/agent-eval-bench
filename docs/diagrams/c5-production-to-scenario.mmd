@@ -1,0 +1,19 @@
+flowchart TD
+    demo["The deployed demo"]
+    ai["Application Insights"]
+    loop["production-loop.yml — daily<br/>scores the day · re-checks C-1 post hoc"]
+    pager["A red run notifies the owner<br/><i>the demo's pager, named as one</i>"]
+    worst["Worst sessions exported<br/>as an artifact"]
+    ext["ScenarioExtractor<br/>derives every assertion mechanically,<br/>including one tool_not_called per<br/>tool that was NOT called"]
+    review["Emitted with a REVIEW: marker"]
+    val["validate-scenarios.mjs<br/><b>refuses any scenario still carrying it</b>"]
+    human["A human decides whether the<br/>observed behaviour was correct"]
+    corpus["The scenario corpus"]
+
+    demo -->|"spans, 100% sampled"| ai --> loop
+    loop -->|"C-1 violated"| pager
+    loop --> worst --> ext --> review --> val
+    val -->|"blocked until read"| human --> corpus
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class val star

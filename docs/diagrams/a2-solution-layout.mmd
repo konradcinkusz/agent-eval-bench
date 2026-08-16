@@ -1,0 +1,22 @@
+flowchart TD
+    subgraph ship["Ships in the container"]
+        svc["AgentService<br/>pipeline · gate · tool boundary · page"]
+        kernel["ServiceDefaults<br/>OpenTelemetry · health · discovery · resilience<br/><i>size-capped by a CI check</i>"]
+    end
+
+    subgraph devonly["Development only, never containerised"]
+        host["AppHost<br/>.NET Aspire composition root"]
+    end
+
+    subgraph testing["Never shipped"]
+        unit["AgentService.Tests<br/>unit tests"]
+        evals["AbsenceConcierge.Evals<br/><b>the bench</b>"]
+    end
+
+    host --> svc
+    svc --> kernel
+    unit --> svc
+    evals --> svc
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class evals star
