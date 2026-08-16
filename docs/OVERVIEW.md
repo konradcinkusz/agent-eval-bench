@@ -680,21 +680,30 @@ on its own.
 
 ## 17. Getting the PDF
 
-A polished, presentation-ready rendering of this document exists as a LaTeX
-source at [`docs/papers/agent-eval-bench-overview.tex`](papers/agent-eval-bench-overview.tex),
-styled in the same house look the rest of the author's projects use for formal
-documents. It is built on demand — never committed, since a generated PDF is
+A polished, presentation-ready rendering of this document exists as LaTeX
+source, in two language editions —
+[`docs/papers/agent-eval-bench-overview.tex`](papers/agent-eval-bench-overview.tex)
+(English) and
+[`docs/papers/agent-eval-bench-overview.pl.tex`](papers/agent-eval-bench-overview.pl.tex)
+(Polish) — styled in the same house look the rest of the author's projects use
+for formal documents, and illustrated with three original diagrams that adapt
+the walkthrough first drawn for [`docs/index.pl.html`](index.pl.html)'s
+"Najprościej" tab (English has no HTML equivalent of that tab yet, so this
+paper is currently the only English presentation of those diagrams). Both
+editions are built on demand — never committed, since a generated PDF is
 build output, not source — by the **Build Overview PDF** GitHub Action:
 
 1. Open the repository's **Actions** tab on GitHub.
 1. Select **Build Overview PDF** in the left-hand workflow list.
 1. Click **Run workflow** (this workflow has no other trigger — it never fires
    on a push or a schedule).
-1. Once the run finishes, download `AgentEvalBench_Overview.pdf` from the run's
-   **Artifacts** section.
+1. Once the run finishes, download `AgentEvalBench_Overview_PDF` from the
+   run's **Artifacts** section — it contains both
+   `AgentEvalBench_Overview_EN.pdf` and `AgentEvalBench_Overview_PL.pdf`.
 
-The same document can be built locally with a LaTeX distribution installed:
+Either edition can be built locally with a LaTeX distribution installed:
 
 ```bash
 cd docs/papers && pdflatex agent-eval-bench-overview.tex && pdflatex agent-eval-bench-overview.tex
+cd docs/papers && pdflatex agent-eval-bench-overview.pl.tex && pdflatex agent-eval-bench-overview.pl.tex
 ```
