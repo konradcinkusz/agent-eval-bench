@@ -28,6 +28,11 @@ repository. A polished PDF rendering of it — English and Polish editions, with
 diagrams — is built on demand, never committed, by the **Build Overview PDF**
 GitHub Action — see [`docs/OVERVIEW.md` §17](docs/OVERVIEW.md#17-getting-the-pdf).
 
+**One deck, if you are presenting it:** [`docs/slides/agent-eval-bench-slides.tex`](docs/slides/agent-eval-bench-slides.tex) —
+24 Beamer frames covering the same ground at talk length, built on demand by
+the **Build Slides PDF** GitHub Action — see
+[`docs/OVERVIEW.md` §18](docs/OVERVIEW.md#18-getting-the-slides).
+
 ## Sixty seconds, if that is all you have
 
 An employee types a sentence. The agent resolves the dates against a real
@@ -261,6 +266,7 @@ docs/
   adr/              architecture decision records
   DEVIATIONS.md     where this repo departs from the standards — dated and reasoned
   papers/           LaTeX presentation of OVERVIEW.md (EN + PL), built to PDF on demand
+  slides/           Beamer talk deck (24 frames), built to PDF on demand
 evals/
   schema/           the scenario contract, as strict JSON Schema
   fixtures/         shared fictional worlds; scenarios write only the delta

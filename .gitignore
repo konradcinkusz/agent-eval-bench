@@ -129,13 +129,22 @@ evals/**/*.local.yaml
 .last-image-tag
 fly.toml.local
 
-# --- LaTeX build output (docs/papers/). PDFs are build output, never
-#     committed — see architecture-standards' 00-RESEARCH-DOCUMENTATION.md.
-#     Only the .tex source is tracked. ---
+# --- LaTeX build output (docs/papers/, docs/slides/). PDFs are build output,
+#     never committed — see architecture-standards' 00-RESEARCH-DOCUMENTATION.md.
+#     Only the .tex source (and the theme file docs/slides/ copies in) is
+#     tracked. ---
 docs/papers/*.pdf
 docs/papers/*.aux
 docs/papers/*.log
 docs/papers/*.out
+docs/slides/*.pdf
+docs/slides/*.aux
+docs/slides/*.log
+docs/slides/*.out
+docs/slides/*.nav
+docs/slides/*.snm
+docs/slides/*.toc
+docs/slides/*.vrb
 docs/papers/*.toc
 
 # --- Local scratch. Anything a session needs but the repo does not. ---
