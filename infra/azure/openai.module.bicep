@@ -76,7 +76,12 @@ resource judge 'Microsoft.CognitiveServices/accounts/deployments@2024-10-01' = {
   name: 'judge'
   sku: {
     name: 'GlobalStandard'
-    capacity: 20
+
+    // 20 (20K TPM) throttled a full-scope Layer 2 run with 429s even with the
+    // provider's retry in place — the judge grades every scenario against
+    // anchored rubrics, and that's a lot more token traffic than the composer's
+    // one-sentence rewrites. 100K TPM is comfortably above what a full run draws.
+    capacity: 100
   }
   properties: {
     model: {
