@@ -30,8 +30,16 @@ public sealed record McpToolReply(bool IsError, string? Text, string? Message, b
 /// be a design nothing in this repository ever tests.
 /// </para>
 /// <para>
-/// It is also P11 taken literally. `grep -r ModelContextProtocol src/` returns
-/// exactly one file.
+/// It is also P11 taken literally: <b>exactly one file imports the SDK</b>.
+/// <code>grep -rl '^using ModelContextProtocol' src/</code> returns
+/// <c>McpClientSession.cs</c> and nothing else.
+/// </para>
+/// <para>
+/// The claim is worded that way because the looser one is false and a reader can
+/// check in a second: a bare <c>grep -r ModelContextProtocol src/</c> also matches
+/// the package reference in the .csproj, this very comment, and every build
+/// artefact under obj/ and bin/. The seam is about who may name the vendor's
+/// types, and a `using` directive is where that is decided.
 /// </para>
 /// </summary>
 public interface IMcpToolSession : IAsyncDisposable

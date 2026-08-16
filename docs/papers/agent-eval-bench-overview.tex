@@ -268,15 +268,17 @@ and business-management SaaS company. An agent that books leave is a good
 specimen precisely because the write is consequential: it commits a person's
 days off in a system of record that their manager and payroll both read, and a
 demo that books nothing real is a demo whose confirmation gate costs nothing to
-get wrong. The integration target is Factorial's public
-MCP server at \texttt{mcp.factorialhr.com}, reached over Streamable HTTP with
-OAuth 2.0 and dynamic client registration, acting as the authenticated user
-and enforcing that user's own permissions --- and the one write this agent is
-built around is that server's time-off request tool. This is not a
-contribution to Factorial's codebase. It is an external client of their
-platform, which is exactly what an API and integrations team exists to enable.
-Table~\ref{tab:capmap} maps what the repository demonstrates to the place
-that demonstrates it.
+get wrong. The integration target is Factorial's public MCP server at
+\texttt{mcp.factorialhr.com}, reached over Streamable HTTP with OAuth 2.0 and
+dynamic client registration, acting as the authenticated user and enforcing
+that user's own permissions --- and the one write this agent is built around is
+that server's time-off request tool. This is not a contribution to Factorial's
+codebase. It is an external client of their platform. Building against somebody
+else's real, published surface is a deliberate constraint rather than a
+convenience: it fixes the tool contract outside this repository, so the payload
+mapping cannot quietly be redefined into whatever makes a scenario pass.
+Table~\ref{tab:capmap} maps what the repository demonstrates to the place that
+demonstrates it.
 
 \begin{table}[htbp]
 \centering
@@ -319,8 +321,8 @@ stack-neutral YAML, JSON and Markdown, and would port to Ruby or TypeScript
 unchanged. Only the harness is .NET. \\
 \bottomrule
 \end{tabularx}
-\caption{The role advertisement's vocabulary, and the artifact in this
-repository that answers each line of it.}
+\caption{What this repository demonstrates, and the artifact that
+demonstrates each line of it.}
 \label{tab:capmap}
 \end{table}
 
@@ -532,7 +534,7 @@ whole system up on a developer's machine with one command and is explicitly not
 the production topology --- it is never containerised, and nothing it configures
 is load-bearing anywhere a real request arrives.
 \repopath{src/AbsenceConcierge.ServiceDefaults} is the shared kernel: OpenTelemetry
-wiring, health endpoints, service discovery, resilience. It is held at 137 lines
+wiring, health endpoints, service discovery, resilience. It is held at 160 lines
 against an approximately 800-line ceiling, and CI fails the build if it grows
 past that ceiling \emph{or} if it starts using domain vocabulary --- the words
 \texttt{confirmation}, \texttt{leave}, \texttt{absence}, \texttt{workforce},
@@ -1301,7 +1303,7 @@ The comment posts only on same-repo pull requests, and never via the \texttt{pul
 
 Two more jobs block a merge for reasons that have nothing to do with evals and everything to do with keeping the instrument trustworthy over time.
 
-The shared-kernel guard holds \texttt{ServiceDefaults} --- the thin plumbing layer of telemetry, health, discovery and resilience --- at 137 lines against an approximately 800-line ceiling, and scans it for domain vocabulary. The ceiling is not about aesthetics. A shared kernel that acquires knowledge of leave types is a shared kernel that can change the agent's behaviour from a project no reviewer of the agent is looking at.
+The shared-kernel guard holds \texttt{ServiceDefaults} --- the thin plumbing layer of telemetry, health, discovery and resilience --- at 160 lines against an approximately 800-line ceiling, and scans it for domain vocabulary. The ceiling is not about aesthetics. A shared kernel that acquires knowledge of leave types is a shared kernel that can change the agent's behaviour from a project no reviewer of the agent is looking at.
 
 Secret scanning runs gitleaks twice: in CI over full git history, and as a pre-commit hook that refuses the commit outright --- including when no scanner is available, because a hook that silently degrades to a no-op on a machine missing a tool is a hook that protects the machines that did not need it. History matters because a secret deleted in the next commit is still a secret in the repository.
 
@@ -1440,7 +1442,7 @@ The adapter was written in a repository with an unusual constraint: there is no 
 
 That changes what good design means here. Ordinarily an anti-corruption boundary is justified by portability --- a second backend should cost one adapter file. Here it has to earn its place on a nearer argument: \finding{whatever cannot be tested without a server is code this repository never runs at all.}
 
-So the SDK sits behind \texttt{IMcpToolSession}, one method wide --- call a tool with a name and arguments, get a reply. One class implements it, and it is the only file in \repopath{src/} that names the vendor package. \texttt{grep -r ModelContextProtocol src/} returning exactly one file is the check, and it is one anybody can run in five seconds without cloning a mental model first. Everything above that seam --- mapping payloads into the workforce model, redeeming the token, filtering the reply so \texttt{only\_for\_self} survives a server that ignored the filter it was asked for, classifying a failure into the three answers of Table~\ref{tab:transport} --- is ordinary code that a forty-line fake exercises in milliseconds, and the fake throws on an unarranged call so a test cannot pass by arranging nothing.
+So the SDK sits behind \texttt{IMcpToolSession}, one method wide --- call a tool with a name and arguments, get a reply. One class implements it, and it is the only file in \repopath{src/} that \emph{imports} the vendor package. \texttt{grep -rl '\textasciicircum{}using ModelContextProtocol' src/} returning exactly one file is the check, and it is one anybody can run in five seconds without cloning a mental model first. It matches the \texttt{using} directive rather than the bare string because the looser grep also finds the package reference in the project file and every build artefact. Everything above that seam --- mapping payloads into the workforce model, redeeming the token, filtering the reply so \texttt{only\_for\_self} survives a server that ignored the filter it was asked for, classifying a failure into the three answers of Table~\ref{tab:transport} --- is ordinary code that a forty-line fake exercises in milliseconds, and the fake throws on an unarranged call so a test cannot pass by arranging nothing.
 
 The alternative that lost is worth naming, because it is the one that reads as simpler: implement the tool interface directly against the SDK's client. Faking that means faking a sealed vendor type or standing up an HTTP server that speaks Streamable HTTP and JSON-RPC. The first is not possible; the second means every test of the confirmation gate in MCP mode drags a transport behind it, and the behaviour worth testing ends up buried under machinery. In a repository whose subject is evaluating agents, ``we could not test it'' is the wrong place to arrive.
 
@@ -1676,7 +1678,7 @@ down is a description. The six here each name one.
     right label.}
     \item \textbf{ADR-0005, the MCP SDK lives behind a one-method session.}
     Rejects letting SDK types spread through the pipeline;
-    \texttt{grep -r ModelContextProtocol src/} returns exactly one file, because
+    \texttt{grep -rl '\textasciicircum{}using ModelContextProtocol' src/} returns exactly one file, because
     \emph{whatever cannot be tested without a server is code this repository
     never runs at all.}
     \item \textbf{ADR-0006, render this overview to PDF on demand.} Rejects

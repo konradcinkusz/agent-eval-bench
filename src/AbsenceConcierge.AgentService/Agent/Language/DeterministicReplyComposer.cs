@@ -17,8 +17,13 @@ namespace AbsenceConcierge.AgentService.Agent.Language;
 /// two sentences are identical right up until the moment the write fails.
 /// </para>
 /// <para>
-/// English only, as SPEC §9 records. That is a real limitation for a Barcelona
-/// reader and it is written down rather than glossed.
+/// <b>This composer writes English only</b>, whatever language the turn arrived
+/// in. Since SPEC 1.5.0 the interpreter reads Spanish too (§9), so the gap is now
+/// asymmetric and worse than it was: `hap-007`, `hap-008` and `amb-009` carry
+/// `locale: es-ES`, are understood, and are answered in English. That is
+/// FINDINGS.md F-10 — found by the calibration labelling pass, recorded rather
+/// than glossed, and deliberately not fixed in the change that found it, because
+/// the fix is coupled to SPEC §4.1's prompt file and the tone rubric.
 /// </para>
 /// </summary>
 public sealed class DeterministicReplyComposer : IReplyComposer
