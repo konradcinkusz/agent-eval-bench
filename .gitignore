@@ -129,6 +129,12 @@ evals/**/*.local.yaml
 .last-image-tag
 fly.toml.local
 
+# --- Rendered Mermaid diagrams. Build output: docs/diagrams/*.mmd is the
+#     source, scripts/render-diagrams.mjs turns it into PDF for the papers.
+#     Committing these would be a second copy of a picture that already has a
+#     source of truth, free to drift from it. ---
+docs/diagrams/rendered/
+
 # --- LaTeX build output (docs/papers/, docs/slides/). PDFs are build output,
 #     never committed — see architecture-standards' 00-RESEARCH-DOCUMENTATION.md.
 #     Only the .tex source (and the theme file docs/slides/ copies in) is

@@ -116,8 +116,8 @@
 
     \vspace{0.3cm}
 
-    {\Large\sffamily\color{darkgray} A Spec-First Evaluation Standard for
-    Tool-Using Agents, Demonstrated on an HR Absence Concierge}
+    {\Large\sffamily\color{darkgray} A Measuring Instrument for Tool-Using
+    Agents --- and the HR Absence Concierge It Is Demonstrated On}
 
     \vspace{0.6cm}
 
@@ -138,24 +138,29 @@
 
 % ----------------------------------------------------------------------------
 \begin{abstract}
-\noindent Agent Eval Bench demonstrates that an AI agent allowed to act on real
-systems can be built so that the machine does the work and a person keeps the
-decision -- and that whether this property survives a prompt edit, a model
-swap, or hostile input is something one can measure rather than merely trust.
-The vehicle is an HR ``Absence Concierge'' that resolves a sentence such as
-``I'm sick today and probably tomorrow'' into a correctly dated leave request
-and then stops for explicit human confirmation before writing anything; the
-submit tool independently refuses any write without a single-use token that
-only an approval releases. The agent is deliberately the smaller half of the
-project. The larger half is a behaviour specification written before the agent
-existed, a 35-scenario dataset spanning five classes, a two-layer evaluation
-harness (deterministic trace assertions plus a calibrated LLM judge), CI gates
-that hard-block constraint violations and diff behaviour against a recorded
-baseline, and a findings report naming twelve defects the suite actually
-caught -- seven of them in the measuring instrument or the specification
+\noindent This repository's product is an \textbf{evaluation bench} --- a
+measuring instrument for a developer building AI agents. It is not an HR
+system. For such an instrument to have anything to measure it needs a
+specimen, and the specimen here is an HR ``Absence Concierge'' that turns a
+sentence like ``I'm sick today and probably tomorrow'' into a correctly dated
+leave request and then stops for explicit human confirmation before writing
+anything. That agent was chosen deliberately --- it has an irreversible write,
+date arithmetic, permissions to respect, and an obvious need for human
+consent --- but it remains the Petri dish, not the main course. The problem the
+instrument addresses is that an AI agent can be broken \emph{invisibly}: a
+change to code, a prompt, or a tool description breaks no build and looks
+harmless in review, yet silently changes what the agent does with real data,
+and an ordinary unit test cannot see it, because the question is not whether a
+function returned 2 instead of 3 but whether the agent asked the human at all
+before it wrote. The answer built here is a behaviour contract written before
+the agent, 35 scenarios stored as data, the production agent replayed
+in-process on every change, an execution trace as the thing graded, and a
+merge gate. Around that sit a two-layer harness --- deterministic trace
+assertions plus a rubric-anchored LLM judge --- and a findings report naming
+twelve defects, seven of them in the measuring instrument or the specification
 rather than in the agent. Everything runs with zero credentials by default,
-and every part that has not yet been exercised against something live is
-recorded as an open, dated fact rather than implied by a passing build.
+and every part not yet exercised against something live is recorded as an
+open, dated fact rather than implied by a passing build.
 \end{abstract}
 
 \vspace{0.4cm}
@@ -424,12 +429,36 @@ reported and trended today without gating anything.
 
 A suite that has never been shown a broken implementation has only proven that
 it can pass. Four deliberately broken agent variants -- each swapping exactly
-one pipeline step in place -- were run against the real scenario corpus: one
-that writes before the confirmation gate, one that fabricates an identifier,
-one that obeys an instruction hidden inside a tool result, and one that
-resubmits an already-confirmed request a second time. Three were caught
-immediately. The fourth survived its first run, and that survival is recorded
-as a finding rather than quietly patched away (F-1, \S\ref{sec:findings}).
+one pipeline step in place, so that a mutant which announced itself would only
+be testing the announcement -- were run against the real scenario corpus.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}Xllc@{}}
+\toprule
+\textbf{Broken variant} & \textbf{Breaks} & \textbf{Must be caught by} & \textbf{Result} \\
+\midrule
+Writes before the confirmation gate & C-1 & \texttt{adv-001} & Caught \\
+Fabricates a leave-type identifier & C-5 & \texttt{hap-001} & Caught \\
+Obeys an instruction inside a tool result & C-7 & \texttt{adv-003} & Caught \\
+Resubmits a write whose outcome was indeterminate & C-6 & \texttt{deg-004} & \textcolor{accentred}{\textbf{Survived}} \\
+\bottomrule
+\end{tabularx}
+\caption{The mutation pass. Three of four were caught on the first run; the fourth was not, and that is finding F-1.}
+\label{tab:mutation}
+\end{table}
+
+The survivor is the interesting one. It does not resubmit a request it knows
+succeeded -- it resubmits a write whose outcome came back \emph{indeterminate},
+a timeout that may or may not have landed. That is the plausible,
+helpful-sounding retry -- \textit{it probably didn't go through, let's be
+helpful} -- and it is the sentence that books somebody's holiday twice. Two
+scenarios had asserted \texttt{at\_least: 1} on the write where they should
+have asserted \texttt{times: 1}, so a double submission satisfied them both.
+The survival is recorded as finding F-1 (\S\ref{sec:findings}) rather than
+quietly patched away, because a suite that quietly fixes the hole a mutant
+found has destroyed the evidence that it had one.
 
 \subsection{CI gates: what actually blocks a merge}
 
@@ -462,7 +491,7 @@ comment, updated in place, carrying that diff -- never a dashboard.
 \draw[-{Latex[length=2mm]}, accentgreen] (constraints.east) -| node[pos=0.32,above,font=\scriptsize] {35/35} (merge.south);
 \draw[-{Latex[length=2mm]}, accentred] (constraints.east) -| node[pos=0.32,below,font=\scriptsize] {anything less} (blocked.north);
 
-\node[font=\small, text width=14.5cm, align=left, anchor=north west] at (-2.1,-1.9) {The suite was deliberately broken four times, to prove it can catch something at all. It caught every time (\texttt{docs/FINDINGS.md}).};
+\node[font=\small, text width=14.5cm, align=left, anchor=north west] at (-2.1,-1.9) {The suite was deliberately broken four times, to prove it can catch anything at all. Three were caught on the first run. The fourth survived --- and that survival is finding F-1 (\texttt{docs/FINDINGS.md}).};
 \end{tikzpicture}
 \caption{This is not a one-time check. It runs on every code change, and it has already been shown a broken agent on purpose.}
 \label{fig:cigate}

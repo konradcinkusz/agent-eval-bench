@@ -15,6 +15,7 @@
     "lint:diagrams": "node scripts/check-diagrams.mjs",
     "validate:scenarios": "node scripts/validate-scenarios.mjs",
     "validate:agents": "node scripts/validate-agent-definitions.mjs",
+    "render:diagrams": "node scripts/render-diagrams.mjs",
     "test:e2e": "playwright test --config tests/e2e/playwright.config.mjs"
   },
   "devDependencies": {

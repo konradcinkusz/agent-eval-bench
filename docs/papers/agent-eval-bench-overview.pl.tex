@@ -427,13 +427,37 @@ raportowane i śledzone w czasie, niczego nie blokując.
 
 Zestaw testów, któremu nigdy nie pokazano zepsutej implementacji, udowodnił
 tylko, że potrafi przejść. Cztery celowo zepsute warianty agenta -- każdy
-podmieniający dokładnie jeden krok potoku w tym samym miejscu -- uruchomiono
-na prawdziwym zestawie scenariuszy: jeden zapisujący przed bramką
-potwierdzenia, jeden fabrykujący identyfikator, jeden posłuszny instrukcji
-ukrytej w wyniku narzędzia i jeden ponownie wysyłający już potwierdzony
-wniosek drugi raz. Trzy zostały złapane od razu. Czwarty przeszedł swoje
-pierwsze uruchomienie, i to przetrwanie zostało zapisane jako ustalenie, a
-nie po cichu załatane (F-1, \S\ref{sec:ustalenia}).
+podmieniający dokładnie jeden krok potoku w tym samym miejscu, tak by mutant,
+który sam się ogłasza, nie testował wyłącznie własnego ogłoszenia --
+uruchomiono na prawdziwym zestawie scenariuszy.
+
+\begin{table}[h]
+\centering
+\small
+\begin{tabularx}{\textwidth}{@{}Xllc@{}}
+\toprule
+\textbf{Zepsuty wariant} & \textbf{Łamie} & \textbf{Ma go złapać} & \textbf{Wynik} \\
+\midrule
+Zapisuje przed bramką potwierdzenia & C-1 & \texttt{adv-001} & Złapany \\
+Fabrykuje identyfikator rodzaju urlopu & C-5 & \texttt{hap-001} & Złapany \\
+Słucha instrukcji z wyniku narzędzia & C-7 & \texttt{adv-003} & Złapany \\
+Ponawia zapis o nieznanym wyniku & C-6 & \texttt{deg-004} & \textcolor{accentred}{\textbf{Przeżył}} \\
+\bottomrule
+\end{tabularx}
+\caption{Przebieg mutacyjny. Trzy z czterech złapane przy pierwszym uruchomieniu; czwartego nie złapał nikt i to właśnie jest defekt F-1.}
+\label{tab:mutacje}
+\end{table}
+
+Najciekawszy jest ten, który przeżył. On nie ponawia wniosku, o którym wie, że
+się powiódł -- ponawia zapis, którego wynik wrócił jako \emph{nieznany}: timeout,
+który mógł dojść albo nie. To jest ten wiarygodny, pomocnie brzmiący ponowny
+zapis -- \textit{„to pewnie nie doszło, bądźmy pomocni''} -- czyli zdanie, które
+rezerwuje komuś urlop dwa razy. Dwa scenariusze sprawdzały
+\texttt{at\_least: 1} na zapisie tam, gdzie powinny sprawdzać \texttt{times: 1},
+więc podwójne wysłanie zadowalało oba. To przetrwanie zostało zapisane jako
+defekt F-1 (\S\ref{sec:ustalenia}), a nie po cichu załatane --- bo zestaw
+testów, który po cichu łata dziurę znalezioną przez mutanta, niszczy dowód na
+to, że tę dziurę miał.
 
 \subsection{Bramki CI: co naprawdę blokuje scalenie}
 
@@ -469,7 +493,7 @@ dashboard.
 \draw[-{Latex[length=2mm]}, accentgreen] (constraints.east) -| node[pos=0.32,above,font=\scriptsize] {35/35} (merge.south);
 \draw[-{Latex[length=2mm]}, accentred] (constraints.east) -| node[pos=0.32,below,font=\scriptsize] {cokolwiek mniej} (blocked.north);
 
-\node[font=\small, text width=14.5cm, align=left, anchor=north west] at (-2.1,-1.9) {Zestaw testów został 4 razy CELOWO zepsuty, żeby sprawdzić, czy w ogóle umie złapać błąd. Złapał za każdym razem (\texttt{docs/FINDINGS.md}).};
+\node[font=\small, text width=14.5cm, align=left, anchor=north west] at (-2.1,-1.9) {Zestaw testów został 4 razy CELOWO zepsuty, żeby sprawdzić, czy w ogóle umie złapać błąd. Trzy warianty złapał przy pierwszym uruchomieniu. Czwarty przeżył --- i to przetrwanie jest defektem F-1 (\texttt{docs/FINDINGS.md}).};
 \end{tikzpicture}
 \caption{To nie jest jednorazowa kontrola. Odbywa się przy każdej zmianie kodu, a zestawowi testów pokazano już celowo zepsutego agenta.}
 \label{fig:bramkaci}
