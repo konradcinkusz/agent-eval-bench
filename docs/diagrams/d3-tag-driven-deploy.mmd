@@ -1,0 +1,17 @@
+flowchart TD
+    branch["Push to a branch"]
+    nothing["Deploys nothing"]
+    tag["Tag v*"]
+    verify["job: verify<br/>the whole eval suite<br/>no credential, no network, no model"]
+    deploy["job: deploy<br/><code>needs: verify</code>"]
+    flyctl["flyctl deploy<br/>--remote-only --ha=false"]
+    smoke["Post-deploy checks against the live URL:<br/>the page answers 200 ·<br/>CSP and security headers present"]
+    stop["The tag never reaches the demo"]
+
+    branch --> nothing
+    tag --> verify
+    verify -->|"pass"| deploy --> flyctl --> smoke
+    verify -->|"fail"| stop
+
+    classDef halt fill:#eceff4,stroke:#8a93a2,color:#2b303b
+    class nothing,stop halt

@@ -1,0 +1,30 @@
+flowchart TD
+    trace["The captured trace"]
+
+    subgraph presence["Presence — did it happen"]
+        a1["tool_called"]
+        a2["event_emitted"]
+        a3["tool_called_with"]
+        a4["span_attribute"]
+        a5["call_attempts"]
+    end
+
+    subgraph absence["Absence — did it NOT happen"]
+        b1["tool_not_called"]
+        b2["event_not_emitted"]
+    end
+
+    subgraph shape["Shape of the run"]
+        c1["order — where C-1 lives"]
+        c2["argument_grounded — C-5"]
+        c3["outcome"]
+        c4["termination — C-4"]
+        c5["output_excludes_internal_ids — C-3"]
+    end
+
+    trace --> presence
+    trace --> absence
+    trace --> shape
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class absence star

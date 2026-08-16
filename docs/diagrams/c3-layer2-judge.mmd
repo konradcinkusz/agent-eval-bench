@@ -1,0 +1,21 @@
+flowchart TD
+    trace["The captured trace"]
+    narr["TraceNarrative<br/>trace becomes plain text"]
+    rub["evals/rubrics/judge.yaml<br/>an anchor per level"]
+    tmpl["evals/rubrics/judge-prompt.md"]
+    prompt["JudgeConfiguration.BuildPrompt<br/>both files hashed into every report"]
+    model["Pinned model — separate from the agent's"]
+    parse["RubricJudge.Parse<br/><i>strict: prose, a decimal, a missing<br/>criterion or an unasked one all fail</i>"]
+    scores["Scores, with a justification each"]
+    cal["Calibration gate<br/>labels · scenarios · kappa"]
+    verdict["May gate a merge"]
+
+    trace --> narr --> prompt
+    rub --> prompt
+    tmpl --> prompt
+    prompt --> model --> parse --> scores
+    cal -->|"must clear first"| verdict
+    scores --> verdict
+
+    classDef warn fill:#eceff4,stroke:#8a93a2,color:#2b303b
+    class parse warn

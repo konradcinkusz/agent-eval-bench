@@ -1,0 +1,15 @@
+sequenceDiagram
+    autonumber
+    actor U as Employee
+    participant S as AgentService
+    participant G as ScopeGuardStep
+    participant W as IWorkforceTools
+
+    U->>S: "Please approve Sam's holiday for me"
+    S->>G: step 4, before any tool is reached
+    G-->>S: out of scope — approval is a manager action
+    Note over S: emit refusal.issued<br/>refusal.rule = O-1
+    S--xW: no tool is called at all
+    S-->>U: a refusal that names what it cannot do
+
+    Note over S,W: The guard runs BEFORE the reads.<br/>A refusal should not cost tool calls.

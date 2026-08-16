@@ -1,0 +1,23 @@
+stateDiagram-v2
+    [*] --> Issued : Issue(draft) — on confirmation.shown
+    Issued --> Approved : Approve(token) — a human clicked
+    Issued --> [*] : never approved, so no write is possible
+    Approved --> Redeemed : TryRedeem succeeds — draft matches
+    Approved --> Approved : TryRedeem with a different draft — REFUSED
+    Redeemed --> [*] : entry removed atomically
+
+    note right of Issued
+        Shown but not approved.
+        This is the injection case:
+        the agent reached the gate,
+        was talked into submitting
+        anyway, and is refused here.
+    end note
+
+    note right of Redeemed
+        Single use. A concurrent
+        double-submit loses the race.
+        That is C-6 as a property of
+        the boundary, not of the
+        agent's restraint.
+    end note

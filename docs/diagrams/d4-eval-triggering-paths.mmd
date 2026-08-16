@@ -1,0 +1,27 @@
+flowchart LR
+    subgraph inputs["Things that shape behaviour"]
+        code["src/ — code"]
+        prompt["prompts/ — the system prompt"]
+        tools["tool descriptions"]
+        agentdef["agents/ — the agent definition"]
+        model["model version and parameters"]
+        rag["retrieval data"]
+    end
+
+    behaviour["<b>Observed behaviour</b><br/>what the user actually gets"]
+    evals["Evals measure THIS —<br/>whichever input moved"]
+    classic["A classic test watches<br/>only the first box"]
+
+    code --> behaviour
+    prompt --> behaviour
+    tools --> behaviour
+    agentdef --> behaviour
+    model --> behaviour
+    rag --> behaviour
+    behaviour --> evals
+    code -.-> classic
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    classDef halt fill:transparent,stroke:#8a93a2,stroke-dasharray:5 5,color:#6d7584
+    class evals star
+    class classic halt
