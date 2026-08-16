@@ -1,25 +1,28 @@
 name: Build Overview PDF
 
 # ─────────────────────────────────────────────────────────────────────────────
-#  Renders the LaTeX presentation of docs/OVERVIEW.md (docs/papers/*.tex) to a
-#  PDF, on demand.
+#  Renders the LaTeX presentations of docs/OVERVIEW.md (docs/papers/*.tex) to
+#  PDF, on demand — one build per language edition, English and Polish.
 #
 #  Manually triggered only — deliberately. This is a presentation of the living
 #  overview document, not a versioned release artifact: there is no tag, no
 #  changelog entry, and nobody depends on a specific build of it existing
-#  anywhere. Regenerate it when the source changes and someone wants the file.
+#  anywhere. Regenerate it when a source .tex changes and someone wants the
+#  files.
 #
 #  PDFs are build output (architecture-standards' 00-RESEARCH-DOCUMENTATION.md
 #  §"PDFs are build output"): nothing this workflow produces is committed —
-#  see .gitignore's "LaTeX build output" block. It is uploaded as a run
-#  artifact instead, downloaded from the Actions run itself.
+#  see .gitignore's "LaTeX build output" block. Both PDFs are uploaded in one
+#  run artifact, downloaded from the Actions run itself.
 #
 #  The pattern follows the estate's one working precedent for this exact
 #  problem — copilot-scope's build-research-pdf.yml — reusing its
-#  xu-cheng/latex-action build step, stripped of the two parts that do not
-#  apply here: no tag trigger (nothing in this repository's docs is versioned
-#  by tag) and no GitHub Release (this produces a build artifact, not a
-#  release asset — `contents: read` is enough, and stays that way).
+#  xu-cheng/latex-action build step (one step per .tex root file, the same
+#  shape copilot-scope uses for its own two papers) and its one-artifact-many-
+#  PDFs bundling, stripped of the two parts that do not apply here: no tag
+#  trigger (nothing in this repository's docs is versioned by tag) and no
+#  GitHub Release (this produces a build artifact, not a release asset —
+#  `contents: read` is enough, and stays that way).
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
@@ -34,38 +37,49 @@ concurrency:
 
 jobs:
   build:
-    name: Build PDF
+    name: Build PDFs
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Checkout
         uses: actions/checkout@v7
 
-      - name: Build PDF
+      - name: Build English edition
         uses: xu-cheng/latex-action@v4
         with:
           root_file: agent-eval-bench-overview.tex
           working_directory: docs/papers
 
-      - name: Rename PDF
-        run: mv docs/papers/agent-eval-bench-overview.pdf AgentEvalBench_Overview.pdf
+      - name: Build Polish edition
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: agent-eval-bench-overview.pl.tex
+          working_directory: docs/papers
+
+      - name: Rename PDFs
+        run: |
+          mv docs/papers/agent-eval-bench-overview.pdf AgentEvalBench_Overview_EN.pdf
+          mv docs/papers/agent-eval-bench-overview.pl.pdf AgentEvalBench_Overview_PL.pdf
 
       - name: Upload artifact
         uses: actions/upload-artifact@v7
         with:
           name: AgentEvalBench_Overview_PDF
-          path: AgentEvalBench_Overview.pdf
+          path: |
+            AgentEvalBench_Overview_EN.pdf
+            AgentEvalBench_Overview_PL.pdf
           if-no-files-found: error
           retention-days: 30
 
       - name: Summary
         run: |
           {
-            echo "## Overview PDF built"
+            echo "## Overview PDFs built"
             echo
-            echo "Rendered from \`docs/papers/agent-eval-bench-overview.tex\`, the LaTeX"
-            echo "presentation of \`docs/OVERVIEW.md\`."
+            echo "Rendered from \`docs/papers/agent-eval-bench-overview.tex\` and"
+            echo "\`agent-eval-bench-overview.pl.tex\`, the English and Polish LaTeX"
+            echo "presentations of \`docs/OVERVIEW.md\`."
             echo
             echo "Download **AgentEvalBench_Overview_PDF** from this run's Artifacts"
-            echo "section below."
+            echo "section below — it contains both language editions."
           } >> "$GITHUB_STEP_SUMMARY"
