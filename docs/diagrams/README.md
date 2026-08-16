@@ -50,6 +50,7 @@ npx -y @mermaid-js/mermaid-cli -i a1-system-context.mmd -o a1.svg   # render one
 | `C3` | [`c3-layer2-judge.mmd`](c3-layer2-judge.mmd) | Layer 2 — the judge, and why it is pinned |
 | `C4` | [`c4-mutation-pass.mmd`](c4-mutation-pass.mmd) | The mutation pass — who checks the instrument |
 | `C5` | [`c5-production-to-scenario.mmd`](c5-production-to-scenario.mmd) | From a production failure to a new scenario |
+| `C6` | [`c6-both-layers.mmd`](c6-both-layers.mmd) | Both layers on one page — everything the trace is graded by |
 
 ### Infrastructure and delivery
 
