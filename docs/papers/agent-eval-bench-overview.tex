@@ -532,7 +532,7 @@ whole system up on a developer's machine with one command and is explicitly not
 the production topology --- it is never containerised, and nothing it configures
 is load-bearing anywhere a real request arrives.
 \repopath{src/AbsenceConcierge.ServiceDefaults} is the shared kernel: OpenTelemetry
-wiring, health endpoints, service discovery, resilience. It is held at 137 lines
+wiring, health endpoints, service discovery, resilience. It is held at 160 lines
 against an approximately 800-line ceiling, and CI fails the build if it grows
 past that ceiling \emph{or} if it starts using domain vocabulary --- the words
 \texttt{confirmation}, \texttt{leave}, \texttt{absence}, \texttt{workforce},
@@ -1292,7 +1292,7 @@ The comment posts only on same-repo pull requests, and never via the \texttt{pul
 
 Two more jobs block a merge for reasons that have nothing to do with evals and everything to do with keeping the instrument trustworthy over time.
 
-The shared-kernel guard holds \texttt{ServiceDefaults} --- the thin plumbing layer of telemetry, health, discovery and resilience --- at 137 lines against an approximately 800-line ceiling, and scans it for domain vocabulary. The ceiling is not about aesthetics. A shared kernel that acquires knowledge of leave types is a shared kernel that can change the agent's behaviour from a project no reviewer of the agent is looking at.
+The shared-kernel guard holds \texttt{ServiceDefaults} --- the thin plumbing layer of telemetry, health, discovery and resilience --- at 160 lines against an approximately 800-line ceiling, and scans it for domain vocabulary. The ceiling is not about aesthetics. A shared kernel that acquires knowledge of leave types is a shared kernel that can change the agent's behaviour from a project no reviewer of the agent is looking at.
 
 Secret scanning runs gitleaks twice: in CI over full git history, and as a pre-commit hook that refuses the commit outright --- including when no scanner is available, because a hook that silently degrades to a no-op on a machine missing a tool is a hook that protects the machines that did not need it. History matters because a secret deleted in the next commit is still a secret in the repository.
 

@@ -599,7 +599,7 @@ longer hypothetical once F-1 was the thing it caught).
 
 ## 12. Architecture decision records
 
-Five ADRs record decisions specific to this repository — not restatements of the
+Six ADRs record decisions specific to this repository — not restatements of the
 standards, which are linked rather than copied, and not deviations, which belong
 in `DEVIATIONS.md` instead. Each names the alternatives that lost and why,
 because, quoting the principle they all cite, *"a document that says 'we
@@ -635,6 +635,11 @@ commands."*
   code this repository never runs at all,"* and the three properties worth
   testing — token redemption, permission filtering, failure classification — all
   test cleanly behind a forty-line fake.
+- **ADR-0006 — Render the project overview to PDF via LaTeX, built on demand.**
+  The documentation is comprehensive across eight files, which is the right
+  shape for a contributor and the wrong one for a reader who wants the whole
+  project in one sitting. The PDF is built by a workflow and never committed —
+  a generated artefact in the tree is one that goes stale silently.
 
 ## 13. Values and engineering philosophy
 

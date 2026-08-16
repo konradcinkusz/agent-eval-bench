@@ -233,13 +233,13 @@ reads as discipline in a commit log and as drift in aggregate. It is the second.
 agent was written against a specification that already existed, by the same
 person, in the same week — so it does what the spec says, and the suite agrees.
 That is the expected result and it is worth stating plainly, because the
-alternative framing ("32 of 32 green") invites a reader to conclude the suite
+alternative framing ("35 of 35 green") invites a reader to conclude the suite
 proved the agent correct. It did not. What it proved is that the agent and the
 specification agree, and the value delivered so far came from the specification
 and the instrument disagreeing with *each other*.
 
 The suite's actual value is prospective: it is a regression gate that hard-blocks
-19 scenarios at 100% on every prompt edit, and its ability to fail has been
+20 scenarios at 100% on every prompt edit, and its ability to fail has been
 demonstrated rather than assumed.
 
 ## 4. The mutation pass, in detail
@@ -276,11 +276,15 @@ model itself has not answered. Every judged scenario reports
 `skipped:no-credential`, which is a distinct status from a pass precisely so that
 this cannot hide.
 
-**The judge is uncalibrated: 0 human labels.** The gate is 40 labels across 8
-scenarios at κ ≥ 0.6 ([`CALIBRATION.md`](CALIBRATION.md)). Until then the
-judge's scores gate nothing, are reported as trend only, and κ is printed as
-*undefined* rather than 1.0 — two raters agreeing on a single category is the
-easiest way to fake a calibration.
+**The judge is uncalibrated: 45 labels, none of them human.** The label set
+exists — 45 across 21 scenarios — but it was written by an AI rater under the
+handle `claude-fable-5`, and `AI-EVALS.md` §5 says *human*. The numeric gate is
+40 labels across 8 scenarios at κ ≥ 0.6 ([`CALIBRATION.md`](CALIBRATION.md)),
+which the count now clears and which is therefore necessary but no longer
+sufficient: scores do not gate until labels under the owner's own handle exist.
+κ is undefined in any case until a keyed run produces a judge score to compare
+against — and it is printed as *undefined* rather than 1.0, because two raters
+agreeing on a single category is the easiest way to fake a calibration.
 
 **The MCP adapter has never run against a live server** ([D-10](DEVIATIONS.md)).
 Its behaviour above the SDK seam is tested against a fake session; its payload
@@ -288,8 +292,8 @@ mapping is not tested at all, and that is the part most likely to be wrong.
 
 **Layer 1's language understanding is graded against a rule-based interpreter
 written by the author of the corpus it is scored on** ([D-7](DEVIATIONS.md)). A
-parser fitted to the 32 strings it will be graded on passes while being useless
-on the 33rd. Mitigated structurally — rules match grammatical shapes rather than
+parser fitted to the 35 strings it will be graded on passes while being useless
+on the 36th. Mitigated structurally — rules match grammatical shapes rather than
 corpus strings, and unit tests include sentences that appear in no scenario — but
 not eliminated. [SPEC §8.2](SPEC.md#82-determinism-and-what-100-quantifies-over)
 bounds what a green Layer 1 is allowed to mean: the orchestration and the
@@ -301,8 +305,13 @@ machinery to convert a production trace into a scenario exists and is tested
 ([`PRODUCTION.md` §2](PRODUCTION.md#2-from-a-production-trace-to-a-scenario)); it
 has never been used in anger.
 
-**The corpus is English-only**, and multilingual date expressions are a known gap
-rather than a claim ([SPEC §9](SPEC.md#9-assumptions)).
+**The corpus is 32 English scenarios and 3 Spanish ones** — `hap-007`, `hap-008`
+and `amb-009`, added with SPEC 1.5.0. Two languages is not multilingual: every
+other language remains a gap rather than a claim, and the three Spanish
+scenarios are enough to show the `DateExpression` set did not need a new case,
+not enough to show it never will ([SPEC §9](SPEC.md#9-assumptions),
+[D-7](DEVIATIONS.md)). The composer answers all of them in English — that is
+F-10, found by labelling and not yet fixed.
 
 ## 6. What this cost
 

@@ -36,11 +36,13 @@ public sealed record CalibrationReport(
 /// <para>
 /// AI-EVALS.md §5 requires a judge to be calibrated against human labels before its
 /// scores gate, and marks that rule *"not yet demonstrated in the estate"*. This is
-/// the demonstration — including, honestly, the state it is in today: <b>zero labels
-/// recorded</b>, so the judge reports and trends and gates nothing. That state is
+/// the demonstration — including, honestly, the state it is in today: <b>45 labels
+/// across 21 scenarios, every one of them written by an AI rater rather than a
+/// human</b>, so the judge reports and trends and gates nothing. That state is
 /// printed on every run rather than inferred from a passing test, because an
 /// uncalibrated judge that silently gates is worse than no judge: it blocks merges
-/// on a number nobody has checked against a person.
+/// on a number nobody has checked against a person — and a label set written by
+/// another model is not that person.
 /// </para>
 /// <para>
 /// The protocol, and how to add labels, is <c>docs/CALIBRATION.md</c>.
