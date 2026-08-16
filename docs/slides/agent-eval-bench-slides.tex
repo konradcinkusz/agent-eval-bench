@@ -388,20 +388,21 @@
   ]
   \node[box] (change) at (0,0) {\textbf{Code change} --- even one line};
   \node[box] (scenarios) at (3.35,0) {\textbf{35 scenarios} re-run};
-  \node[gatebox] (constraints) at (6.7,0) {\textbf{Hard constraints} = \textbf{35/35}?};
+  \node[gatebox] (constraints) at (6.7,0) {\textbf{Hard constraints} = \textbf{20/20}?};
   \node[yesbox] (merge) at (9.75,0.9) {\textcolor{okgreen}{\checkmark} \textbf{Merged}};
   \node[nobox] (blocked) at (9.75,-0.9) {\textcolor{badred}{\ding{55}} \textbf{Blocked}};
 
   \draw[-{Latex[length=1.8mm]}, mbMuted] (change) -- (scenarios);
   \draw[-{Latex[length=1.8mm]}, mbMuted] (scenarios) -- (constraints);
-  \draw[-{Latex[length=1.8mm]}, okgreen] (constraints.east) -| node[pos=0.3,above,font=\tiny] {35/35} (merge.south);
+  \draw[-{Latex[length=1.8mm]}, okgreen] (constraints.east) -| node[pos=0.3,above,font=\tiny] {20/20} (merge.south);
   \draw[-{Latex[length=1.8mm]}, badred] (constraints.east) -| node[pos=0.3,below,font=\tiny] {less} (blocked.north);
   \end{tikzpicture}
 
   \vspace{0.5em}
   \small No partial credit, no override. The suite was deliberately broken
-  four times to check it could catch \emph{something}. It caught every
-  time.
+  four times to check it could catch \emph{something}. Three were caught on
+  the first run. \textbf{The fourth survived} --- and that survival is
+  finding F-1.
 \end{frame}
 
 % ========================= Findings =====================
@@ -501,7 +502,7 @@
     \begin{itemize}
       \small
       \item All ten phases complete
-      \item 35/35 constraint scenarios pass
+      \item 20/20 constraint scenarios pass (of 35 total)
       \item Never deployed --- stated, not hidden
     \end{itemize}
     \column{0.5\textwidth}
