@@ -153,6 +153,11 @@ needs no credentials. 🇵🇱 [Wersja polska](docs/START-HERE.pl.md).
 
 ## Why this exists
 
+The bench is the first worked example of a repository-agnostic
+[eval standard](https://github.com/konradcinkusz/architecture-standards/blob/main/docs/guides/AI-EVALS.md)
+I wrote before this project existed, and the HR agent is the specimen it is
+demonstrated on — a subject to measure, not the thing being offered.
+
 Prompts get edited the way configuration gets edited — casually. A change to a
 prompt, a model version, or a tool description can regress an agent's behaviour
 with **no diff in your code**, and the usual defence is one good transcript pasted
