@@ -121,6 +121,14 @@ jobs:
       - name: Diagrams agree with their standalone sources
         run: npm run lint:diagrams
 
+      # The tutorials, the how-to guides and the documentation front door are
+      # deliberately bilingual. This is the structural half — both halves exist.
+      # The coupling half (neither was edited alone) needs the base branch to
+      # diff against, so it lives in the `coupling` job, which already fetches
+      # full history for exactly that class of rule.
+      - name: Bilingual documents are paired
+        run: npm run lint:parity
+
       # The eval harness does not exist until Phase 4. This step is what stops
       # the scenario corpus being, for three phases, a directory of YAML that no
       # CI context executes — "an unreferenced test config is not a latent
@@ -333,6 +341,16 @@ jobs:
           set -euo pipefail
           git fetch --no-tags origin "$BASE_REF"
           node scripts/check-change-coupling.mjs "origin/$BASE_REF"
+
+      - name: A bilingual document did not move alone
+        # Same environment-not-interpolation reasoning as the step above: a ref
+        # name on a fork's pull request is attacker-controllable.
+        env:
+          BASE_REF: ${{ github.base_ref }}
+        run: |
+          set -euo pipefail
+          git fetch --no-tags origin "$BASE_REF"
+          node scripts/check-doc-parity.mjs "origin/$BASE_REF"
 
   # ===========================================================================
   # Build and test
