@@ -1,0 +1,16 @@
+sequenceDiagram
+    autonumber
+    participant S as ExecuteWriteStep
+    participant W as IWorkforceTools
+    participant R as Remote system
+
+    S->>W: request_time_off — the approved token
+    W->>R: submit
+    R--xW: timeout — no response
+    W-->>S: ToolOutcome.Indeterminate
+
+    Note over S: emit degradation.noted<br/>phase = submission, kind = timeout
+    S--xW: NOT retried — a second attempt<br/>could book the leave twice (C-6)
+    S-->>S: outcome = degraded
+
+    Note over S,R: The reply says "it may or may not have<br/>been submitted" — which is the truth,<br/>and is graded by the degradation-honesty rubric.

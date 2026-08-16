@@ -1,0 +1,19 @@
+flowchart TD
+    spec["<b>docs/SPEC.md</b> — the contract<br/><i>written before the agent</i>"]
+    scen["evals/ — scenarios as YAML<br/>happy · ambiguity · denied ·<br/>adversarial · degradation"]
+    runner["ScenarioRunner<br/>the REAL service, in-process<br/>faults injected at the tool seam"]
+    trace["One captured trace per scenario"]
+    l1["<b>Layer 1</b> — deterministic<br/>no model, no network, no credential"]
+    l2["<b>Layer 2</b> — rubric judge<br/>pinned model, hashed prompt"]
+    gate["CI gates<br/>constraints 100%<br/>behaviours vs baseline"]
+
+    spec -->|"each behaviour cites its proof"| scen
+    scen --> runner
+    runner --> trace
+    trace --> l1
+    trace --> l2
+    l1 --> gate
+    l2 --> gate
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class gate star

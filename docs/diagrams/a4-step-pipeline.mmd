@@ -1,0 +1,31 @@
+flowchart TD
+    s1["1 · EstablishActorStep<br/><code>establish_actor</code>"]
+    s2["2 · ConfirmationDecisionStep<br/><code>confirmation_decision</code>"]
+    s3["3 · InterpretUtteranceStep<br/><code>interpret_utterance</code>"]
+    s4["4 · ScopeGuardStep<br/><code>scope_guard</code>"]
+    s5["5 · ResolvePersonStep<br/><code>resolve_person</code>"]
+    s6["6 · ResolveDatesStep<br/><code>resolve_dates</code>"]
+    s7["7 · LeaveTypeStep<br/><code>retrieve_leave_types</code>"]
+    s8["8 · ConflictCheckStep<br/><code>check_conflicts</code>"]
+    s9["9 · DraftStep<br/><code>draft_request</code>"]
+    s10["10 · ConfirmationGateStep<br/><code>confirmation_gate</code>"]
+    s11["11 · ExecuteWriteStep<br/><code>submit_request</code>"]
+
+    stop1["STOP — refused<br/>before any tool is called"]
+    stop2["STOP — clarification requested"]
+    stop3["STOP — confirmation pending<br/>the turn ends here"]
+
+    s1 --> s2 --> s3 --> s4
+    s4 -->|"out of scope: O-1 … O-7"| stop1
+    s4 --> s5
+    s5 -->|"ambiguous name"| stop2
+    s5 --> s6
+    s6 -->|"ambiguous date"| stop2
+    s6 --> s7 --> s8 --> s9 --> s10
+    s10 -->|"first turn: show the draft"| stop3
+    s10 -->|"a later turn, decision approved"| s11
+
+    classDef gate fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    classDef halt fill:#eceff4,stroke:#8a93a2,color:#2b303b
+    class s10,s11 gate
+    class stop1,stop2,stop3 halt
