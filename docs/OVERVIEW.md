@@ -12,10 +12,15 @@ writes anything.**
   [`COMPLIANCE.md`](COMPLIANCE.md) (both checklists, worked through) ·
   [`CALIBRATION.md`](CALIBRATION.md) (judge-vs-human protocol) ·
   [`adr/`](adr/) (five architecture decision records).
-- **PDF**: this document has a polished LaTeX rendering at
+- **PDF**: this document has a polished LaTeX rendering, in English and
+  Polish, at
   [`docs/papers/agent-eval-bench-overview.tex`](papers/agent-eval-bench-overview.tex),
   built on demand by the manually-triggered **Build Overview PDF** GitHub Action
   (`.github/workflows/build-overview-pdf.yml`) — see §17.
+- **Slides**: a talk-length version of this document exists as a Beamer deck at
+  [`docs/slides/agent-eval-bench-slides.tex`](slides/agent-eval-bench-slides.tex),
+  built on demand by the **Build Slides PDF** GitHub Action
+  (`.github/workflows/build-slides-pdf.yml`) — see §18.
 - **What this document is for**: every file listed above answers one question
   precisely and in depth. This one answers "what is this, why does it exist, and
   does it work" in a single sitting, for a reader who is not going to open six
@@ -45,6 +50,7 @@ writes anything.**
 1. [Non-goals](#15-non-goals)
 1. [Relationship to architecture-standards](#16-relationship-to-architecture-standards)
 1. [Getting the PDF](#17-getting-the-pdf)
+1. [Getting the slides](#18-getting-the-slides)
 
 ---
 
@@ -706,4 +712,28 @@ Either edition can be built locally with a LaTeX distribution installed:
 ```bash
 cd docs/papers && pdflatex agent-eval-bench-overview.tex && pdflatex agent-eval-bench-overview.tex
 cd docs/papers && pdflatex agent-eval-bench-overview.pl.tex && pdflatex agent-eval-bench-overview.pl.tex
+```
+
+## 18. Getting the slides
+
+A talk-length compression of this document exists as a Beamer deck,
+[`docs/slides/agent-eval-bench-slides.tex`](slides/agent-eval-bench-slides.tex)
+— 24 frames, built on the "mybeamer" house theme
+([`docs/slides/beamerthememybeamer.sty`](slides/beamerthememybeamer.sty),
+copied in from
+[`DeepDiveInto_CSharp_Dictionaries_presentation`](https://github.com/konradcinkusz/DeepDiveInto_CSharp_Dictionaries_presentation),
+the theme's origin) with three of the same diagrams as the paper, redrawn to
+fit a 16:9 slide rather than a page. Built on demand — never committed — by
+the **Build Slides PDF** GitHub Action:
+
+1. Open the repository's **Actions** tab on GitHub.
+1. Select **Build Slides PDF** in the left-hand workflow list.
+1. Click **Run workflow** (this workflow has no other trigger either).
+1. Once the run finishes, download `AgentEvalBench_Slides_PDF` from the
+   run's **Artifacts** section.
+
+Locally:
+
+```bash
+cd docs/slides && pdflatex agent-eval-bench-slides.tex && pdflatex agent-eval-bench-slides.tex
 ```
