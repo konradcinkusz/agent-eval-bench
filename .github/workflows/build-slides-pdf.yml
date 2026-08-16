@@ -1,0 +1,72 @@
+name: Build Slides PDF
+
+# ─────────────────────────────────────────────────────────────────────────────
+#  Renders docs/slides/agent-eval-bench-slides.tex (Beamer, the "mybeamer"
+#  house theme) to a PDF, on demand.
+#
+#  A separate workflow from Build Overview PDF, deliberately — a talk deck and
+#  a project overview are different kinds of document for different audiences,
+#  and architecture-standards' "Building the PDF in CI" pattern this follows
+#  says a workflow's trigger should say what kind of document it builds. One
+#  workflow building both would blur that.
+#
+#  Manually triggered only, same reasoning as the overview PDF: no release
+#  cadence to tag against, regenerated when someone wants the current deck.
+#
+#  PDFs are build output (architecture-standards' 00-RESEARCH-DOCUMENTATION.md
+#  §"PDFs are build output"): nothing this workflow produces is committed —
+#  see .gitignore's "LaTeX build output" block. Uploaded as a run artifact,
+#  downloaded from the Actions run itself.
+# ─────────────────────────────────────────────────────────────────────────────
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-slides-pdf-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build slide deck
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Build slides
+        uses: xu-cheng/latex-action@v4
+        with:
+          root_file: agent-eval-bench-slides.tex
+          working_directory: docs/slides
+          # xu-cheng/latex-action drives latexmk, which reruns pdflatex as
+          # many times as the document needs (here: twice, so the footline's
+          # \inserttotalframenumber resolves against a current .aux) — unlike
+          # a plain `pdflatex` invocation, no explicit second pass is needed.
+
+      - name: Rename PDF
+        run: mv docs/slides/agent-eval-bench-slides.pdf AgentEvalBench_Slides.pdf
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: AgentEvalBench_Slides_PDF
+          path: AgentEvalBench_Slides.pdf
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Summary
+        run: |
+          {
+            echo "## Slides PDF built"
+            echo
+            echo "Rendered from \`docs/slides/agent-eval-bench-slides.tex\` (Beamer,"
+            echo "the \"mybeamer\" theme)."
+            echo
+            echo "Download **AgentEvalBench_Slides_PDF** from this run's Artifacts"
+            echo "section below."
+          } >> "$GITHUB_STEP_SUMMARY"
