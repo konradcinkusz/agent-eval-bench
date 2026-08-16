@@ -336,6 +336,7 @@
     <div class="cta">
       <a class="btn btn-solid" href="https://github.com/konradcinkusz/agent-eval-bench">Zobacz na GitHub</a>
       <a class="btn btn-ghost" href="https://github.com/konradcinkusz/agent-eval-bench/blob/main/docs/SPEC.md">Przeczytaj specyfikację</a>
+      <a class="btn btn-ghost" href="dokumentacja.pl.html">📘 Pełna dokumentacja (PL)</a>
       <a class="btn btn-ghost" href="https://github.com/konradcinkusz/agent-eval-bench/blob/main/docs/FINDINGS.md">Ustalenia z testów</a>
       <a class="btn btn-ghost" href="index.html">English version</a>
     </div>
@@ -364,27 +365,292 @@
   <section id="panel-simple" role="tabpanel" aria-labelledby="tab-simple">
     <div class="wrap">
 
-      <h2><span class="no">zanim wejdziesz w szczegóły</span>Ta sama historia, tylko najprościej, jak się da</h2>
+      <h2><span class="no">o co tu naprawdę chodzi</span>To nie jest aplikacja kadrowa. To przyrząd pomiarowy dla programisty</h2>
       <div class="lede-box">
         <p>
-          Reszta tej strony ma architekturę, wykresy sekwencji i tabele z nazwami klas. Zanim tam
-          wejdziesz, oto dokładnie ta sama historia opowiedziana od podstaw — krok po kroku, obrazkami,
-          bez żargonu.
+          Zanim pojawi się cokolwiek o urlopach — jedno zdanie, które porządkuje wszystko inne:
+          <strong>produktem tego repozytorium jest poligon ewaluacyjny, czyli narzędzie do sprawdzania
+          agentów AI w trakcie ich tworzenia.</strong> Nie system HR.
         </p>
         <p class="dim">
-          Bohaterów jest właściwie dwóch: <strong>pracownik</strong>, który o coś prosi, i
-          <strong>agent</strong> — cyfrowy asystent, który się tym zajmuje. W tym demie to ten sam
-          pracownik na końcu klika „zgadzam się"; w prawdziwej firmie tę rolę mogłaby pełnić inna,
-          uprawniona osoba. Liczy się jedno: <strong>ktoś musi kliknąć, zanim cokolwiek zostanie
-          zapisane.</strong>
+          Żeby taki przyrząd w ogóle miało co mierzyć, potrzebny jest jakiś <em>badany okaz</em> — i tym
+          okazem jest agent HR do wniosków urlopowych. Wybrany nieprzypadkowo: ma nieodwracalny zapis do
+          systemu, musi liczyć daty, musi respektować uprawnienia i w oczywisty sposób wymaga zgody
+          człowieka. Idealny materiał do badania. Ale to <strong>szalka Petriego, nie danie główne</strong> —
+          stąd hasło u góry strony: „Agent to pretekst. Poligon ewaluacyjny to właściwy produkt”.
         </p>
       </div>
 
-      <h2><span class="no">9 kroków, jedna zasada</span>Co się dzieje, krok po kroku</h2>
+      <h2><span class="no">problem</span>Programista zmienia jedną linijkę. I co teraz?</h2>
       <p>
-        Wyobraź sobie, że agent to bardzo sumienny asystent, a Ty jesteś jego jedynym szefem. Asystent
-        nigdy niczego nie robi bez Twojej wyraźnej zgody — nawet jeśli jest w stu procentach pewny, że
-        dobrze zrozumiał, o co prosisz.
+        Agent AI ma nieprzyjemną właściwość: można go zepsuć, nie widząc tego. Poprawka w kodzie, w
+        prompcie albo w opisie narzędzia nie wywala kompilacji i nie wygląda groźnie w code review — a
+        potrafi po cichu zmienić to, co agent robi z prawdziwymi danymi.
+      </p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+        <svg viewBox="0 0 920 400" role="img"
+             aria-label="Diagram problemu, który rozwiązuje to repozytorium. Programista zmienia jedną linijkę kodu. Powstają trzy możliwe skutki: nic się nie zepsuło, albo agent zaczyna zapisywać dane bez pytania człowieka o zgodę, albo agent zaczyna źle liczyć dni urlopu. Dwa ostatnie są niewidoczne — nie widać ich ani w kodzie, ani na oko podczas przeglądu zmian. Bez przyrządu pomiarowego dowiadujesz się o nich dopiero od użytkownika, po fakcie.">
+          <defs>
+            <marker id="arw8" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+          </defs>
+
+          <rect class="box" x="320" y="20" width="280" height="58" rx="8"/>
+          <text class="name" x="460" y="45" text-anchor="middle">✍️ programista zmienia</text>
+          <text class="name" x="460" y="64" text-anchor="middle">jedną linijkę</text>
+
+          <text class="lbl" x="460" y="102" text-anchor="middle">co ta zmiana zrobiła z zachowaniem agenta?</text>
+          <line class="edge" x1="460" y1="78" x2="460" y2="112"/>
+
+          <line class="edge" x1="460" y1="112" x2="165" y2="152" marker-end="url(#arw8)"/>
+          <line class="edge" x1="460" y1="112" x2="460" y2="152" marker-end="url(#arw8)"/>
+          <line class="edge" x1="460" y1="112" x2="755" y2="152" marker-end="url(#arw8)"/>
+
+          <rect class="box" x="30" y="158" width="270" height="118" rx="8"/>
+          <circle class="dot-on" cx="283" cy="175" r="4"/>
+          <text class="name" x="48" y="186">✅ nic się nie zepsuło</text>
+          <text class="meta" x="48" y="210">agent zachowuje się</text>
+          <text class="meta" x="48" y="228">dokładnie tak samo</text>
+          <text class="meta" x="48" y="256">— i to jest ten przypadek,</text>
+          <text class="meta" x="48" y="270">którego się spodziewasz</text>
+
+          <rect class="box-ghost" x="325" y="158" width="270" height="118" rx="8"/>
+          <text class="lbl-accent" x="343" y="186" style="font-size:13px;font-weight:600">⚠️ agent zapisuje urlop</text>
+          <text class="lbl-accent" x="343" y="204" style="font-size:13px;font-weight:600">BEZ pytania o zgodę</text>
+          <text class="meta" x="343" y="230">bramka przestała działać,</text>
+          <text class="meta" x="343" y="248">ale odpowiedzi nadal</text>
+          <text class="meta" x="343" y="266">wyglądają zupełnie normalnie</text>
+
+          <rect class="box-ghost" x="620" y="158" width="270" height="118" rx="8"/>
+          <text class="lbl-accent" x="638" y="186" style="font-size:13px;font-weight:600">⚠️ agent źle liczy dni</text>
+          <text class="meta" x="638" y="210">wlicza sobotę do urlopu</text>
+          <text class="meta" x="638" y="228">albo gubi święto —</text>
+          <text class="meta" x="638" y="256">liczba w karcie wygląda</text>
+          <text class="meta" x="638" y="270">wiarygodnie i jest błędna</text>
+
+          <text class="lbl" x="757" y="300" text-anchor="middle">↑ tego nie widać ani w kodzie, ani na oko ↑</text>
+          <line class="boundary" x1="325" y1="286" x2="890" y2="286"/>
+
+          <text class="lbl-strong" x="460" y="348" text-anchor="middle">Bez przyrządu pomiarowego dowiadujesz się o tym od użytkownika — po fakcie.</text>
+          <text class="lbl" x="460" y="372" text-anchor="middle">A przy agencie „po fakcie” znaczy: komuś już zapisano urlop, którego nie zatwierdził.</text>
+        </svg>
+        </div>
+        <figcaption>
+          Zwykły test jednostkowy tego nie łapie, bo tu nie chodzi o to, czy funkcja zwróciła 2 zamiast 3.
+          Chodzi o to, <em>czy agent w ogóle zapytał człowieka, zanim coś zapisał</em> — czyli o przebieg
+          całego zachowania, a nie o pojedynczą wartość.
+        </figcaption>
+      </figure>
+
+      <h2><span class="no">odpowiedź</span>Poligon: to samo zachowanie, odgrywane od nowa przy każdej zmianie</h2>
+      <p>
+        Cały pomysł mieści się w jednym zdaniu: <strong>opisz z góry, jak agent ma się zachowywać, zapisz
+        to jako zestaw scenariuszy-danych, i odtwarzaj je automatycznie przy każdej zmianie kodu — a jeśli
+        złamany zostanie warunek krytyczny, po prostu nie pozwól scalić tej zmiany.</strong>
+      </p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+        <svg viewBox="0 0 920 300" role="img"
+             aria-label="Diagram działania poligonu ewaluacyjnego. Najpierw powstaje kontrakt zachowań, dokument SPEC.md napisany zanim powstał agent. Z niego biorą się 35 scenariuszy zapisanych jako dane w formacie YAML. Przy każdej zmianie kodu ten sam agent, który działa w produkcji, jest odgrywany w pamięci procesu testowego. Powstaje ślad wykonania, czyli zapis tego, co agent naprawdę zrobił krok po kroku. Na końcu bramka sprawdza, czy wszystkie 35 scenariuszy przechodzą; jeśli tak, zmianę można scalić, jeśli nie, zmiana jest zablokowana.">
+          <defs>
+            <marker id="arw9" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+          </defs>
+
+          <rect class="box" x="16" y="52" width="160" height="140" rx="8"/>
+          <text class="name" x="30" y="80">📜 kontrakt</text>
+          <text class="meta" x="30" y="102">docs/SPEC.md</text>
+          <text class="meta" x="30" y="126">jak agent MA się</text>
+          <text class="meta" x="30" y="144">zachowywać —</text>
+          <text class="meta" x="30" y="168">spisane, zanim</text>
+          <text class="meta" x="30" y="186">powstał agent</text>
+
+          <line class="edge" x1="176" y1="122" x2="204" y2="122" marker-end="url(#arw9)"/>
+
+          <rect class="box" x="204" y="52" width="160" height="140" rx="8"/>
+          <text class="name" x="218" y="80">🧪 35 scenariuszy</text>
+          <text class="meta" x="218" y="102">jako dane (YAML)</text>
+          <text class="meta" x="218" y="126">każdy to: „powiedz</text>
+          <text class="meta" x="218" y="144">TO, oczekuj TEGO”</text>
+          <text class="meta" x="218" y="168">— dane, nie kod:</text>
+          <text class="meta" x="218" y="186">czyta je też laik</text>
+
+          <line class="edge" x1="364" y1="122" x2="392" y2="122" marker-end="url(#arw9)"/>
+
+          <rect class="box" x="392" y="52" width="160" height="140" rx="8"/>
+          <text class="name" x="406" y="80">▶️ odegranie</text>
+          <text class="meta" x="406" y="102">DOKŁADNIE ten sam</text>
+          <text class="meta" x="406" y="120">agent, co w produkcji</text>
+          <text class="meta" x="406" y="144">uruchamiany wprost</text>
+          <text class="meta" x="406" y="162">w pamięci —</text>
+          <text class="meta" x="406" y="186">bez sieci, w sekundy</text>
+
+          <line class="edge" x1="552" y1="122" x2="580" y2="122" marker-end="url(#arw9)"/>
+
+          <rect class="box" x="580" y="52" width="150" height="140" rx="8"/>
+          <text class="name" x="594" y="80">🧾 ślad</text>
+          <text class="meta" x="594" y="102">zapis tego, co agent</text>
+          <text class="meta" x="594" y="120">naprawdę zrobił:</text>
+          <text class="meta" x="594" y="144">co wywołał, w jakiej</text>
+          <text class="meta" x="594" y="162">kolejności — i czego</text>
+          <text class="meta" x="594" y="186">NIE zrobił</text>
+
+          <line class="edge" x1="730" y1="122" x2="758" y2="122" marker-end="url(#arw9)"/>
+
+          <rect class="gate-box" x="758" y="52" width="150" height="140" rx="8"/>
+          <text class="name" x="772" y="80">🚦 bramka</text>
+          <text class="meta" x="772" y="102">warunki krytyczne:</text>
+          <text class="name" x="772" y="128" style="font-size:15px">35 / 35</text>
+          <text class="meta" x="772" y="152">inaczej zmiany</text>
+          <text class="meta" x="772" y="170">NIE DA SIĘ</text>
+          <text class="meta" x="772" y="188">scalić do projektu</text>
+
+          <text class="lbl-strong" x="460" y="238" text-anchor="middle">Sekundy · bez sieci · bez klucza · bez kosztów — dlatego stać nas, żeby to biegło przy KAŻDEJ zmianie.</text>
+          <text class="lbl" x="460" y="266" text-anchor="middle">Sprawdzany jest przebieg zachowania („czy zapytał, zanim zapisał”), a nie sama treść odpowiedzi.</text>
+        </svg>
+        </div>
+        <figcaption>
+          Kluczowe słowo to <strong>„ten sam”</strong>: poligon nie testuje kopii ani uproszczonej atrapy
+          agenta — uruchamia tę samą klasę, którą wywołuje prawdziwy serwis. Gdyby testował własną wersję,
+          mógłby świecić na zielono, mierząc coś, czego użytkownik nigdy nie dostaje.
+        </figcaption>
+      </figure>
+
+      <h2><span class="no">cztery zastosowania</span>Eval to nie „testy w CI”. To pomiar, który konsumuje się w czterech miejscach</h2>
+      <p>
+        Bramka przy zmianie kodu, którą pokazuje diagram wyżej, to tylko jedno z czterech miejsc, gdzie
+        ten sam pomiar się przydaje. Warto je rozdzielić, bo mylenie evala z testem regresyjnym gubi trzy
+        pozostałe.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Kiedy</th><th>Po co</th><th>Analogia klasyczna</th><th>Gdzie to jest w tym repo</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1 · w pętli developerskiej</td>
+              <td>Iterujesz prompt albo opis narzędzia i patrzysz, czy odsetek zdanych scenariuszy rośnie. Evale są tu narzędziem <em>projektowania</em>: najpierw scenariusz, potem prompt, który go przechodzi.</td>
+              <td>red-green-refactor (TDD)</td>
+              <td>Lokalne <code>dotnet test</code> — 35 scenariuszy w sekundy, bez sieci i bez klucza.</td>
+            </tr>
+            <tr>
+              <td>2 · przy zmianie (bramka CI)</td>
+              <td>Regresja: czy ta zmiana zepsuła coś względem zapisanego wyniku bazowego.</td>
+              <td>testy regresyjne</td>
+              <td><code>ci.yml</code> — warunki krytyczne 100%, zachowania porównywane z <code>evals/baselines/layer1.json</code>.</td>
+            </tr>
+            <tr>
+              <td>3 · przy wyborze modelu</td>
+              <td>Ten sam zestaw odpalony na różnych modelach → decyzja „który model, jakie parametry” oparta na liczbach, a nie na wrażeniu.</td>
+              <td>benchmark</td>
+              <td>ADR-0004: model przypięty, sędzia przypięty <em>osobno</em> od agenta, a wynik bazowy jest dzielony wg modelu, który go wyprodukował.</td>
+            </tr>
+            <tr>
+              <td>4 · ciągle na produkcji</td>
+              <td>Próbkowanie prawdziwych sesji ocenianych tym samym aparatem — bo rozkład prawdziwych wejść nigdy nie równa się 35 wymyślonym scenariuszom.</td>
+              <td>monitoring / SLO</td>
+              <td><code>production-loop.yml</code> — codziennie czyta spany, sprawdza C-1 post factum, wystawia najgorsze sesje do wyodrębnienia. <strong>Maszyneria gotowa, ale nigdy nie przeszedł przez nią prawdziwy ruch (D-12).</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2><span class="no">druga korekta</span>Wyzwalaczem nie jest „zmiana w kodzie”, tylko zmiana czegokolwiek, co kształtuje zachowanie</h2>
+      <p>
+        W zwykłym projekcie zachowanie zmienia kod. W systemie z modelem językowym ruchomych części jest
+        więcej — i połowa z nich w klasycznym repozytorium nie jest nawet uznawana za „kod”.
+      </p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+        <svg viewBox="0 0 920 360" role="img"
+             aria-label="Diagram pokazujący sześć rzeczy, które kształtują zachowanie agenta opartego na modelu językowym: kod źródłowy, prompt systemowy, opisy narzędzi, definicja agenta, wersja modelu wraz z parametrami, oraz dane do wyszukiwania kontekstu. Wszystkie sześć wpływa na jedno: na zachowanie systemu, czyli to, co użytkownik naprawdę dostaje. Eval mierzy właśnie to zachowanie, niezależnie od tego, która z sześciu części się poruszyła. Klasyczny test pilnuje tylko pierwszej pozycji, czyli kodu.">
+          <defs>
+            <marker id="arw10" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+          </defs>
+
+          <text class="lbl-strong" x="20" y="22">sześć rzeczy, które kształtują zachowanie agenta:</text>
+
+          <rect class="box" x="20" y="34" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="58">kod źródłowy (src/)</text>
+
+          <rect class="box" x="20" y="80" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="104">prompt systemowy (prompts/)</text>
+
+          <rect class="box" x="20" y="126" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="150">opisy narzędzi</text>
+
+          <rect class="box" x="20" y="172" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="196">definicja agenta (agents/)</text>
+
+          <rect class="box" x="20" y="218" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="242">wersja modelu + parametry</text>
+
+          <rect class="box" x="20" y="264" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="288">dane do RAG</text>
+
+          <line class="edge" x1="270" y1="53" x2="386" y2="188" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="99" x2="386" y2="192" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="145" x2="386" y2="195" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="191" x2="386" y2="198" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="237" x2="386" y2="201" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="283" x2="386" y2="205" marker-end="url(#arw10)"/>
+
+          <rect class="gate-box" x="396" y="150" width="196" height="92" rx="8"/>
+          <text class="name" x="412" y="180">ZACHOWANIE</text>
+          <text class="name" x="412" y="200">SYSTEMU</text>
+          <text class="meta" x="412" y="224">to, co użytkownik</text>
+          <text class="meta" x="412" y="238">naprawdę dostaje</text>
+
+          <line class="edge" x1="592" y1="196" x2="640" y2="196" marker-end="url(#arw10)"/>
+
+          <rect class="box" x="650" y="150" width="250" height="92" rx="8"/>
+          <text class="name" x="666" y="178">🎯 eval mierzy TO</text>
+          <text class="meta" x="666" y="202">niezależnie od tego,</text>
+          <text class="meta" x="666" y="220">która z sześciu części</text>
+          <text class="meta" x="666" y="236">się poruszyła</text>
+
+          <line class="boundary" x1="20" y1="316" x2="900" y2="316"/>
+          <text class="lbl" x="20" y="338">Klasyczny test pilnuje tylko pozycji nr 1. Dlatego w tym repo osobne sprawdzenie w CI blokuje zmianę</text>
+          <text class="lbl" x="20" y="354">w <tspan class="lbl-strong">prompts/</tspan> albo <tspan class="lbl-strong">agents/</tspan>, która nie ruszyła specyfikacji — bo to zmiana zachowania bez śladu w kodzie.</text>
+        </svg>
+        </div>
+        <figcaption>
+          Punkt 4 z tabeli wyżej dokłada jeszcze jedną, nieprzyjemną możliwość: zachowanie potrafi się
+          zmienić, gdy <strong>nic z tej listy nie zostało ruszone</strong> — bo dostawca podmienił model
+          pod spodem. Dlatego ADR-0004 zabrania cichego podmieniania modelu: jeśli odpowiedział inny model
+          niż zamówiony, musi to trafić do śladu, a wynik bazowy jest przypisany do modelu, który go
+          wyprodukował.
+        </figcaption>
+      </figure>
+
+      <div class="lede-box">
+        <p>
+          <strong>Najkrótsza definicja, gdyby ktoś przycisnął:</strong> testy odpowiadają na pytanie
+          „czy kod robi to, co napisałem”. Evale — „czy system robi to, co wyspecyfikowałem”, niezależnie
+          od tego, która z ruchomych części się zmieniła i czy w ogóle cokolwiek się zmieniło.
+        </p>
+      </div>
+
+      <h2><span class="no">badany okaz</span>Dopiero teraz agent HR — czyli to, co jest mierzone</h2>
+      <p>
+        Poniższe dziewięć kroków to <strong>nie opis produktu</strong>, tylko opis zachowania, które
+        poligon bierze pod lupę. Warto je przejść z jednego powodu: każdy krok to osobne miejsce, w którym
+        agent może się po cichu zepsuć — i każde z nich zestaw scenariuszy sprawdza osobno.
+      </p>
+      <p class="dim">
+        Dla ułatwienia: <strong>pracownik</strong> to ten, kto o coś prosi, a <strong>agent</strong> to
+        cyfrowy asystent, który się tym zajmuje. Zasada, wokół której kręci się cały ten przykład, jest
+        jedna: <strong>ktoś musi kliknąć, zanim cokolwiek zostanie zapisane.</strong>
       </p>
 
       <ol class="steps">
@@ -592,89 +858,109 @@
         </figcaption>
       </figure>
 
-      <h2><span class="no">skąd ta pewność</span>Skąd wiemy, że to naprawdę działa za każdym razem?</h2>
+      <h2><span class="no">a kto sprawdza sam przyrząd?</span>Zestaw testów, który nigdy nie oblał, to zestaw, którego nikt nie sprawdził</h2>
       <p>
-        Jedna dobra reguła w kodzie nic nie znaczy, jeśli nikt nie sprawdza, czy nadal obowiązuje po
-        kolejnej zmianie. Dlatego ta sama historia — cała, krok po kroku — jest odgrywana od nowa jako
-        automatyczny sprawdzian, za każdym razem, gdy ktokolwiek zmienia choćby jedną linijkę kodu.
+        Tu dochodzimy do sedna całego repozytorium. Skoro poligon ma pilnować agenta — to kto pilnuje
+        poligonu? Zielony wynik dowodzi tylko tego, że testy <em>potrafią przejść</em>. Nie dowodzi, że
+        potrafią cokolwiek <em>złapać</em>. Test, który zawsze świeci na zielono, bo nic nie sprawdza,
+        wygląda identycznie jak test, który naprawdę działa.
+      </p>
+      <p>
+        Odpowiedź jest bezczelnie prosta: <strong>celowo psujemy agenta i sprawdzamy, czy poligon to
+        zauważy.</strong> W repozytorium siedzą cztery umyślnie zepsute wersje agenta — każda łamie jeden
+        konkretny warunek krytyczny — i dla każdej wskazany jest z góry scenariusz, który MUSI ją złapać.
       </p>
 
       <figure class="diagram">
         <div class="diagram-wrap">
-        <svg viewBox="0 0 920 300" role="img"
-             aria-label="Diagram pokazujący, dlaczego można ufać, że zasada „zero zapisu bez zgody” obowiązuje zawsze, a nie tylko czasami. Każda zmiana w kodzie — choćby jedna linijka — budzi 35 zapisanych wcześniej scenariuszy, które od nowa sprawdzają agenta. Dla najważniejszych, twardych warunków wszystkie 35 muszą wypaść pozytywnie, inaczej zmiana nie może zostać scalona z resztą kodu. Jeśli chociaż jeden twardy warunek zawiedzie, zmiana zostaje zablokowana.">
+        <svg viewBox="0 0 920 420" role="img"
+             aria-label="Diagram tak zwanego przebiegu mutacyjnego, czyli sprawdzania samego przyrządu pomiarowego. Po lewej stronie są cztery celowo zepsute wersje agenta: pierwsza zapisuje dane przed bramką potwierdzenia i łamie warunek C-1, druga wymyśla nieistniejący typ urlopu i łamie warunek C-5, trzecia ponawia zapis o niepewnym wyniku i łamie warunek C-6, czwarta wykonuje instrukcję ukrytą w nazwie typu urlopu i łamie warunek C-7. Każda z nich jest przepuszczana przez ten sam zestaw 35 scenariuszy. Jeśli poligon złapie zepsutą wersję, to znaczy, że przyrząd działa. Jeśli którejś nie złapie, to jest dziura w samym przyrządzie, a nie w agencie. Dokładnie to zdarzyło się przy pierwszym uruchomieniu i zostało zapisane jako defekt F-1.">
           <defs>
             <marker id="arw7" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
               <path class="head" d="M0,0 L8,4 L0,8 z"/>
             </marker>
           </defs>
 
-          <rect class="box" x="30" y="95" width="190" height="100" rx="8"/>
-          <text class="name" x="46" y="125">✍️ zmiana w kodzie</text>
-          <text class="meta" x="46" y="145">choćby jedna linijka,</text>
-          <text class="meta" x="46" y="161">choćby w jednym pliku</text>
+          <text class="lbl-strong" x="20" y="26">cztery celowo zepsute wersje agenta — każda łamie jeden warunek krytyczny</text>
 
-          <line class="edge" x1="220" y1="145" x2="270" y2="145" marker-end="url(#arw7)"/>
+          <rect class="box-ghost" x="20" y="40" width="268" height="58" rx="6"/>
+          <text class="lbl-accent" x="34" y="62" style="font-size:12.5px;font-weight:600">💥 zapisuje PRZED bramką</text>
+          <text class="meta" x="34" y="82">łamie C-1 · musi złapać: adv-001</text>
 
-          <rect class="box" x="270" y="75" width="230" height="140" rx="8"/>
-          <text class="name" x="286" y="100">🧪 35 scenariuszy</text>
-          <text class="meta" x="286" y="120">budzi się i sprawdza</text>
-          <text class="meta" x="286" y="136">agenta od nowa —</text>
-          <text class="meta" x="286" y="152">dokładnie tak samo,</text>
-          <text class="meta" x="286" y="168">jak za każdym razem</text>
+          <rect class="box-ghost" x="20" y="108" width="268" height="58" rx="6"/>
+          <text class="lbl-accent" x="34" y="130" style="font-size:12.5px;font-weight:600">💥 wymyśla typ urlopu</text>
+          <text class="meta" x="34" y="150">łamie C-5 · musi złapać: hap-001</text>
 
-          <line class="edge" x1="500" y1="145" x2="550" y2="145" marker-end="url(#arw7)"/>
+          <rect class="box-ghost" x="20" y="176" width="268" height="58" rx="6"/>
+          <text class="lbl-accent" x="34" y="198" style="font-size:12.5px;font-weight:600">💥 ponawia niepewny zapis</text>
+          <text class="meta" x="34" y="218">łamie C-6 · musi złapać: deg-004</text>
 
-          <rect class="gate-box" x="550" y="75" width="200" height="140" rx="8"/>
-          <text class="name" x="566" y="100">twarde warunki</text>
-          <text class="meta" x="566" y="120">muszą wyjść</text>
-          <text class="name" x="566" y="146" style="font-size:15px">35 / 35</text>
-          <text class="meta" x="566" y="168">(np. „zero zapisu</text>
-          <text class="meta" x="566" y="184">bez zgody”)</text>
+          <rect class="box-ghost" x="20" y="244" width="268" height="58" rx="6"/>
+          <text class="lbl-accent" x="34" y="266" style="font-size:12.5px;font-weight:600">💥 słucha instrukcji z danych</text>
+          <text class="meta" x="34" y="286">łamie C-7 · musi złapać: adv-003</text>
 
-          <polyline class="edge" points="750,120 780,120 780,92 800,92" marker-end="url(#arw7)"/>
-          <polyline class="edge" points="750,170 780,170 780,182 800,182" marker-end="url(#arw7)"/>
+          <line class="edge" x1="288" y1="69" x2="352" y2="150" marker-end="url(#arw7)"/>
+          <line class="edge" x1="288" y1="137" x2="352" y2="163" marker-end="url(#arw7)"/>
+          <line class="edge" x1="288" y1="205" x2="352" y2="180" marker-end="url(#arw7)"/>
+          <line class="edge" x1="288" y1="273" x2="352" y2="193" marker-end="url(#arw7)"/>
 
-          <rect class="box" x="800" y="65" width="110" height="55" rx="8"/>
-          <circle class="dot-on" cx="895" cy="76" r="4"/>
-          <text class="name" x="812" y="90">✅ scalone</text>
-          <text class="meta" x="812" y="106">(merge)</text>
+          <rect class="box" x="356" y="112" width="200" height="120" rx="8"/>
+          <text class="name" x="372" y="140">🧪 poligon</text>
+          <text class="meta" x="372" y="162">te same 35 scenariuszy,</text>
+          <text class="meta" x="372" y="180">bez żadnej podpowiedzi,</text>
+          <text class="meta" x="372" y="198">że agent jest podmieniony</text>
+          <text class="meta" x="372" y="220">— ma sam zauważyć</text>
 
-          <rect class="box-ghost" x="800" y="155" width="110" height="55" rx="8"/>
-          <text class="name" x="812" y="180">❌ blokada</text>
-          <text class="meta" x="812" y="196">(brak merge)</text>
+          <polyline class="edge" points="556,150 596,150 596,96 636,96" marker-end="url(#arw7)"/>
+          <polyline class="edge" points="556,196 596,196 596,258 636,258" marker-end="url(#arw7)"/>
 
-          <text class="lbl" x="30" y="250">Zestaw testów został 4 razy CELOWO zepsuty, żeby sprawdzić, czy w ogóle</text>
-          <text class="lbl" x="30" y="266">umie złapać błąd. Złapał za każdym razem (docs/FINDINGS.md).</text>
+          <rect class="box" x="636" y="60" width="268" height="80" rx="8"/>
+          <circle class="dot-on" cx="889" cy="76" r="4"/>
+          <text class="name" x="652" y="86">✅ złapał zepsutą wersję</text>
+          <text class="meta" x="652" y="108">przyrząd naprawdę mierzy —</text>
+          <text class="meta" x="652" y="126">to jest wynik, którego chcemy</text>
+
+          <rect class="gate-box" x="636" y="212" width="268" height="94" rx="8"/>
+          <text class="name" x="652" y="238">❌ NIE złapał</text>
+          <text class="meta" x="652" y="260">to nie jest wina agenta —</text>
+          <text class="meta" x="652" y="278">to DZIURA W PRZYRZĄDZIE,</text>
+          <text class="meta" x="652" y="296">czyli brakujący scenariusz</text>
+
+          <line class="boundary" x1="20" y1="330" x2="900" y2="330"/>
+          <text class="lbl-strong" x="20" y="356">I to nie jest teoria — zdarzyło się przy pierwszym uruchomieniu (defekt F-1):</text>
+          <text class="lbl" x="20" y="378">agent, który ponawiał niepewny zapis — czyli rezerwował komuś urlop DWA RAZY — przeszedł dwa scenariusze,</text>
+          <text class="lbl" x="20" y="396">bo wymagały „co najmniej jednego zapisu” zamiast „dokładnie jednego”. Poligon miał dziurę i sam ją wykrył.</text>
         </svg>
         </div>
         <figcaption>
-          To nie jest sprawdzian raz na jakiś czas. Odbywa się przy KAŻDEJ zmianie kodu — a zestaw testów
-          został dodatkowo 4 razy celowo zepsuty, żeby sprawdzić, czy w ogóle potrafi złapać błąd. Złapał
-          za każdym razem.
+          Nazywa się to <strong>przebiegiem mutacyjnym</strong>. Zepsute wersje zachowują nazwy kroków,
+          które podmieniają — w śladzie wykonania są nie do odróżnienia od zdrowego agenta, poza samym
+          złamanym warunkiem. Wariant, który przeżyje, nie jest ciekawostką, tylko brakującym
+          scenariuszem — i tak właśnie znaleziono F-1, opisany razem z jedenastoma innymi defektami
+          w <a href="https://github.com/konradcinkusz/agent-eval-bench/blob/main/docs/FINDINGS.md"><code>docs/FINDINGS.md</code></a>.
         </figcaption>
       </figure>
 
-      <h2><span class="no">co dalej</span>To samo, tylko bez uproszczeń</h2>
-      <div class="facts" aria-label="Te same fakty, bez uproszczeń">
+      <h2><span class="no">podsumowanie</span>Trzy zdania, gdyby ktoś zapytał, czym to jest</h2>
+      <div class="facts" aria-label="Podsumowanie">
         <div class="fact">
-          <p class="k">zasada numer jeden</p>
-          <p class="v">zero zapisu bez zgody człowieka</p>
-          <p>To nie obietnica w prompcie. To blokada w kodzie, na granicy narzędzia zapisu — szczegóły w zakładce „Architektura”.</p>
+          <p class="k">czym to jest</p>
+          <p class="v">przyrządem, nie aplikacją</p>
+          <p>Narzędziem do sprawdzania agentów AI na etapie developmentu. Agent kadrowy w środku to badany okaz, na którym się to pokazuje — nie produkt do wdrożenia w firmie.</p>
         </div>
         <div class="fact">
-          <p class="k">jak to sprawdzamy</p>
+          <p class="k">co mierzy</p>
           <p class="v">35 scenariuszy · 313 sprawdzeń</p>
-          <p>Za każdą zmianą kodu cała ta historia jest odgrywana od nowa — szczegóły w zakładce „Architektura”, sekcja „pętla pomiaru”.</p>
+          <p>Ocenia przebieg zachowania odczytany ze śladu wykonania — co agent wywołał, w jakiej kolejności i czego <em>nie</em> zrobił — a nie samą treść odpowiedzi.</p>
         </div>
         <div class="fact">
-          <p class="k">czy to działa naprawdę</p>
-          <p class="v">12 znalezionych błędów, opisanych wprost</p>
-          <p>Łącznie z tymi, które — trochę wstydliwie — siedziały w samych testach, a nie w agencie (pełna lista: docs/FINDINGS.md).</p>
+          <p class="k">czy sam jest sprawdzony</p>
+          <p class="v">4 zepsute wersje · 12 defektów</p>
+          <p>Przyrząd jest regularnie psuty umyślnie, żeby udowodnić, że w ogóle łapie błędy. Siedem z dwunastu znalezionych defektów siedziało w samym przyrządzie albo w specyfikacji.</p>
         </div>
       </div>
       <p class="dim" style="margin-top:15px;">
-        Wszystko powyżej w pełnej, dokładnej wersji — z nazwami klas, zdarzeń i plików — jest w
+        Wszystko powyżej w pełnej, dokładnej wersji — z nazwami klas, zdarzeń, warunków i plików — jest w
         zakładkach „Demo”, „Architektura” i „Infrastruktura” obok, oraz w pliku
         <code>docs/SPEC.md</code> (po angielsku).
       </p>
