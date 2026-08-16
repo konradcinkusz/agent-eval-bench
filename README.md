@@ -47,7 +47,13 @@ your systems can be built so the machine does the work and a person keeps the
 decision — and whether that stays true under prompt edits, model swaps and
 hostile input is something you can measure, not something you trust.
 
-**Start here**, four files, in order:
+**New to the repository?** [`docs/START-HERE.md`](docs/START-HERE.md) is the
+documentation front door — it says which of the four kinds of document you need
+(tutorial, how-to, reference, explanation) and sends you there. It includes a
+[first run](docs/tutorials/01-first-run.md) that takes about fifteen minutes and
+needs no credentials. 🇵🇱 [Wersja polska](docs/START-HERE.pl.md).
+
+**Start here** if you would rather judge it than run it — four files, in order:
 
 1. [`docs/SPEC.md` §4](docs/SPEC.md#4-hard-constraints) — the seven hard
    constraints. This is what is graded, and it was written before the agent
