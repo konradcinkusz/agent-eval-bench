@@ -19,6 +19,15 @@
  * `a1-`. That keeps the filename free to describe the diagram while the id stays
  * the join key.
  *
+ * The README is the third place, and it is checked differently. It embeds one
+ * diagram — the measuring loop — because a repository whose deliverable is the
+ * loop should draw the loop before it draws anything else, and GitHub renders
+ * Mermaid in a README the same way it does in any other document. It is not a
+ * numbered section, so it cannot join on an id; the rule there is weaker but
+ * still mechanical: every ```mermaid block in README.md must be byte-identical
+ * to some file in docs/diagrams/. Copying a diagram into the README and then
+ * editing one of the two copies is the drift this catches.
+ *
  * Zero dependencies on purpose: this runs in the same job as check-links.mjs,
  * before anything has been installed.
  *
@@ -128,6 +137,53 @@ for (const name of files) {
   }
 }
 
+/** Every ```mermaid block in a document, in order, each ending in a newline. */
+function mermaidBlocks(source) {
+  const blocks = [];
+  let fence = null;
+
+  for (const line of source.split('\n')) {
+    if (fence === null && line.trim() === '```mermaid') {
+      fence = [];
+      continue;
+    }
+
+    if (fence !== null && line.trim() === '```') {
+      blocks.push(`${fence.join('\n')}\n`);
+      fence = null;
+      continue;
+    }
+
+    if (fence !== null) {
+      fence.push(line);
+    }
+  }
+
+  return blocks;
+}
+
+// The README's embedded diagrams, matched by content rather than by id — see the
+// header comment for why the rule is weaker there and why it still has to exist.
+const byContent = new Map(files.map((name) => [readFileSync(join(dirPath, name), 'utf8'), name]));
+const readmePath = join(repoRoot, 'README.md');
+const embedded = existsSync(readmePath) ? mermaidBlocks(readFileSync(readmePath, 'utf8')) : [];
+const embeddedNames = [];
+
+for (const [index, source] of embedded.entries()) {
+  const match = byContent.get(source);
+
+  if (match === undefined) {
+    failures.push(
+      `README.md's Mermaid block #${index + 1} is identical to no file in docs/diagrams/. `
+      + 'The README embeds a copy of a diagram, never one of its own: copy the .mmd it '
+      + 'came from verbatim, or add the diagram to docs/DIAGRAMS.md and docs/diagrams/ first.',
+    );
+    continue;
+  }
+
+  embeddedNames.push(match);
+}
+
 if (sections.length === 0) {
   console.error('check-diagrams: docs/DIAGRAMS.md declares no diagram sections. That cannot be right — failing loudly.');
   process.exit(1);
@@ -141,4 +197,10 @@ if (failures.length > 0) {
   process.exit(1);
 }
 
-console.log(`check-diagrams: ${sections.length} diagram(s), each paired with docs/diagrams/ and identical.`);
+const embeddedNote = embeddedNames.length > 0
+  ? ` README.md embeds ${embeddedNames.join(', ')}, unchanged.`
+  : '';
+
+console.log(
+  `check-diagrams: ${sections.length} diagram(s), each paired with docs/diagrams/ and identical.${embeddedNote}`,
+);
