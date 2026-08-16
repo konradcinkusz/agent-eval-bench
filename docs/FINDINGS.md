@@ -333,7 +333,7 @@ whatever the schedule fires.
 
 The paragraphs above are qualitative on purpose — a number copied into prose goes
 stale on the next commit. These numbers are therefore **a measurement, not a
-specification**: taken 2026-08-15 at commit `7121e4c`, on one developer-class
+specification**: taken 2026-08-15 at commit `45f89a3`, on one developer-class
 Linux container, quoted so a reader has an order of magnitude rather than a
 promise. SPEC §8.1's budgets are the specification, and CI is deliberately not
 made to assert on wall-clock — a timing assertion on a shared runner is a flaky
