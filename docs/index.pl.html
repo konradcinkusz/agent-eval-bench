@@ -520,6 +520,126 @@
         </figcaption>
       </figure>
 
+      <h2><span class="no">cztery zastosowania</span>Eval to nie „testy w CI”. To pomiar, który konsumuje się w czterech miejscach</h2>
+      <p>
+        Bramka przy zmianie kodu, którą pokazuje diagram wyżej, to tylko jedno z czterech miejsc, gdzie
+        ten sam pomiar się przydaje. Warto je rozdzielić, bo mylenie evala z testem regresyjnym gubi trzy
+        pozostałe.
+      </p>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Kiedy</th><th>Po co</th><th>Analogia klasyczna</th><th>Gdzie to jest w tym repo</th></tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>1 · w pętli developerskiej</td>
+              <td>Iterujesz prompt albo opis narzędzia i patrzysz, czy odsetek zdanych scenariuszy rośnie. Evale są tu narzędziem <em>projektowania</em>: najpierw scenariusz, potem prompt, który go przechodzi.</td>
+              <td>red-green-refactor (TDD)</td>
+              <td>Lokalne <code>dotnet test</code> — 35 scenariuszy w sekundy, bez sieci i bez klucza.</td>
+            </tr>
+            <tr>
+              <td>2 · przy zmianie (bramka CI)</td>
+              <td>Regresja: czy ta zmiana zepsuła coś względem zapisanego wyniku bazowego.</td>
+              <td>testy regresyjne</td>
+              <td><code>ci.yml</code> — warunki krytyczne 100%, zachowania porównywane z <code>evals/baselines/layer1.json</code>.</td>
+            </tr>
+            <tr>
+              <td>3 · przy wyborze modelu</td>
+              <td>Ten sam zestaw odpalony na różnych modelach → decyzja „który model, jakie parametry” oparta na liczbach, a nie na wrażeniu.</td>
+              <td>benchmark</td>
+              <td>ADR-0004: model przypięty, sędzia przypięty <em>osobno</em> od agenta, a wynik bazowy jest dzielony wg modelu, który go wyprodukował.</td>
+            </tr>
+            <tr>
+              <td>4 · ciągle na produkcji</td>
+              <td>Próbkowanie prawdziwych sesji ocenianych tym samym aparatem — bo rozkład prawdziwych wejść nigdy nie równa się 35 wymyślonym scenariuszom.</td>
+              <td>monitoring / SLO</td>
+              <td><code>production-loop.yml</code> — codziennie czyta spany, sprawdza C-1 post factum, wystawia najgorsze sesje do wyodrębnienia. <strong>Maszyneria gotowa, ale nigdy nie przeszedł przez nią prawdziwy ruch (D-12).</strong></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h2><span class="no">druga korekta</span>Wyzwalaczem nie jest „zmiana w kodzie”, tylko zmiana czegokolwiek, co kształtuje zachowanie</h2>
+      <p>
+        W zwykłym projekcie zachowanie zmienia kod. W systemie z modelem językowym ruchomych części jest
+        więcej — i połowa z nich w klasycznym repozytorium nie jest nawet uznawana za „kod”.
+      </p>
+
+      <figure class="diagram">
+        <div class="diagram-wrap">
+        <svg viewBox="0 0 920 360" role="img"
+             aria-label="Diagram pokazujący sześć rzeczy, które kształtują zachowanie agenta opartego na modelu językowym: kod źródłowy, prompt systemowy, opisy narzędzi, definicja agenta, wersja modelu wraz z parametrami, oraz dane do wyszukiwania kontekstu. Wszystkie sześć wpływa na jedno: na zachowanie systemu, czyli to, co użytkownik naprawdę dostaje. Eval mierzy właśnie to zachowanie, niezależnie od tego, która z sześciu części się poruszyła. Klasyczny test pilnuje tylko pierwszej pozycji, czyli kodu.">
+          <defs>
+            <marker id="arw10" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto">
+              <path class="head" d="M0,0 L8,4 L0,8 z"/>
+            </marker>
+          </defs>
+
+          <text class="lbl-strong" x="20" y="22">sześć rzeczy, które kształtują zachowanie agenta:</text>
+
+          <rect class="box" x="20" y="34" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="58">kod źródłowy (src/)</text>
+
+          <rect class="box" x="20" y="80" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="104">prompt systemowy (prompts/)</text>
+
+          <rect class="box" x="20" y="126" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="150">opisy narzędzi</text>
+
+          <rect class="box" x="20" y="172" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="196">definicja agenta (agents/)</text>
+
+          <rect class="box" x="20" y="218" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="242">wersja modelu + parametry</text>
+
+          <rect class="box" x="20" y="264" width="250" height="38" rx="5"/>
+          <text class="step-name" x="34" y="288">dane do RAG</text>
+
+          <line class="edge" x1="270" y1="53" x2="386" y2="188" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="99" x2="386" y2="192" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="145" x2="386" y2="195" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="191" x2="386" y2="198" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="237" x2="386" y2="201" marker-end="url(#arw10)"/>
+          <line class="edge" x1="270" y1="283" x2="386" y2="205" marker-end="url(#arw10)"/>
+
+          <rect class="gate-box" x="396" y="150" width="196" height="92" rx="8"/>
+          <text class="name" x="412" y="180">ZACHOWANIE</text>
+          <text class="name" x="412" y="200">SYSTEMU</text>
+          <text class="meta" x="412" y="224">to, co użytkownik</text>
+          <text class="meta" x="412" y="238">naprawdę dostaje</text>
+
+          <line class="edge" x1="592" y1="196" x2="640" y2="196" marker-end="url(#arw10)"/>
+
+          <rect class="box" x="650" y="150" width="250" height="92" rx="8"/>
+          <text class="name" x="666" y="178">🎯 eval mierzy TO</text>
+          <text class="meta" x="666" y="202">niezależnie od tego,</text>
+          <text class="meta" x="666" y="220">która z sześciu części</text>
+          <text class="meta" x="666" y="236">się poruszyła</text>
+
+          <line class="boundary" x1="20" y1="316" x2="900" y2="316"/>
+          <text class="lbl" x="20" y="338">Klasyczny test pilnuje tylko pozycji nr 1. Dlatego w tym repo osobne sprawdzenie w CI blokuje zmianę</text>
+          <text class="lbl" x="20" y="354">w <tspan class="lbl-strong">prompts/</tspan> albo <tspan class="lbl-strong">agents/</tspan>, która nie ruszyła specyfikacji — bo to zmiana zachowania bez śladu w kodzie.</text>
+        </svg>
+        </div>
+        <figcaption>
+          Punkt 4 z tabeli wyżej dokłada jeszcze jedną, nieprzyjemną możliwość: zachowanie potrafi się
+          zmienić, gdy <strong>nic z tej listy nie zostało ruszone</strong> — bo dostawca podmienił model
+          pod spodem. Dlatego ADR-0004 zabrania cichego podmieniania modelu: jeśli odpowiedział inny model
+          niż zamówiony, musi to trafić do śladu, a wynik bazowy jest przypisany do modelu, który go
+          wyprodukował.
+        </figcaption>
+      </figure>
+
+      <div class="lede-box">
+        <p>
+          <strong>Najkrótsza definicja, gdyby ktoś przycisnął:</strong> testy odpowiadają na pytanie
+          „czy kod robi to, co napisałem”. Evale — „czy system robi to, co wyspecyfikowałem”, niezależnie
+          od tego, która z ruchomych części się zmieniła i czy w ogóle cokolwiek się zmieniło.
+        </p>
+      </div>
+
       <h2><span class="no">badany okaz</span>Dopiero teraz agent HR — czyli to, co jest mierzone</h2>
       <p>
         Poniższe dziewięć kroków to <strong>nie opis produktu</strong>, tylko opis zachowania, które
