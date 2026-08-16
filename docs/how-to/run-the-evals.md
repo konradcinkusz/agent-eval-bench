@@ -44,7 +44,7 @@ the test is skipped, not passed. To make it actually run, see
 Scenario names appear in the test output. Filter on the id:
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer1" --logger "console;verbosity=detailed"
+dotnet test --filter "FullyQualifiedName~Layer1"
 ```
 
 then search the output for the id. There is no per-scenario test filter, because

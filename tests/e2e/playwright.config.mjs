@@ -83,6 +83,15 @@ export default defineConfig({
     url: `${baseURL}/health`,
     reuseExistingServer: false,
     timeout: 120_000,
+
+    // Piped rather than the default ignore/pipe split: when the server never
+    // reaches /health, "Timed out waiting 120000ms from config.webServer" is the
+    // whole error otherwise — whatever the process printed on its way to not
+    // starting (a bind failure, a config exception, a crash) is exactly what a
+    // timeout does not tell you.
+    stdout: 'pipe',
+    stderr: 'pipe',
+
     env: {
       ASPNETCORE_ENVIRONMENT: 'Production',
       ASPNETCORE_URLS: baseURL,

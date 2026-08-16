@@ -44,7 +44,7 @@ się uruchomił, zobacz [Włączenie sędziego](enable-the-judge.pl.md).
 Nazwy scenariuszy pojawiają się w wyjściu testów. Filtruj po identyfikatorze:
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer1" --logger "console;verbosity=detailed"
+dotnet test --filter "FullyQualifiedName~Layer1"
 ```
 
 a potem poszukaj identyfikatora w wyjściu. Nie ma filtra „na scenariusz", bo

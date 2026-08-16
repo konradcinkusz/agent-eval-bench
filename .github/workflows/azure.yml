@@ -206,7 +206,7 @@ jobs:
         run: |
           dotnet test tests/AbsenceConcierge.Evals/AbsenceConcierge.Evals.csproj \
             --configuration Release --no-build \
-            --logger "trx;LogFileName=first-judged-run.trx" --results-directory ./TestResults
+            --report-trx --report-trx-filename first-judged-run.trx --results-directory ./TestResults
 
       - name: What the first judged run measured
         if: success() || failure()

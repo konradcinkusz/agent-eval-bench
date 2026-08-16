@@ -20,7 +20,7 @@ Layer 1 asserts over spans and events, never over prose. So the reply telling yo
 something happened is not evidence that it happened.
 
 ```bash
-dotnet test --filter "FullyQualifiedName~Layer1" --logger "console;verbosity=detailed"
+dotnet test --filter "FullyQualifiedName~Layer1"
 ```
 
 The failure names the scenario, the assertion, and what the trace actually
