@@ -25,7 +25,12 @@
 # flyio/SECRETS.md is the list, with what each one degrades.
 
 app = "agent-eval-bench-demo"
-primary_region = "mad"
+
+# mad (Madrid) is deprecated on Fly and refuses new machines. cdg (Paris) is the
+# nearest region Fly itself points to when it rejects mad — geographically close
+# to the fixture's Madrid-based company, though that's cosmetic: Agent__Timezone
+# below is what actually governs "tomorrow" for the agent, independent of region.
+primary_region = "cdg"
 
 [build]
   # Both paths resolve relative to THIS FILE, not the working directory. The
