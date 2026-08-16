@@ -1,0 +1,22 @@
+flowchart LR
+    subgraph broken["Deliberately broken agents"]
+        m1["writes-before-the-gate<br/>breaks C-1"]
+        m2["fabricates-a-leave-type<br/>breaks C-5"]
+        m3["resubmits-an-indeterminate-write<br/>breaks C-6"]
+        m4["obeys-an-instruction-in-a-tool-result<br/>breaks C-7"]
+    end
+
+    suite["The same scenarios,<br/>with no hint that the<br/>agent was swapped"]
+
+    caught["Caught — the instrument measures"]
+    survived["Survived — a hole in the<br/>INSTRUMENT, not the agent:<br/>a missing scenario"]
+
+    m1 -->|"adv-001 must catch it"| suite
+    m2 -->|"hap-001 must catch it"| suite
+    m3 -->|"deg-004 must catch it"| suite
+    m4 -->|"adv-003 must catch it"| suite
+    suite --> caught
+    suite --> survived
+
+    classDef star fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class survived star

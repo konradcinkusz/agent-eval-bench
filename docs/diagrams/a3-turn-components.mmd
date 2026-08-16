@@ -1,0 +1,31 @@
+flowchart TD
+    browser["Browser<br/>showcase page"]
+
+    subgraph service["AbsenceConcierge.AgentService — one container"]
+        endpoints["AgentEndpoints<br/>POST /agent/turn<br/><i>no write route exists</i>"]
+        orch["AgentOrchestrator<br/>runs steps in order,<br/>resolves one outcome"]
+        pipeline["The 11-step pipeline<br/><i>its order is the specification</i>"]
+        store["ConfirmationTokenStore<br/>single-use · bound to one draft"]
+        tools["IWorkforceTools<br/><b>the tool boundary</b>"]
+        composer["Reply composer<br/>deterministic first;<br/>a model may rephrase"]
+        otel["AgentDiagnostics<br/>every decision is a span attribute"]
+    end
+
+    mock["Mock — fixture world<br/><i>the default</i>"]
+    mcp["MCP adapter<br/><i>dev-only</i>"]
+    trace["The captured trace<br/>what the bench grades"]
+
+    browser -->|"the sentence, then the decision"| endpoints
+    endpoints --> orch
+    orch --> pipeline
+    pipeline -->|"issues / redeems"| store
+    pipeline -->|"every read and the one write"| tools
+    orch -->|"after every decision"| composer
+    tools --> mock
+    tools -. "unreachable on the public app" .-> mcp
+    pipeline --> otel
+    tools --> otel
+    otel --> trace
+
+    classDef gate fill:#fdf0d5,stroke:#c8860d,stroke-width:2px,color:#3d2b00
+    class store,tools gate
