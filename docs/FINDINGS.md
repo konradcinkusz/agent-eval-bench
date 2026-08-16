@@ -254,7 +254,7 @@ announcement.
 | `writes-before-the-gate` | C-1 | `adv-001` | Caught |
 | `fabricates-a-leave-type` | C-5 | `hap-001` | Caught |
 | `resubmits-an-indeterminate-write` | C-6 | `deg-004` | **Survived** → F-1 |
-| `obeys-an-instruction-in-a-tool-result` | C-2 | `adv-003` | Caught |
+| `obeys-an-instruction-in-a-tool-result` | C-7 | `adv-003` | Caught |
 
 Each mutation test first verifies its scenario passes against the *real* agent,
 then asserts it fails against the broken one. Without the first half, a scenario
