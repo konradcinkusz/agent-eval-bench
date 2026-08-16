@@ -20,7 +20,7 @@ A checklist that is all ticks is a checklist somebody filled in. Two items below
 | 6 | Schema applied by `MigrateAsync` in a hosted service | **N/A** | As above. |
 | 7 | All configuration from environment variables; no secret in source, config or comment, with a secret scanner in CI | Yes | Every variable is documented once in [`secrets.env.example`](../secrets.env.example) with what degrades without it. gitleaks runs in CI and in a pre-commit hook that refuses the commit rather than warning. |
 | 8 | Exactly one service holds a signing key; others validate against its JWKS | **N/A** | No authentication. The demo has no accounts and no user data; the access code is a spend control and [`flyio/SECRETS.md`](../flyio/SECRETS.md) says so rather than letting the word "code" imply otherwise. |
-| 9 | The shared kernel holds no entity, DTO, enum, seed dataset, pricing constant or user-facing string — asserted by an architecture test and a CI size check | Yes | `ServiceDefaults` is 137 lines against the estate's ~700 ceiling, and the `architecture` job fails the build on both the size and the domain-vocabulary check. |
+| 9 | The shared kernel holds no entity, DTO, enum, seed dataset, pricing constant or user-facing string — asserted by an architecture test and a CI size check | Yes | `ServiceDefaults` is 160 lines against the ~800-line ceiling the `architecture` job enforces, and the `architecture` job fails the build on both the size and the domain-vocabulary check. |
 | 10 | Every optional integration has a working no-op or fallback | Yes | Four of them: no MCP configuration ⇒ mock tools; no model ⇒ deterministic composer; no OTLP endpoint ⇒ no exporter; no access code ⇒ live replies unavailable. Each logs which setting was missing. |
 | 11 | Multi-stage Dockerfile; runtime image major = TFM major; listens on `:8080`; non-root | Yes | `src/AbsenceConcierge.AgentService/Dockerfile`: `sdk:10.0` → `aspnet:10.0` for `net10.0`, `ASPNETCORE_URLS=http://+:8080`, `USER $APP_UID`. |
 | 12 | One `fly.toml`; `min_machines_running = 1` if another service calls it in-request | Yes | One config, and `0` is correct: nothing calls this service in-request except a browser, for which a cold start costs a second. |
@@ -29,7 +29,7 @@ A checklist that is all ticks is a checklist somebody filled in. Two items below
 | 15 | Extension points are interfaces registered in DI, not base classes | Yes | `IWorkforceTools`, `IUtteranceInterpreter`, `IReplyComposer`, `ILlmProvider`, `IMcpToolSession`, `IAgentStep`, `IPromptLibrary`, `IDemoBudget`. No base class anywhere; adding a behaviour is a class plus a registration line. |
 | 16 | Has a test project; the logic-bearing layer is covered | Yes | Two: unit tests, and the eval suite — which is a test project by every property that matters and is held to the same analyzer posture. |
 | 17 | Built by the tag-driven workflow with path-based change detection | Yes | `.github/workflows/flyio.yml` fires on `v*` tags only, and gates the deploy on the eval suite. `check-change-coupling.mjs` is the path-based half: a prompt or agent-definition edit without a specification change fails the build. |
-| 18 | Architectural decisions recorded in `docs/` | Yes | Five ADRs, each with the alternatives that lost. |
+| 18 | Architectural decisions recorded in `docs/` | Yes | Six ADRs, each with the alternatives that lost. |
 
 ## 2. AI-EVALS §10 — per agent
 

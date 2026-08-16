@@ -125,7 +125,8 @@ public sealed class Layer2Tests
         // calibration against human labels before a judge's scores gate anything, and
         // marks the rule "not yet demonstrated in the estate". This repository is the
         // demonstration, and today the demonstration is of the uncalibrated state:
-        // zero labels, so the scores are reported and trended and gate nothing.
+        // 45 labels exist, but every one is an AI rater's and §5 says human — so the
+        // scores are reported and trended and gate nothing.
         var calibration = Layer2Run.Report.Calibration;
 
         Console.WriteLine($"Calibration: {calibration.Reason}");
