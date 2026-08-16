@@ -23,7 +23,7 @@ behind it. Without the record, the reversal looks like a simplification.
 
 The estate already has the habit and the evidence for it: `copilot-scope`'s
 `STRATEGY.md` was written when that repo had no users, and
-`AureliusPromptus`'s `INFRASTRUCTURE-ANALYSIS.md` argues *against* a change on
+the reference SaaS's `INFRASTRUCTURE-ANALYSIS.md` argues *against* a change on
 switching-cost grounds, with numbers. Both are cited in P14 as worth more than
 documents that list commands.
 

@@ -10,7 +10,7 @@
 //  locally — the same deployment either way, which is what makes the workflow's
 //  behaviour reproducible from a laptop when it misbehaves.
 //
-//  The pattern is AureliusPromptus's flyio-shared stack, deliberately: compute
+//  The pattern is the reference SaaS's flyio-shared stack, deliberately: compute
 //  stays on Fly, Azure supplies only the managed services a demo cannot fake —
 //  a paid model and a trace sink. What is NOT copied from there is the AI
 //  Foundry hub/project pair, because this repository provisions no persistent

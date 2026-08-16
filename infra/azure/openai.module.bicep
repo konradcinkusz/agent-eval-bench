@@ -11,7 +11,7 @@
 //
 //  Deployments are chained with dependsOn: Azure OpenAI accepts one deployment
 //  operation at a time, and parallel creation fails with a conflict. Learned
-//  in AureliusPromptus, where the comment on the same chain calls it the
+//  in the estate's reference SaaS, where the comment on the same chain calls it the
 //  load-bearing gotcha of the whole file.
 // ============================================================================
 

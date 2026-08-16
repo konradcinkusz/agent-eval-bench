@@ -1,0 +1,45 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-labelledby="title desc">
+  <title id="title">agent-eval-bench</title>
+  <desc id="desc">Three runs arrive from the left and stop at a gold gate; only one continues, through the single gap in it.</desc>
+
+  <!--
+    The mark draws the repository's one claim rather than decorating it.
+
+      • three lines arrive from the left — the work the agent did;
+      • a gold bar stops all three — the confirmation gate;
+      • the bar has exactly one gap, and exactly one line resumes beyond it —
+        the single-use token, and the one write it releases.
+
+    Presentation attributes only, no <style> block: GitHub sanitises SVG embedded
+    in Markdown and strips stylesheets, which would render the mark as black
+    shapes on a white field. Colours are the one-pager's (docs/index.html).
+  -->
+
+  <defs>
+    <radialGradient id="aeb-glow" cx="50%" cy="104%" r="62%">
+      <stop offset="0%" stop-color="#A97C22" stop-opacity="0.22"/>
+      <stop offset="100%" stop-color="#A97C22" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <!-- panel -->
+  <rect x="8" y="8" width="496" height="496" rx="116" fill="#0B0D11"/>
+  <rect x="8" y="8" width="496" height="496" rx="116" fill="url(#aeb-glow)"/>
+  <rect x="8.75" y="8.75" width="494.5" height="494.5" rx="115.25" fill="none" stroke="#272B37" stroke-width="1.5"/>
+
+  <!-- the runs that arrive and stop: two reads, and the write -->
+  <g stroke-width="24" stroke-linecap="round" fill="none">
+    <line x1="112" y1="158" x2="264" y2="158" stroke="#6D7584"/>
+    <line x1="112" y1="256" x2="264" y2="256" stroke="#E8B04B"/>
+    <line x1="112" y1="354" x2="264" y2="354" stroke="#6D7584"/>
+  </g>
+
+  <!-- the gate: one bar, one gap -->
+  <g stroke="#E8B04B" stroke-width="26" stroke-linecap="round" fill="none">
+    <line x1="316" y1="120" x2="316" y2="216"/>
+    <line x1="316" y1="296" x2="316" y2="392"/>
+  </g>
+
+  <!-- what gets through, and only through the gap -->
+  <line x1="368" y1="256" x2="400" y2="256" stroke="#E8B04B" stroke-width="24" stroke-linecap="round"/>
+</svg>
