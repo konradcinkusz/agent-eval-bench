@@ -177,7 +177,7 @@ done
 if [ -n "${SLN}" ]; then
   green "Ready. Next:"
   dim "  dotnet build ${SLN}"
-  dim "  dotnet run --project AbsenceConcierge.AppHost"
+  dim "  dotnet run --project src/AbsenceConcierge.AppHost"
 else
   green "Ready — repository baseline only; there is no solution to build yet."
   dim "This is Phase 0 of the plan in README.md. What you CAN run today:"

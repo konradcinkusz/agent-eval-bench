@@ -15,6 +15,10 @@
   --page: #fbfbfc;
   --panel: #ffffff;
   --accent: #1f4fd8;
+  /* Text sitting ON the accent. One token, because the accent flips from a
+     dark blue to a light one in dark mode — white text rode along and landed
+     at 2.4:1 on the page's two most important buttons. */
+  --accent-ink: #ffffff;
   --warn-bg: #fff6e5;
   --warn-line: #e8c98a;
   --live-bg: #ecf3ff;
@@ -29,6 +33,7 @@
     --page: #14161b;
     --panel: #1b1e26;
     --accent: #7fa6ff;
+    --accent-ink: #10141f;
     --warn-bg: #2c2517;
     --warn-line: #6b5626;
     --live-bg: #17203a;
@@ -177,7 +182,7 @@ a:focus-visible {
   outline-offset: 2px;
 }
 
-button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+button.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
 
 button.link {
   /* Inline, but not a 14px-tall tap target: the padding buys the finger room

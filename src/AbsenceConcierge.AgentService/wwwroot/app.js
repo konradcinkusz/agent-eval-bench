@@ -129,10 +129,16 @@ function lock(on) {
 
 async function turn(text, decision) {
   if (busy) return;
+  const hadCard = !card.hidden;
   lock(true);
   card.hidden = true;
 
   const thinking = showThinking();
+
+  // Whether the service actually ruled on this turn. A 429 or an unreachable
+  // service is not a verdict: the draft is still held on the server, and a
+  // card that vanishes anyway leaves nothing to say yes to.
+  let resolved = false;
 
   try {
     const response = await fetch('/agent/turn', {
@@ -156,6 +162,7 @@ async function turn(text, decision) {
     }
 
     const { turn: result, mode } = await response.json();
+    resolved = true;
 
     setBanner(mode);
     append('agent', result.reply);
@@ -171,6 +178,14 @@ async function turn(text, decision) {
   } finally {
     thinking.remove();
     lock(false);
+
+    if (!resolved && hadCard) {
+      // The question comes back, because it was never answered. Focus follows
+      // only for a decision — a failed typed message leaves the person in the
+      // composer, where they were.
+      card.hidden = false;
+      if (decision) card.focus();
+    }
 
     // A decision consumes the card, and with it whichever button held focus.
     // Focus that is on a removed-from-view element is focus lost to the page;
@@ -217,10 +232,22 @@ document.getElementById('unlock-form').addEventListener('submit', async (event) 
   event.preventDefault();
 
   const status = document.getElementById('unlock-status');
-  accessCode = codeField.value.trim();
+  const supplied = codeField.value.trim();
 
   status.hidden = false;
   status.classList.remove('ok');
+
+  // A header value must be Latin-1, and fetch() throws on anything else —
+  // before any request leaves the browser. Stored unchecked, one emoji in this
+  // field made every later turn die with "could not be reached", which blames
+  // the network for what the keyboard did. Refuse it here, with a sentence,
+  // and leave whatever code was previously applied still standing.
+  if (!/^[\x20-\x7E]*$/.test(supplied)) {
+    status.textContent = 'That is not a code this demo could have issued, so it was not applied.';
+    return;
+  }
+
+  accessCode = supplied;
   status.textContent = 'Checking…';
 
   try {
@@ -242,7 +269,11 @@ document.getElementById('unlock-form').addEventListener('submit', async (event) 
 fetch('/demo/status')
   .then((response) => (response.ok ? response.json() : null))
   .then((mode) => {
+    // A non-OK answer falls through to the same sentence as no answer at all:
+    // either way the page cannot know which composer will write, and "Checking…"
+    // left standing forever reads as a page that broke on arrival.
     if (mode) setBanner(mode);
+    else banner.textContent = 'Replies are written by the deterministic composer.';
   })
   .catch(() => {
     banner.textContent = 'Replies are written by the deterministic composer.';
