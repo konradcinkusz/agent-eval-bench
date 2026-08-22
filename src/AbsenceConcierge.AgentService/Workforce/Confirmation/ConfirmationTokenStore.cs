@@ -59,13 +59,28 @@ public sealed class InMemoryConfirmationTokenStore : IConfirmationTokenStore
 
     public bool Approve(string token)
     {
-        if (!_entries.TryGetValue(token, out var entry))
+        // Compare-and-swap rather than read-then-set. The indexer version had a
+        // hole exactly where this store is the last line of defence: between the
+        // read and the write-back, a concurrent TryRedeem could remove the token —
+        // and the write-back would then re-insert it, approved, resurrecting a
+        // spent token for a second write. Nothing above this layer serialises
+        // turns, so "two approvals racing one redeem" is a pair of parallel HTTP
+        // requests, not a hypothetical. TryUpdate refuses to insert: once the
+        // token is gone, it stays gone.
+        while (_entries.TryGetValue(token, out var entry))
         {
-            return false;
+            if (entry.Approved)
+            {
+                return true;
+            }
+
+            if (_entries.TryUpdate(token, entry with { Approved = true }, entry))
+            {
+                return true;
+            }
         }
 
-        _entries[token] = entry with { Approved = true };
-        return true;
+        return false;
     }
 
     public bool TryRedeem(string token, ConfirmationDraft submitted)

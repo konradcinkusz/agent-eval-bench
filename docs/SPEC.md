@@ -1,9 +1,16 @@
 # Absence Concierge — behaviour specification
 
 - **Agent slug**: `absence-concierge`
-- **Spec version**: 1.5.0
+- **Spec version**: 1.6.0
 - **Status**: Accepted — this is the contract. Code is measured against it, not the other way round.
-- **Date**: 2026-08-15 (1.4.0, 1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+- **Date**: 2026-08-22 (1.5.0, 1.4.0, 1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+
+**What changed in 1.6.0**, on finding F-14 — a turn that threw reported `completed`:
+
+| Change | Why |
+|---|---|
+| [§7](#7-degradation-contract) rule 4 now covers the agent itself, not only the write: an unhandled error inside the pipeline resolves the turn as `degraded`, never as `completed` | The outcome recorder's default — `completed`, for the happy path that ran to the end claiming nothing — was also reachable by a turn that **threw** before any step recorded anything. The composer then answered "That is done." to a request that did nothing: rule 4's "cheerful confirmation of something that did not happen", produced by the orchestrator's own error path ([F-14](FINDINGS.md)) |
+| [§2.2](#22-trace-events)'s `degradation.phase` table gains `pipeline`, whose `degradation.tool` names the failed step | The error path now emits `degradation.noted` like every other degradation, so a trace reader — and a future scenario — can assert it. If the write already happened when a later step threw, `completed` stands: it is the truth, and the note would not be |
 
 **What changed in 1.5.0**, on adding Spanish date expressions:
 
@@ -194,8 +201,8 @@ and does not say where it lives, so this specification defines it:
 
 | Attribute | Values |
 |---|---|
-| `degradation.phase` | `leave_type_lookup` · `conflict_check` · `employee_lookup` · `submission` |
-| `degradation.tool` | the tool that failed |
+| `degradation.phase` | `leave_type_lookup` · `conflict_check` · `employee_lookup` · `submission` · `pipeline` |
+| `degradation.tool` | the tool that failed — except for `pipeline`, where no tool failed and it names the step that did *(added in 1.6.0)* |
 | `degradation.kind` | `timeout` · `error` · `empty` · `malformed` |
 
 Without these, degradation would be gradeable only by the judge, and AI-EVALS.md
@@ -535,6 +542,13 @@ rules, restated as testable properties:
    `degraded` and the reply says the request was **not** submitted. The one
    unacceptable answer is a cheerful confirmation of something that did not
    happen.
+
+   **The same rule binds the agent's own failure path.** *(Added in 1.6.0,
+   on F-14.)* A turn that throws before the write resolves as `degraded` with a
+   `pipeline` degradation note — never as `completed`, which is what the outcome
+   recorder's default would otherwise report for a turn that recorded nothing
+   before dying. If the write had already succeeded when a later step threw,
+   `completed` stands, because then it is the truth.
 1. **A failed read before the gate does not become a write.** If conflict
    checking fails, the agent may still draft — clearly marked as unverified —
    but the confirmation must state that the conflict check did not run.

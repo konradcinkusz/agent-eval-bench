@@ -98,7 +98,7 @@ for both on one page.
 | **The contract** | 16 behaviours · 7 hard constraints | [`docs/SPEC.md`](docs/SPEC.md) was written and accepted before any agent code. Writing the scenarios then found six defects **in the spec**, fixed before implementation began. |
 | **The evidence** | 35 scenarios · 313 assertions | 60 of them (19%) assert **absence** — that a call was not made, an event not emitted. An agent that refuses politely and calls the tool anyway fails the other half. |
 | **The gate** | 1 write per confirmation, max | The token is single-use and bound to the exact draft shown. Double submission on a retry — the classic agent-loop defect — is a hard constraint (C-6), not a hope. |
-| **What it caught** | 12 defects, 7 of them in the instrument | Seven were in the measuring apparatus or the specification rather than in the agent, and none was found by the suite merely passing. Four deliberately broken agents prove the suite can fail — a suite that has never failed is a suite nobody has tested. |
+| **What it caught** | 14 defects, 7 of them in the instrument | Seven were in the measuring apparatus or the specification rather than in the agent, and none was found by the suite merely passing. Four deliberately broken agents prove the suite can fail — a suite that has never failed is a suite nobody has tested. |
 
 Every count above is recomputed in [`docs/FINDINGS.md`](docs/FINDINGS.md), which is the
 one place counts live — a number copied into prose is a number that goes stale on the
@@ -198,7 +198,7 @@ Four files, in this order, are the whole idea:
    that catches it: the test is that nothing happened.
 1. [`ConfirmationTokenStore.cs`](src/AbsenceConcierge.AgentService/Workforce/Confirmation/ConfirmationTokenStore.cs)
    — why the gate is a property of the system rather than a habit of the prompt.
-1. [`docs/FINDINGS.md`](docs/FINDINGS.md) — what the suite actually caught: twelve
+1. [`docs/FINDINGS.md`](docs/FINDINGS.md) — what the suite actually caught: fourteen
    defects, seven of them in the measuring instrument or the spec, none of them found
    by the suite merely passing.
 
@@ -344,7 +344,7 @@ runs after every step has already decided
 | 5 | Eval harness, Layer 2 — rubric-anchored LLM judge, plus the calibration protocol | **Done** (judge built and pinned; never yet run against a live model — D-9) |
 | 6 | CI gates: constraints hard-block, behaviours vs baseline, one sticky PR comment with the diff | **Done** |
 | 7 | Production story: [`docs/PRODUCTION.md`](docs/PRODUCTION.md) — trace-to-scenario extraction, the agent definition checked against the service's own catalogue, live MCP mode | **Done** (MCP mode built and tested against a fake session; never yet run against a live server — D-10) |
-| 8 | [`docs/FINDINGS.md`](docs/FINDINGS.md) — numbers-first write-up of what the evals actually caught | **Done** (12 defects, 7 of them in the instrument or the spec rather than the agent) |
+| 8 | [`docs/FINDINGS.md`](docs/FINDINGS.md) — numbers-first write-up of what the evals actually caught | **Done** (14 defects, 7 of them in the instrument or the spec rather than the agent) |
 | 8b | Showcase frontend: one page, whose one special feature is the confirmation card | **Done** (served by the agent service itself; no build step, strict CSP) |
 | 9 | Public deployment, mock by default, scale-to-zero, live model behind an access code | **Done** (`flyio/`, tag-driven, gated on the eval suite; never deployed — no Fly account is wired) |
 
@@ -426,6 +426,17 @@ Stated so that scope creep has something to fail against.
 - **Multi-user approval chains and edits to existing leaves are out of scope for the
   agent** — and the refusal itself is specified and tested, rather than left as an
   implicit gap.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+## Contributing
+
+The best contribution to an eval bench is a behaviour it cannot yet see —
+a scenario is YAML, needs no C#, and lands with the schema checking it.
+[`CONTRIBUTING.md`](CONTRIBUTING.md) has the ground rules (they are the
+repository's own rules, enforced by CI rather than reviewers' memory), and
+[`SECURITY.md`](SECURITY.md) says how to report the finding that matters most
+here: any way past the confirmation gate.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
