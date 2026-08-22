@@ -32,6 +32,19 @@ test.describe('the confirmation card', () => {
     const card = page.locator('#card');
     await expect(card).toBeVisible();
 
+    // Focus moves onto the card when it appears — the next keystroke decides an
+    // irreversible write, so a keyboard or screen-reader user must land on the
+    // question rather than have to hunt for it.
+    await expect(card).toBeFocused();
+
+    // The transcript is a log live region: replies are announced, not silent.
+    await expect(page.locator('#turns')).toHaveAttribute('role', 'log');
+
+    // Nothing is left mid-flight once the reply lands: the thinking indicator
+    // is gone and the composer is usable again.
+    await expect(page.locator('#turns li.thinking')).toHaveCount(0);
+    await expect(page.locator('#send')).toBeEnabled();
+
     // The clock is pinned to Tuesday 2026-08-11, so "today and tomorrow" is
     // exactly this range and exactly two working days — the same arithmetic
     // hap-001 asserts from inside the trace, now visible through the glass.
@@ -99,6 +112,10 @@ test.describe('the confirmation card', () => {
     // The card is consumed either way: a second "yes" must have nothing left
     // to say yes to.
     await expect(page.locator('#card')).toBeHidden();
+
+    // The decision consumed the element that held focus; focus is handed back
+    // to the composer rather than dropped on the page body.
+    await expect(page.locator('#message')).toBeFocused();
 
     // And the world is untouched. The mock write mutates nothing by design —
     // so the sharper check is that the turn never even reached a write, which
@@ -169,6 +186,22 @@ test.describe('the banner', () => {
     await expect(page.locator('#banner')).toHaveText(
       'No model is configured. Replies are written by the deterministic composer.',
     );
+  });
+
+  test('applying an access code answers next to the field, not with silence', async ({ page }) => {
+    await page.goto('/');
+    await page.click('.unlock summary');
+
+    // Enter in the field applies it — the same reflex the composer honours —
+    // and the answer lands where the person is looking. On this deployment no
+    // model is configured, so the honest answer is that the code cannot help;
+    // what the test pins is that pressing Apply is never answered with nothing.
+    await page.fill('#code', 'not-the-code');
+    await page.press('#code', 'Enter');
+
+    const status = page.locator('#unlock-status');
+    await expect(status).toBeVisible();
+    await expect(status).toContainText('Not unlocked.');
   });
 });
 

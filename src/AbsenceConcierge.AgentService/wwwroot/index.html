@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Absence Concierge — the confirmation gate, live</title>
 <meta name="description" content="An HR agent that resolves dates, drafts a time-off request, and stops for an explicit human confirmation before writing anything.">
+<meta name="theme-color" content="#fbfbfc" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#14161b" media="(prefers-color-scheme: dark)">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'%3E%3Crect width='512' height='512' rx='116' fill='%230B0D11'/%3E%3Cg stroke-linecap='round' fill='none'%3E%3Cpath d='M112 158h152M112 354h152' stroke='%236D7584' stroke-width='34'/%3E%3Cpath d='M112 256h152M368 256h32' stroke='%23E8B04B' stroke-width='34'/%3E%3Cpath d='M316 120v96M316 296v96' stroke='%23E8B04B' stroke-width='36'/%3E%3C/g%3E%3C/svg%3E">
 <link rel="stylesheet" href="app.css">
 </head>
@@ -27,14 +29,21 @@
   <p id="banner" class="banner" role="status">Checking which composer is answering…</p>
 
   <section class="transcript" aria-label="Conversation">
-    <ol id="turns"></ol>
+    <!-- role="log" makes the transcript a polite live region: a screen reader
+         hears each reply when it arrives, without stealing focus from the
+         composer. The thinking indicator is aria-hidden so the region only
+         announces sentences, never the ellipsis that precedes them. -->
+    <ol id="turns" role="log"></ol>
 
     <!-- The one interaction on this page. It is a card and not a sentence because
          the draft is structured data on the wire: the dates, the day count and the
          excluded days come from the same values the trace recorded, so what a human
          approves is what the agent is holding rather than a re-parse of its prose. -->
-    <div id="card" class="card" hidden>
-      <h2>Confirm this request</h2>
+    <!-- tabindex="-1" lets the script move focus here when the card appears —
+         the one moment on this page where focus must move, because the next
+         keystroke decides whether an irreversible write happens. -->
+    <div id="card" class="card" role="group" aria-labelledby="card-title" tabindex="-1" hidden>
+      <h2 id="card-title">Confirm this request</h2>
       <dl>
         <div><dt>Leave type</dt><dd id="card-type"></dd></div>
         <div><dt>Dates</dt><dd id="card-dates"></dd></div>
@@ -58,8 +67,8 @@
 
   <form id="composer" autocomplete="off">
     <label for="message">Say something</label>
-    <input id="message" name="message" type="text" maxlength="1000"
-           placeholder="I'm sick today and probably tomorrow">
+    <input id="message" name="message" type="text" maxlength="1000" required
+           enterkeyhint="send" placeholder="I'm sick today and probably tomorrow">
     <button id="send" type="submit" class="primary">Send</button>
   </form>
 
@@ -79,14 +88,22 @@
       was submitted: it runs after every step has already decided, and its output is
       discarded if it drifts from the grounded reply.
     </p>
-    <label for="code">Access code</label>
-    <input id="code" name="code" type="password" autocomplete="off">
-    <button id="unlock" type="button">Apply</button>
+    <form id="unlock-form">
+      <label for="code">Access code</label>
+      <input id="code" name="code" type="password" autocomplete="off">
+      <button id="unlock" type="submit">Apply</button>
+    </form>
+    <!-- The answer lands here as well as in the banner: the banner is at the top
+         of the page, and the person who just pressed Apply is at the bottom. -->
+    <p id="unlock-status" class="status" role="status" hidden></p>
   </details>
 
   <footer>
     <p>
-      Source, specification, 32 eval scenarios and the findings:
+      <!-- No scenario count here, deliberately: this page once said "32" while
+           the suite held 35. Counts live in docs/FINDINGS.md, where they are
+           recomputed — a number copied into prose goes stale on the next commit. -->
+      Source, the specification, the eval scenarios and the findings:
       <a href="https://github.com/konradcinkusz/agent-eval-bench">github.com/konradcinkusz/agent-eval-bench</a>
     </p>
   </footer>
