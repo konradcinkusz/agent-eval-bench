@@ -147,7 +147,7 @@ projektu. Większą połową jest specyfikacja zachowań napisana przed agentem,
 zestaw 35 scenariuszy w pięciu klasach, dwuwarstwowy zestaw testów
 (deterministyczne asercje na śladzie wykonania plus kalibrowany sędzia LLM),
 bramki CI, które twardo blokują naruszenia warunków i porównują zachowanie z
-zapisanym baseline'em, oraz raport z ustaleniami wskazujący dwanaście
+zapisanym baseline'em, oraz raport z ustaleniami wskazujący czternaście
 defektów, jakie zestaw testów faktycznie wyłapał -- siedem z nich w samym
 narzędziu pomiarowym albo w specyfikacji, a nie w agencie. Wszystko działa
 domyślnie bez żadnych credentiali, a każdy element, który nie został jeszcze
@@ -949,7 +949,7 @@ Gdy wszystkie pary wpadają w jedną kategorię, kappa jest raportowana jako \te
 
 Istnieje czterdzieści pięć etykiet na 21 scenariuszach. Z zapasem spełniają pierwsze trzy warunki. Zostały napisane przez oceniającego będącego \emph{modelem AI} --- model z innej rodziny niż sędzia, pracujący na tych samych wyrenderowanych transkrypcjach względem tych samych zakotwiczeń --- a standard wdrażany przez to repozytorium mówi ,,człowiek''. Bramka liczbowa jest zatem traktowana jako konieczna, lecz niewystarczająca, a czwarty warunek trzyma bramkę zamkniętą. Certyfikowanie sędziego etykietami wytworzonymi przez model to żółwie aż do samego dna, a właściwą reakcją jest powiedzenie tego w raporcie, a nie pozwolenie, by przekroczony próg sugerował coś, czego nie ma.
 
-Przebieg nie poszedł na marne. Wykonany zanim gdziekolwiek jakikolwiek sędzia wytworzył choć jedną ocenę, sam akt ręcznego etykietowania względem zakotwiczeń wydobył trzy z dwunastu defektów: \finding{F-9}, że zakotwiczenia ugruntowania nie mają odpowiedzi dla danych o świecie, które ślad streszcza, ale których dosłownie nie niesie --- to niejednoznaczność w przyrządzie pomiarowym, nie w agencie; \finding{F-10}, że kompozytor odpowiada osobie mówiącej po hiszpańsku po angielsku; oraz \finding{F-11}, że odpowiedzi degradacyjne wypowiadają swoje kluczowe zdanie dwukrotnie. Trzy defekty znalezione przez sam protokół, przy wyłączonym sędzim. To argument za protokołem niezależny od tego, czy sędzia kiedykolwiek zadziała.
+Przebieg nie poszedł na marne. Wykonany zanim gdziekolwiek jakikolwiek sędzia wytworzył choć jedną ocenę, sam akt ręcznego etykietowania względem zakotwiczeń wydobył trzy z czternastu defektów: \finding{F-9}, że zakotwiczenia ugruntowania nie mają odpowiedzi dla danych o świecie, które ślad streszcza, ale których dosłownie nie niesie --- to niejednoznaczność w przyrządzie pomiarowym, nie w agencie; \finding{F-10}, że kompozytor odpowiada osobie mówiącej po hiszpańsku po angielsku; oraz \finding{F-11}, że odpowiedzi degradacyjne wypowiadają swoje kluczowe zdanie dwukrotnie. Trzy defekty znalezione przez sam protokół, przy wyłączonym sędzim. To argument za protokołem niezależny od tego, czy sędzia kiedykolwiek zadziała.
 
 \subsection{Dowód, że przyrząd pomiarowy potrafi zawieść}
 
@@ -1245,8 +1245,8 @@ Ten wiersz zamyka pierwsza autoryzowana tura wobec żywego serwera z maszyny dew
 \section{Ustalenia: co przyrząd pomiarowy rzeczywiście wychwycił}
 \label{sec:ustalenia}
 
-Odnotowano dwanaście defektów. Siedem z nich tkwiło w przyrządzie pomiarowym albo
-w specyfikacji, a nie w agencie, i \textbf{ani jeden z tych dwunastu nie został
+Odnotowano czternaście defektów. Siedem z nich tkwiło w przyrządzie pomiarowym albo
+w specyfikacji, a nie w agencie, i \textbf{ani jeden z tych czternastu nie został
 znaleziony dzięki temu, że zestaw testów przeszedł lub oblał podczas uruchomienia
 przeciwko agentowi}. To zdanie jest uczciwym podsumowaniem dotychczasowego zwrotu
 z projektu: dostarczona wartość wzięła się stąd, że specyfikacja i przyrząd nie
@@ -1279,11 +1279,13 @@ Walidator napisany w zupełnie innym celu & F-7 \\
 Czerwony build & F-6, F-8 \\
 Przebieg etykietowania kalibracyjnego, przeprowadzony zanim jakikolwiek sędzia cokolwiek ocenił & F-9, F-10, F-11 \\
 Robienie screenshota do pliku README & F-12 \\
+Czytanie magazynu tokenów z myślą o współbieżności & F-13 \\
+Czytanie ścieżki błędu orkiestratora & F-14 \\
 \midrule
 Uruchomienie zestawu testów przeciwko agentowi i odczytanie wyniku & \textcolor{accentred}{\textbf{żadne}} \\
 \bottomrule
 \end{tabularx}
-\caption{Pochodzenie dwunastu ustaleń. Liczy się ostatni wiersz: dotychczasowy plon przyrządu wziął się z jego budowy, atakowania go i oglądania jego wyników ludzkim okiem --- nigdy z jego własnego werdyktu ,,przeszedł/oblał'' wydanego na agenta.}
+\caption{Pochodzenie czternastu ustaleń. Liczy się ostatni wiersz: dotychczasowy plon przyrządu wziął się z jego budowy, atakowania go i oglądania jego wyników ludzkim okiem --- nigdy z jego własnego werdyktu ,,przeszedł/oblał'' wydanego na agenta.}
 \label{tab:provenance}
 \end{table}
 
@@ -1312,9 +1314,11 @@ F-9 & Zakotwiczenia rubryki ugruntowania nie mają odpowiedzi na dane o świecie
 F-10 & Deterministyczny kompozytor odpowiedzi odpowiada osobie mówiącej po hiszpańsku po angielsku & \textcolor{accentorange}{Średnia} \\
 F-11 & Odpowiedzi degradacyjne podają swoje kluczowe zdanie dwukrotnie & \textcolor{darkgray}{Niska} \\
 F-12 & Karta potwierdzenia informowała osobę zatwierdzającą, że wymagane jest zaświadczenie lekarskie, choć nie było & \textcolor{accentred}{\textbf{Wysoka}} \\
+F-13 & Wyścig przy zatwierdzaniu mógł wskrzesić zrealizowany token potwierdzenia i autoryzować drugi zapis & \textcolor{accentred}{\textbf{Wysoka}} \\
+F-14 & Tura, która rzuciła wyjątek przed zapisaniem wyniku, raportowała ,,completed'' i odpowiadała ,,That is done.'' & \textcolor{accentred}{\textbf{Wysoka}} \\
 \bottomrule
 \end{tabularx}
-\caption{Dwanaście odnotowanych ustaleń. Siedem --- F-2, F-3, F-4, F-5, F-6, F-8, F-9 --- to defekty przyrządu pomiarowego lub specyfikacji, a nie agenta.}
+\caption{Czternaście odnotowanych ustaleń. Siedem --- F-2, F-3, F-4, F-5, F-6, F-8, F-9 --- to defekty przyrządu pomiarowego lub specyfikacji, a nie agenta.}
 \label{tab:findings}
 \end{table}
 
@@ -1668,7 +1672,7 @@ został wychwycony przez \texttt{adv-001}, a wariant wykonujący instrukcję zaw
 w wyniku narzędzia --- przez \texttt{adv-003}.
 
 \textbf{P2 --- czy taki przyrząd zarabia na swoje utrzymanie?} Tak, a teza jest
-mocniejsza niż zielona odznaka, bo zbudowano ją z porażek. Odnotowano dwanaście
+mocniejsza niż zielona odznaka, bo zbudowano ją z porażek. Odnotowano czternaście
 defektów, siedem z nich w przyrządzie pomiarowym lub w specyfikacji, a nie w
 agencie, i żadnego z nich nie wytworzył sam fakt, że zestaw testów przeszedł bez
 zarzutu. Zestaw, który zawsze tylko przechodził, wykazał, że potrafi przejść.

@@ -89,7 +89,7 @@ steps.
 | [`DIAGRAMS.md`](DIAGRAMS.md) | The whole system as 22 diagrams — architecture, user flows, the eval loop, delivery |
 | [`dokumentacja.pl.html`](dokumentacja.pl.html) 🇵🇱 | The complete technical documentation, 26 sections in 7 parts |
 | [`index.html`](index.html) / [`index.pl.html`](index.pl.html) 🇵🇱 | The one-pagers — the argument, for a first-time reader |
-| [`FINDINGS.md`](FINDINGS.md) | What the suite actually caught: twelve defects, seven of them in the instrument |
+| [`FINDINGS.md`](FINDINGS.md) | What the suite actually caught: fourteen defects, seven of them in the instrument |
 | [`CALIBRATION.md`](CALIBRATION.md) | Why a judge must agree with a human before it may block anything |
 | [`PRODUCTION.md`](PRODUCTION.md) | What changes when this runs somewhere real, and what silently stops working |
 | [`DEVIATIONS.md`](DEVIATIONS.md) | Where this repository knowingly departs from the standards it is measured against |

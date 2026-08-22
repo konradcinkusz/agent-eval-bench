@@ -63,7 +63,7 @@ that goes stale on the next commit.
 
 ## 2. What it caught
 
-Twelve defects. Seven of them were in the measuring instrument or the
+Fourteen defects. Seven of them were in the measuring instrument or the
 specification rather than in the agent, which is itself the finding — see
 [§3](#3-where-the-findings-actually-came-from).
 
@@ -81,6 +81,8 @@ specification rather than in the agent, which is itself the finding — see
 | F-10 | The composer answers a Spanish speaker in English | The calibration labelling pass | 10 | Medium — every fact right, the register wrong for the fixture's own audience |
 | F-11 | The degradation replies say their key sentence twice | The calibration labelling pass | 10 | Low |
 | F-12 | The card told approvers a certificate was needed when none was — `hidden` rows were not hidden | Taking the README screenshot | 10 | **High** — false information on the one surface a human approves from |
+| F-13 | A racing approval could resurrect a redeemed confirmation token, authorising a second write | Reading the store with concurrency in mind | post-10 | **High** — C-6's last enforcement layer had a race in it |
+| F-14 | A turn that threw before any outcome was recorded reported `completed`, and the reply said "That is done." | Reading the orchestrator's failure path | post-10 | **High** — a fabricated success, the answer §7 forbids by name |
 
 ### F-9, F-10, F-11 — what labelling caught before the judge ever ran
 
@@ -115,6 +117,45 @@ change — the suite gained the two `toBeHidden()` assertions first and went red
 then `[hidden] { display: none !important; }` made the attribute win over any
 display the stylesheet gives a row. The lesson is E2E-ACCEPTANCE-TESTING.md §2's,
 one layer up: asserting what IS shown proves nothing about what is not.
+
+### F-13 — a racing approval could resurrect a redeemed token
+
+`InMemoryConfirmationTokenStore.Approve` was a read followed by an indexer
+write: fetch the entry, write it back with `Approved = true`. Between those two
+steps a concurrent `TryRedeem` could remove the token and authorise the one
+write it is for — and the write-back would then **re-insert** the token,
+approved, ready to authorise a second. Nothing above the store serialises turns:
+two approve requests for one conversation are two parallel HTTP calls, so the
+interleaving is a race anybody can enter, not a hypothetical.
+
+The store's own documentation is what makes this F-13 rather than a nit: it
+calls itself "the second enforcement layer", the reason C-6 is "a property of
+the boundary rather than of the agent's restraint". A boundary that holds
+except under concurrency is precisely the kind of claim this repository exists
+to hold to a number. The fix is a compare-and-swap (`TryUpdate`), which refuses
+to insert — once a token is removed, it stays removed — and the regression test
+races an approval against a redemption five thousand times and asserts the
+token never comes back. Found by reading, not by the suite: no scenario drives
+two turns concurrently, which §5 now has to own as a named blind spot.
+
+### F-14 — a turn that threw said "That is done."
+
+The outcome recorder's default is `completed` — documented as "the happy path
+after a write", a turn that ran to the end with no step claiming anything. The
+orchestrator's catch block reached the same default from the opposite state: a
+step throws, the catch records `termination_reason=error` and nothing else, and
+`Resolve()` — with nothing recorded — returns `completed`. The composer's
+completion branch, finding no write result, falls back to the literal sentence
+**"That is done."** A crashed turn produced a cheerful confirmation of
+something that did not happen, which is the one answer
+[SPEC §7](SPEC.md#7-degradation-contract) rule 4 forbids by name.
+
+No scenario ever saw it because no scenario makes the agent throw — fault
+injection at the tool seam produces error *results*, which the steps handle;
+the catch path is for bugs, and the suite does not manufacture bugs in the
+agent itself. Fixed in 1.6.0: the catch records `degraded` with a `pipeline`
+degradation note naming the failed step, unless the write had already
+succeeded — in which case `completed` stands, because then it is the truth.
 
 ### F-1 — `at_least: 1` let one confirmation authorise two writes
 
@@ -227,6 +268,10 @@ reads as discipline in a commit log and as drift in aggregate. It is the second.
 | The mutation pass | F-1 |
 | A validator written for something else | F-7 |
 | A red build | F-6, F-8 |
+| The calibration labelling pass | F-9, F-10, F-11 |
+| Taking the README screenshot | F-12 |
+| Reading the code with concurrency in mind | F-13 |
+| Reading the orchestrator's failure path | F-14 |
 | Running the suite against the agent | **none** |
 
 **Not one defect was found by the suite passing or failing on the agent.** The
@@ -312,6 +357,15 @@ scenarios are enough to show the `DateExpression` set did not need a new case,
 not enough to show it never will ([SPEC §9](SPEC.md#9-assumptions),
 [D-7](DEVIATIONS.md)). The composer answers all of them in English — that is
 F-10, found by labelling and not yet fixed.
+
+**Every scenario is single-threaded.** The runner executes one turn at a time,
+so no scenario can express "two approve requests arrive at once" — which is how
+F-13, a race that could resurrect a spent confirmation token, lived in the one
+store whose whole job is to be the layer that does not depend on callers
+behaving. It was found by reading, is pinned by a unit test that races the
+interleaving five thousand times, and the class of defect remains outside what
+the scenario schema can state: a concurrency clause in the schema would need
+the runner to schedule turns, not just order them.
 
 ## 6. What this cost
 
