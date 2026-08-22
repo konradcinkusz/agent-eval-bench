@@ -112,9 +112,13 @@ export default defineConfig({
 
       // Reachable ceilings. The turn cap is exercised by one test with its own
       // conversation; the per-minute window is spent by the LAST test, so its
-      // number only needs to be small enough to cross in a burst.
+      // number only needs to be small enough to cross in a burst — and large
+      // enough that the rest of the suite cannot cross it by accident. The
+      // ordinary tests spend ~28 limited requests worst-case; 30 left a
+      // two-request margin before an unrelated test started failing with a
+      // 429 it never asserts, and 40 is still well inside the burst's 60.
       Demo__MaxTurnsPerConversation: '8',
-      Demo__RequestsPerMinutePerClient: '30',
+      Demo__RequestsPerMinutePerClient: '40',
     },
   },
 });

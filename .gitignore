@@ -163,3 +163,7 @@ tmp/
 
 # Playwright e2e output (tests/e2e/)
 tests/e2e/.artifacts/
+
+# Playwright's default output directory, in case a suite runs without the
+# repo's config (which points its own outputDir at tests/e2e/.artifacts/).
+test-results/

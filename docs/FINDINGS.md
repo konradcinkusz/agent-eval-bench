@@ -332,8 +332,12 @@ against — and it is printed as *undefined* rather than 1.0, because two raters
 agreeing on a single category is the easiest way to fake a calibration.
 
 **The MCP adapter has never run against a live server** ([D-10](DEVIATIONS.md)).
-Its behaviour above the SDK seam is tested against a fake session; its payload
-mapping is not tested at all, and that is the part most likely to be wrong.
+Its behaviour above the SDK seam is tested against a fake session, and its
+payload mapping has unit tests (`McpPayloadTests.cs`, nine cases) — but those
+tests assert expectations written from the same protocol documentation the
+mapping was written from. Whether a live server *accepts* the payloads is
+exactly what a fake session cannot say, and that remains the part most likely
+to be wrong.
 
 **Layer 1's language understanding is graded against a rule-based interpreter
 written by the author of the corpus it is scored on** ([D-7](DEVIATIONS.md)). A
