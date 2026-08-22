@@ -158,6 +158,14 @@ public static class AgentDiagnostics
         public const string ConflictCheck = "conflict_check";
         public const string EmployeeLookup = "employee_lookup";
         public const string Submission = "submission";
+
+        /// <summary>
+        /// The agent itself threw, outside any tool seam. For this phase alone the
+        /// <c>degradation.tool</c> attribute names the step that failed, because
+        /// there is no tool to name and "which step" is the fact a trace reader
+        /// needs first.
+        /// </summary>
+        public const string Pipeline = "pipeline";
     }
 
     /// <summary>The kinds of SPEC §2.2's <c>degradation.kind</c> table.</summary>

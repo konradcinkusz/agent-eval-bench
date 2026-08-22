@@ -70,6 +70,7 @@ public sealed class AgentOrchestrator(
 
         var termination = AgentDiagnostics.TerminationReasons.Decision;
         var stepsRun = 0;
+        IAgentStep? running = null;
 
         try
         {
@@ -89,6 +90,7 @@ public sealed class AgentOrchestrator(
                 }
 
                 stepsRun++;
+                running = step;
 
                 if (await RunStepAsync(step, context, cancellationToken).ConfigureAwait(false) == StepSignal.Stop)
                 {
@@ -109,6 +111,21 @@ public sealed class AgentOrchestrator(
             termination = AgentDiagnostics.TerminationReasons.Error;
             activity?.SetStatus(ActivityStatusCode.Error, exception.Message);
             logger.LogError(exception, "Agent turn {TurnIndex} failed.", turnIndex);
+
+            // Without this, a turn that threw before any step recorded an outcome
+            // resolved to the default — completed — and the composer answered
+            // "That is done." to a request that did nothing (F-14). The guard on
+            // WriteResult keeps the note honest in the other direction: if the
+            // write had already happened when a later step threw, "completed" is
+            // the truth and a sentence claiming nothing was submitted would not be.
+            if (context.WriteResult is null)
+            {
+                context.Outcomes.Record(AgentDiagnostics.TurnOutcomes.Degraded);
+                context.NoteDegradation(
+                    AgentDiagnostics.DegradationPhases.Pipeline,
+                    running?.Name ?? "unknown",
+                    AgentDiagnostics.DegradationKinds.Error);
+            }
         }
 #pragma warning restore CA1031
 
