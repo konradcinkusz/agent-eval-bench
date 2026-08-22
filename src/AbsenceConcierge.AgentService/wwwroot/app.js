@@ -252,6 +252,14 @@ document.getElementById('unlock-form').addEventListener('submit', async (event) 
 
   try {
     const response = await fetch('/demo/status', { headers: headers() });
+
+    if (response.status === 429) {
+      // Reached, refused: the status route shares the turn route's window, and
+      // "could not be reached" would blame the network for a ceiling.
+      status.textContent = 'Too many requests from this address — wait a minute and press Apply again.';
+      return;
+    }
+
     if (!response.ok) throw new Error(String(response.status));
 
     const mode = await response.json();
