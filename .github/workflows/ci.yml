@@ -17,7 +17,7 @@ name: CI
 #                  ┌──────────────────────────┐
 #                  │ build-test               │  dotnet build + dotnet test
 #                  │   ├─ unit tests          │
-#                  │   ├─ Layer 1, 32 evals   │  constraints 100%, behaviours
+#                  │   ├─ Layer 1 eval suite  │  constraints 100%, behaviours
 #                  │   │                      │  vs baseline, mutation pass
 #                  │   ├─ Layer 2, judged     │  thresholds; no key ⇒ SKIPPED
 #                  │   └─ sticky PR comment   │  the diff, not a dashboard
