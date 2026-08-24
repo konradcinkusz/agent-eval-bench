@@ -20,8 +20,8 @@
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <AspireVersion>13.4.6</AspireVersion>
-    <OpenTelemetryVersion>1.17.0</OpenTelemetryVersion>
+    <AspireVersion>13.5.2</AspireVersion>
+    <OpenTelemetryVersion>1.18.0</OpenTelemetryVersion>
     <ExtensionsVersion>10.9.0</ExtensionsVersion>
   </PropertyGroup>
 
@@ -44,7 +44,7 @@
       Azure Monitor is one place they can land, and the eval harness goes on
       reading them in-process with nothing configured. Verified on nuget.org.
     -->
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.4.0" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.3" />
   </ItemGroup>
 
   <ItemGroup Label="Agent service">
