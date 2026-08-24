@@ -13,7 +13,7 @@ namespace AbsenceConcierge.Evals.Reporting;
 ///
 /// <para>
 /// Once, because the suite has a three-minute budget on a pull request and running
-/// thirty-two scenarios per assertion would spend it on repetition. The theory below
+/// the whole corpus per assertion would spend it on repetition. The theory below
 /// then reports one test per scenario, which is what makes a failure readable — a
 /// single test called "the evals pass" tells you nothing except that they did not.
 /// </para>

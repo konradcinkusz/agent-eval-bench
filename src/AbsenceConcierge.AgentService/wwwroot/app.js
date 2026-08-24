@@ -48,6 +48,28 @@ function append(who, text, className) {
   li.scrollIntoView({ block: 'nearest' });
 }
 
+// A turn takes a beat on the deterministic composer and seconds on a live model.
+// The indicator is aria-hidden: the transcript is a live region, and what a screen
+// reader should hear is the reply, not an ellipsis followed by the reply.
+function showThinking() {
+  const li = document.createElement('li');
+  li.className = 'thinking';
+  li.setAttribute('aria-hidden', 'true');
+
+  const label = document.createElement('span');
+  label.className = 'who';
+  label.textContent = 'agent';
+
+  const dots = document.createElement('span');
+  dots.className = 'dots';
+  dots.textContent = '…';
+
+  li.append(label, dots);
+  turns.append(li);
+  li.scrollIntoView({ block: 'nearest' });
+  return li;
+}
+
 function setBanner(mode) {
   banner.textContent = mode.reason;
   banner.classList.toggle('live', Boolean(mode.live));
@@ -91,6 +113,11 @@ function showCard(confirmation, degradations) {
   }
 
   card.hidden = false;
+
+  // Focus moves exactly once on this page: onto the card, when it appears. The
+  // next keystroke decides an irreversible write, so a keyboard or screen-reader
+  // user must land on the question rather than have to hunt for it.
+  card.focus();
 }
 
 function lock(on) {
@@ -102,8 +129,16 @@ function lock(on) {
 
 async function turn(text, decision) {
   if (busy) return;
+  const hadCard = !card.hidden;
   lock(true);
   card.hidden = true;
+
+  const thinking = showThinking();
+
+  // Whether the service actually ruled on this turn. A 429 or an unreachable
+  // service is not a verdict: the draft is still held on the server, and a
+  // card that vanishes anyway leaves nothing to say yes to.
+  let resolved = false;
 
   try {
     const response = await fetch('/agent/turn', {
@@ -116,17 +151,18 @@ async function turn(text, decision) {
       // The service says which ceiling was hit when it can — a conversation at its
       // turn limit and an address sending too fast need different sentences.
       const body = await response.json().catch(() => ({}));
-      append('service', body.error ?? 'Too many requests from this address. Wait a minute and try again.');
+      append('service', body.error ?? 'Too many requests from this address. Wait a minute and try again.', 'error');
       return;
     }
 
     if (!response.ok) {
       const body = await response.json().catch(() => ({}));
-      append('service', body.error ?? `The service answered ${response.status}.`);
+      append('service', body.error ?? `The service answered ${response.status}.`, 'error');
       return;
     }
 
     const { turn: result, mode } = await response.json();
+    resolved = true;
 
     setBanner(mode);
     append('agent', result.reply);
@@ -138,9 +174,23 @@ async function turn(text, decision) {
     // Deliberately not showing the exception. A network error's message is about
     // this browser, not about the agent, and putting it in the transcript reads as
     // something the agent said.
-    append('service', 'The service could not be reached.');
+    append('service', 'The service could not be reached.', 'error');
   } finally {
+    thinking.remove();
     lock(false);
+
+    if (!resolved && hadCard) {
+      // The question comes back, because it was never answered. Focus follows
+      // only for a decision — a failed typed message leaves the person in the
+      // composer, where they were.
+      card.hidden = false;
+      if (decision) card.focus();
+    }
+
+    // A decision consumes the card, and with it whichever button held focus.
+    // Focus that is on a removed-from-view element is focus lost to the page;
+    // the composer is where the conversation continues.
+    if (decision && card.hidden) message.focus();
   }
 }
 
@@ -174,16 +224,64 @@ document.querySelectorAll('button[data-say]').forEach((button) => {
   });
 });
 
-document.getElementById('unlock').addEventListener('click', async () => {
-  accessCode = codeField.value.trim();
-  const response = await fetch('/demo/status', { headers: headers() });
-  if (response.ok) setBanner(await response.json());
+// A form rather than a lone button so Enter in the code field applies it — the
+// same reflex the composer already honours. The answer lands next to the field
+// as well as in the banner: silence after pressing Apply reads as a broken page,
+// and the wrong-code state deserves a sentence where the person is looking.
+document.getElementById('unlock-form').addEventListener('submit', async (event) => {
+  event.preventDefault();
+
+  const status = document.getElementById('unlock-status');
+  const supplied = codeField.value.trim();
+
+  status.hidden = false;
+  status.classList.remove('ok');
+
+  // A header value must be Latin-1, and fetch() throws on anything else —
+  // before any request leaves the browser. Stored unchecked, one emoji in this
+  // field made every later turn die with "could not be reached", which blames
+  // the network for what the keyboard did. Refuse it here, with a sentence,
+  // and leave whatever code was previously applied still standing.
+  if (!/^[\x20-\x7E]*$/.test(supplied)) {
+    status.textContent = 'That is not a code this demo could have issued, so it was not applied.';
+    return;
+  }
+
+  accessCode = supplied;
+  status.textContent = 'Checking…';
+
+  try {
+    const response = await fetch('/demo/status', { headers: headers() });
+
+    if (response.status === 429) {
+      // Reached, refused: the status route shares the turn route's window, and
+      // "could not be reached" would blame the network for a ceiling.
+      status.textContent = 'Too many requests from this address — wait a minute and press Apply again.';
+      return;
+    }
+
+    if (!response.ok) throw new Error(String(response.status));
+
+    const mode = await response.json();
+    setBanner(mode);
+
+    status.classList.toggle('ok', Boolean(mode.live));
+    status.textContent = mode.live
+      ? mode.reason
+      : (accessCode ? `Not unlocked. ${mode.reason}` : mode.reason);
+  } catch {
+    status.textContent = 'The service could not be reached, so the code was not checked.';
+  }
 });
 
 fetch('/demo/status')
   .then((response) => (response.ok ? response.json() : null))
   .then((mode) => {
+    // A non-OK answer falls through to the same sentence as no answer at all:
+    // either way the page cannot know which composer will write, and "Checking…"
+    // left standing forever reads as a page that broke on arrival.
     if (mode) setBanner(mode);
+    else banner.textContent = 'Replies are written by the deterministic composer.';
   })
   .catch(() => {
     banner.textContent = 'Replies are written by the deterministic composer.';

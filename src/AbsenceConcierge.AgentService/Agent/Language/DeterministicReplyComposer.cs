@@ -244,6 +244,13 @@ public sealed class DeterministicReplyComposer : IReplyComposer
         { Phase: AgentDiagnostics.DegradationPhases.Submission } =>
             "The request was not submitted — the system rejected it. Nothing has been booked, so please try again.",
 
+        // F-14's phase. No trailing "nothing has been submitted" here: the
+        // Degraded branch appends that sentence itself when it is true, and a
+        // note that hard-codes it would repeat it — F-11's defect — or, worse,
+        // say it on a turn where a draft summary follows.
+        { Phase: AgentDiagnostics.DegradationPhases.Pipeline } =>
+            "Something went wrong inside the agent on this turn.",
+
         _ => "Something did not work as expected, and nothing has been submitted.",
     };
 

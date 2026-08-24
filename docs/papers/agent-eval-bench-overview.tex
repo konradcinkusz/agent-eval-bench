@@ -157,7 +157,7 @@ the agent, 35 scenarios stored as data, the production agent replayed
 in-process on every change, an execution trace as the thing graded, and a
 merge gate. Around that sit a two-layer harness --- deterministic trace
 assertions plus a rubric-anchored LLM judge --- and a findings report naming
-twelve defects, seven of them in the measuring instrument or the specification
+fourteen defects, seven of them in the measuring instrument or the specification
 rather than in the agent. Everything runs with zero credentials by default,
 and every part not yet exercised against something live is recorded as an
 open, dated fact rather than implied by a passing build.
@@ -1178,7 +1178,7 @@ When every pair falls in a single category, kappa is reported as \textbf{undefin
 
 Forty-five labels across 21 scenarios exist. They clear the first three conditions comfortably. They were written by an \emph{AI} rater --- a different model family from the judge, working from the same rendered transcripts against the same anchors --- and the standard this repository implements says ``human''. So the numeric gate is treated as necessary but not sufficient, and the fourth condition holds the gate shut. Certifying a judge with labels produced by a model is turtles all the way down, and the correct response is to say so in the report rather than to let a passing threshold imply something it does not.
 
-The pass was not wasted. Run before any judge had produced a single score anywhere, the act of labelling by hand against the anchors surfaced three of the twelve defects: \finding{F-9}, that the grounding anchors have no answer for world-data the trace summarises but does not literally carry --- an ambiguity in the instrument, not the agent; \finding{F-10}, that the composer answers a Spanish speaker in English; and \finding{F-11}, that degradation replies state their key sentence twice. Three defects found by the protocol itself, with the judge switched off. That is the argument for the protocol independent of whether the judge ever runs.
+The pass was not wasted. Run before any judge had produced a single score anywhere, the act of labelling by hand against the anchors surfaced three of the fourteen defects: \finding{F-9}, that the grounding anchors have no answer for world-data the trace summarises but does not literally carry --- an ambiguity in the instrument, not the agent; \finding{F-10}, that the composer answers a Spanish speaker in English; and \finding{F-11}, that degradation replies state their key sentence twice. Three defects found by the protocol itself, with the judge switched off. That is the argument for the protocol independent of whether the judge ever runs.
 
 \subsection{Proving the instrument can fail}
 
@@ -1474,8 +1474,8 @@ The row closes on the first authorised turn against a live server from a develop
 \section{Findings: what the instrument actually caught}
 \label{sec:findings}
 
-Twelve defects are recorded. Seven of them were in the measuring instrument or
-in the specification rather than in the agent, and \textbf{not one of the twelve
+Fourteen defects are recorded. Seven of them were in the measuring instrument or
+in the specification rather than in the agent, and \textbf{not one of the fourteen
 was found by the suite passing or failing while running against the agent}. That
 sentence is the honest summary of the project's return so far: the value
 delivered came from the specification and the instrument disagreeing with each
@@ -1507,11 +1507,13 @@ A validator written for something else entirely & F-7 \\
 A red build & F-6, F-8 \\
 The calibration labelling pass, run before any judge scored anything & F-9, F-10, F-11 \\
 Taking a screenshot for the README & F-12 \\
+Reading the token store with concurrency in mind & F-13 \\
+Reading the orchestrator's failure path & F-14 \\
 \midrule
 Running the suite against the agent and reading the result & \textcolor{accentred}{\textbf{none}} \\
 \bottomrule
 \end{tabularx}
-\caption{Provenance of the twelve findings. The last row is the one that matters: the instrument's yield to date came from building it, attacking it, and looking at its output with human eyes --- never from its own pass/fail verdict on the agent.}
+\caption{Provenance of the fourteen findings. The last row is the one that matters: the instrument's yield to date came from building it, attacking it, and looking at its output with human eyes --- never from its own pass/fail verdict on the agent.}
 \label{tab:provenance}
 \end{table}
 
@@ -1539,9 +1541,11 @@ F-9 & The grounding rubric's anchors have no answer for world-data that the trac
 F-10 & The deterministic reply composer answers a Spanish speaker in English & \textcolor{accentorange}{Medium} \\
 F-11 & Degradation replies state their key sentence twice & \textcolor{darkgray}{Low} \\
 F-12 & The confirmation card told an approver a medical certificate was required when none was & \textcolor{accentred}{\textbf{High}} \\
+F-13 & A racing approval could resurrect a redeemed confirmation token, authorising a second write & \textcolor{accentred}{\textbf{High}} \\
+F-14 & A turn that threw before recording an outcome reported ``completed'' and replied ``That is done.'' & \textcolor{accentred}{\textbf{High}} \\
 \bottomrule
 \end{tabularx}
-\caption{The twelve recorded findings. Seven --- F-2, F-3, F-4, F-5, F-6, F-8, F-9 --- are defects in the instrument or the specification, not in the agent.}
+\caption{The fourteen recorded findings. Seven --- F-2, F-3, F-4, F-5, F-6, F-8, F-9 --- are defects in the instrument or the specification, not in the agent.}
 \label{tab:findings}
 \end{table}
 
@@ -1874,7 +1878,7 @@ by \texttt{adv-001}, a variant that obeys an instruction inside a tool result
 was caught by \texttt{adv-003}.
 
 \textbf{Q2 --- does an instrument like this earn its keep?} Yes, and the claim
-is stronger than a green badge because it is made from failures. Twelve defects
+is stronger than a green badge because it is made from failures. Fourteen defects
 are recorded, seven of them in the instrument or the specification rather than
 in the agent, and none of them produced by the suite simply running clean. A
 suite that has only ever passed has demonstrated that it can pass. This one was

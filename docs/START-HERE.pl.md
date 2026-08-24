@@ -88,7 +88,7 @@ Zorientowane na zrozumienie. Czytaj, gdy chcesz uzasadnienia, a nie kroków.
 | [`DIAGRAMS.md`](DIAGRAMS.md) 🇬🇧 | Cały system jako 22 diagramy — architektura, przepływy, pętla ewaluacji, dostarczanie |
 | [`dokumentacja.pl.html`](dokumentacja.pl.html) | Pełna dokumentacja techniczna, 26 sekcji w 7 częściach |
 | [`index.pl.html`](index.pl.html) / [`index.html`](index.html) 🇬🇧 | One-pagery — argument, dla czytelnika po raz pierwszy |
-| [`FINDINGS.md`](FINDINGS.md) 🇬🇧 | Co zestaw naprawdę wyłapał: dwanaście defektów, siedem w samym przyrządzie |
+| [`FINDINGS.md`](FINDINGS.md) 🇬🇧 | Co zestaw naprawdę wyłapał: czternaście defektów, siedem w samym przyrządzie |
 | [`CALIBRATION.md`](CALIBRATION.md) 🇬🇧 | Dlaczego sędzia musi zgadzać się z człowiekiem, zanim cokolwiek zablokuje |
 | [`PRODUCTION.md`](PRODUCTION.md) 🇬🇧 | Co się zmienia, gdy to działa naprawdę, i co po cichu przestaje działać |
 | [`DEVIATIONS.md`](DEVIATIONS.md) 🇬🇧 | Gdzie to repozytorium świadomie odchodzi od standardów, którymi jest mierzone |

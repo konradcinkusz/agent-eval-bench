@@ -89,7 +89,7 @@ rubrics, 7 stated refusals); a 35-scenario dataset across five classes, written 
 data; the production agent replayed in-process on every change; an execution trace
 as the thing that gets graded; and a merge gate. Around that sit a two-layer
 harness — deterministic trace assertions plus a rubric-anchored LLM judge — and a
-findings report that names twelve defects, seven of them in the measuring
+findings report that names fourteen defects, seven of them in the measuring
 instrument or the specification rather than in the agent (`FINDINGS.md`).
 
 The submit tool refuses any write without a single-use token that only an explicit
@@ -432,7 +432,7 @@ by an AI rater, not a human one, and the standard this repository implements say
 sufficient**: judge scores are reported and trended today, but gate nothing until
 labels recorded under the repository owner's own handle exist too. That labelling
 pass, run before any judge had ever produced a single score, is what actually
-surfaced three of the twelve defects in `FINDINGS.md` (§9) — evidence that the
+surfaced three of the fourteen defects in `FINDINGS.md` (§9) — evidence that the
 protocol itself, independent of the judge, already found real problems.
 
 ### 7.4 Proving the suite can fail
@@ -488,7 +488,7 @@ the internet.
 
 ## 9. What the evals actually caught
 
-**Twelve defects. Seven of them were in the measuring instrument or the
+**Fourteen defects. Seven of them were in the measuring instrument or the
 specification rather than in the agent — which is itself the finding.** Not one
 was found by the suite simply passing or failing while running against the
 agent; the value delivered came from the specification and the instrument

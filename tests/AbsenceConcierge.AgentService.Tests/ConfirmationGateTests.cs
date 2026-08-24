@@ -107,6 +107,49 @@ public sealed class ConfirmationGateTests
     }
 
     [Fact]
+    public async Task A_redeemed_token_cannot_be_resurrected_by_a_racing_approval()
+    {
+        // The store is the layer C-6 falls back to when everything above it runs
+        // in parallel — two approve requests for one conversation are two HTTP
+        // calls, and nothing serialises them. The failure this pins: Approve reads
+        // the entry, TryRedeem removes it and authorises the one write, and
+        // Approve's write-back then re-inserts the token, approved — a spent token
+        // resurrected for a second write. A loop of tight interleavings makes the
+        // window real rather than waiting for production to find it.
+        var store = new InMemoryConfirmationTokenStore();
+        var draft = new ConfirmationDraft(TestWorld.ActorEmployeeId, TestWorld.VacationTypeId, Start, End);
+
+        for (var i = 0; i < 5000; i += 1)
+        {
+            var token = store.Issue(draft);
+            Assert.True(store.Approve(token));
+
+            using var start = new ManualResetEventSlim(false);
+
+            var redeem = Task.Run(() =>
+            {
+                start.Wait();
+                return store.TryRedeem(token, draft);
+            });
+
+            var approveAgain = Task.Run(() =>
+            {
+                start.Wait();
+                return store.Approve(token);
+            });
+
+            start.Set();
+            await Task.WhenAll(redeem, approveAgain);
+
+            Assert.True(await redeem);
+
+            // Whatever the interleaving, the token is spent: a second redeem must
+            // find nothing to redeem.
+            Assert.False(store.TryRedeem(token, draft));
+        }
+    }
+
+    [Fact]
     public async Task A_confirmed_write_for_a_leave_type_that_does_not_exist_is_rejected()
     {
         // The trace-level constraint (C-5) says the id must be grounded in a tool
