@@ -30,11 +30,17 @@ public static class DisplayText
             return "(unnamed)";
         }
 
+        // `>= 0`, not `> 0`. A break at index 0 — a name that STARTS with "[", "(",
+        // ":" or a newline — used to fall through to the untouched value, so the one
+        // input most obviously constructed to defeat the cut was the one that
+        // bypassed it entirely. Cutting at 0 leaves nothing, which falls to
+        // "(unnamed)" below: a name that is nothing but a structural break has no
+        // displayable part, and saying so is the safe answer.
         var cut = value.IndexOfAny(Breaks);
-        var text = cut > 0 ? value[..cut] : value;
+        var text = cut >= 0 ? value[..cut] : value;
 
         var dash = text.IndexOf(" - ", StringComparison.Ordinal);
-        if (dash > 0)
+        if (dash >= 0)
         {
             text = text[..dash];
         }
