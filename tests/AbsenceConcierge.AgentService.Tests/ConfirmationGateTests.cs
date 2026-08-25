@@ -206,6 +206,49 @@ public sealed class ConfirmationGateTests
     }
 
     [Fact]
+    public void A_rejected_token_is_removed_rather_than_kept_for_the_process_lifetime()
+    {
+        // The store used to drop an entry only on redemption, so a rejected
+        // confirmation, an abandoned card and an evicted conversation each leaked
+        // one until the process died — the one map here with neither a bound nor an
+        // expiry, in the component the docs elevate most, while the conversation and
+        // client-quota stores are both explicitly bounded. `rejected` is a terminal
+        // state in the A6 state machine and the store never reached it.
+        var store = new InMemoryConfirmationTokenStore();
+        var draft = new ConfirmationDraft(TestWorld.ActorEmployeeId, TestWorld.VacationTypeId, Start, End);
+
+        var token = store.Issue(draft);
+        store.Approve(token);
+        store.Reject(token);
+
+        // Gone, and gone in the safe direction: an approved-then-rejected token
+        // must not authorise anything afterwards.
+        Assert.False(store.TryRedeem(token, draft));
+        Assert.False(store.Approve(token));
+    }
+
+    [Fact]
+    public void Past_the_cap_the_oldest_token_is_evicted_and_fails_closed()
+    {
+        // A bound, because a public endpoint plus an unbounded map is a memory
+        // exhaustion nobody has to be clever to cause. Eviction fails closed: the
+        // write is refused and the visitor is re-asked, never written for.
+        var store = new InMemoryConfirmationTokenStore(capacity: 2);
+        var draft = new ConfirmationDraft(TestWorld.ActorEmployeeId, TestWorld.VacationTypeId, Start, End);
+
+        var oldest = store.Issue(draft);
+        store.Approve(oldest);
+
+        var second = store.Issue(draft);
+        store.Approve(second);
+        var third = store.Issue(draft);
+        store.Approve(third);
+
+        Assert.False(store.TryRedeem(oldest, draft));
+        Assert.True(store.TryRedeem(third, draft));
+    }
+
+    [Fact]
     public async Task The_gate_is_checked_before_the_arguments_are_validated()
     {
         // Ordering matters for diagnosis: an unconfirmed write must fail for being

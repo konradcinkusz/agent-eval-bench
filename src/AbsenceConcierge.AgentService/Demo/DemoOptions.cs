@@ -87,6 +87,15 @@ public sealed class DemoOptions
     public int MaxConversations { get; set; } = 10_000;
 
     /// <summary>
+    /// Confirmation tokens held at once. Past it, the oldest issued is evicted, and
+    /// an evicted token fails closed — the write is refused and the visitor is
+    /// re-asked, which is the safe direction. Bounded for the same reason as the
+    /// conversation cap above: this store had neither a bound nor an expiry, in the
+    /// component the documentation elevates most.
+    /// </summary>
+    public int MaxConfirmationTokens { get; set; } = 10_000;
+
+    /// <summary>
     /// Turns one conversation may carry. A human books leave in a handful; past
     /// this the endpoint answers 429 and suggests a fresh conversation. Bounds the
     /// per-conversation state (retrieved leave-type ids accumulate per turn).

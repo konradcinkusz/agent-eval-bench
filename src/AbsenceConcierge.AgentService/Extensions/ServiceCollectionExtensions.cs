@@ -51,7 +51,12 @@ public static class ServiceCollectionExtensions
         services.Configure<McpOptions>(configuration.GetSection(McpOptions.SectionName));
 
         services.TryAddSingleton(TimeProvider.System);
-        services.AddSingleton<IConfirmationTokenStore, InMemoryConfirmationTokenStore>();
+        // Bounded from the same options the conversation cap uses: one pending draft
+        // per conversation is the natural ceiling, and an unbounded map behind a
+        // public endpoint is a memory exhaustion nobody has to be clever to cause.
+        services.AddSingleton<IConfirmationTokenStore>(sp =>
+            new InMemoryConfirmationTokenStore(
+                sp.GetRequiredService<IOptions<DemoOptions>>().Value.MaxConfirmationTokens));
 
         services.AddSingleton<IFixtureLoader>(sp => new FixtureLoader(
             sp.GetRequiredService<ILogger<FixtureLoader>>(),
