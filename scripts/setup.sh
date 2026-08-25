@@ -34,6 +34,7 @@ dim()   { printf '\033[0;90m    %s\033[0m\n' "$*"; }
 step()  { printf '\n\033[1;36m%s\033[0m\n' "$*"; }
 
 MISSING_REQUIRED=0
+MISSING_SCANNER=0
 
 bold "agent-eval-bench — first-time setup"
 dim  "$(git rev-parse --short HEAD 2>/dev/null || echo 'no commits yet') on $(git rev-parse --abbrev-ref HEAD 2>/dev/null || echo '?')"
@@ -95,10 +96,11 @@ elif [ "${DOCKER_USABLE}" = true ]; then
   yellow "gitleaks not installed — the pre-commit hook will use the Docker image."
   dim "Slower per commit. Install the binary to avoid it: https://github.com/gitleaks/gitleaks#installing"
 else
-  red "No secret scanner: neither gitleaks nor a running Docker daemon is available."
-  dim "The pre-commit hook REFUSES to commit without one, by design (P5)."
-  dim "Install: https://github.com/gitleaks/gitleaks#installing"
-  MISSING_REQUIRED=1
+  yellow "No secret scanner: neither gitleaks nor a running Docker daemon is available."
+  dim "The pre-commit hook REFUSES to commit without one, by design (P5) — so you"
+  dim "can build, test, run the agent and run the evals, but not commit, until one"
+  dim "exists. Install: https://github.com/gitleaks/gitleaks#installing"
+  MISSING_SCANNER=1
 fi
 
 if command -v node >/dev/null 2>&1; then
@@ -106,6 +108,16 @@ if command -v node >/dev/null 2>&1; then
 else
   yellow "node not found — the markdown lint job cannot be run locally."
   dim "CI still runs it. Only affects: npm run lint:md"
+fi
+
+# A missing scanner blocks COMMITTING, not building — and the front door promises
+# the .NET SDK is the only hard prerequisite. This used to be fatal, so on an
+# ordinary fresh laptop with dotnet and node the quickstart's very first command
+# exited 1 before installing hooks or creating the local secret store: the setup
+# script refuting the README two paragraphs above it. `--check` is the committer's
+# gate and stays strict; an interactive run degrades and says what will be refused.
+if [ "${CHECK_ONLY}" = true ] && [ "${MISSING_SCANNER}" -ne 0 ]; then
+  MISSING_REQUIRED=1
 fi
 
 if [ "${MISSING_REQUIRED}" -ne 0 ]; then
@@ -120,6 +132,11 @@ if [ "${CHECK_ONLY}" = true ]; then
   exit 0
 fi
 
+if [ "${MISSING_SCANNER}" -ne 0 ]; then
+  printf '\n'
+  yellow "Continuing without a secret scanner. Commits WILL be refused until one exists."
+fi
+
 # ============================================================================
 step "2. Git hooks"
 # ============================================================================
@@ -129,9 +146,14 @@ step "2. Git hooks"
 step "3. Local secret store"
 # ============================================================================
 # Secrets never live in the working tree as files that a build could copy. Two
-# stores are used, in this order of preference:
-#   • dotnet user-secrets — per-project, outside the repository, for local runs
-#   • .env (gitignored)   — for shell tooling and container runs
+# stores are used, and they are NOT interchangeable:
+#   • dotnet user-secrets — per-project, outside the repository. This is the store
+#     .NET reads by itself, and the one every how-to in docs/how-to/ uses.
+#   • .env (gitignored)   — for shell tooling and container runs. .NET does not
+#     read it natively and no script here sources it, so a value set only in .env
+#     reaches nothing. Saying so is the point: secrets.env.example describes "the
+#     journey of any value, once: .env → environment variable → IConfiguration
+#     key", and the first arrow is the shell's job, not this script's.
 if [ -f .env ]; then
   green ".env already exists — leaving it alone."
 else
@@ -139,20 +161,26 @@ else
   green "Created .env from secrets.env.example (gitignored)."
 fi
 dim "Every variable in it is OPTIONAL. An empty .env is a valid, working setup."
+dim "Nothing reads .env on your behalf. To load it into a shell first:"
+dim "  set -a; . ./.env; set +a"
 
 # ============================================================================
 step "4. Optional — live LLM provider  (needed for: live-model mode)"
 # ============================================================================
 yellow "Skipped unless you set it up yourself."
-dim "Without it: the agent runs on recorded model responses (Llm__Provider=Replay)."
-dim "            Deterministic, free, and what the Layer-1 evals use anyway."
-dim "With it:    set Llm__Provider, Llm__Endpoint, Llm__Deployment, Llm__ApiKey in .env."
+dim "Without it: the deterministic composer writes the reply (Llm:Provider=None)."
+dim "            Free, and what the Layer-1 evals run on anyway."
+dim "With it, in the store .NET actually reads:"
+dim "  dotnet user-secrets --project src/AbsenceConcierge.AgentService set Llm:Provider AzureOpenAI"
+dim "  ...and likewise Llm:Endpoint, Llm:Model and Llm:ApiKey."
+dim "The key is Llm:Model — the Azure DEPLOYMENT NAME. There is no Llm:Deployment."
+dim "Setting these in .env alone is a silent no-op: nothing loads that file."
 dim "What degrades if you skip it: nothing in the demo or in Layer 1."
 
 # ============================================================================
 step "5. Optional — LLM judge  (needed for: eval Layer 2)"
 # ============================================================================
-yellow "Skipped unless you set Judge__ApiKey."
+yellow "Skipped unless you set Llm:ApiKey, Llm:Endpoint and Llm:JudgeModel."
 dim "Without it: the Layer-2 job reports SKIPPED with a reason — never green."
 dim "With it:    rubric-anchored scoring against evals/rubrics/, judge model pinned."
 

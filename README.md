@@ -146,6 +146,13 @@ documentation and scenario lint. `scripts/setup.sh` checks both and names what i
 missing with a link to it, rather than failing later with a stack trace. Nothing else:
 no account, no container registry, no cloud subscription.
 
+One thing to know before you *commit* rather than run: the pre-commit hook refuses
+without a secret scanner, so contributing also wants **gitleaks** (or a running
+Docker daemon, which the hook falls back to). Running, building and evaluating do
+not. `./scripts/setup.sh --check` is the strict form that treats a missing scanner
+as a failure; a plain run degrades, installs the hooks anyway, and says what will be
+refused.
+
 ```bash
 git clone https://github.com/konradcinkusz/agent-eval-bench.git
 cd agent-eval-bench
