@@ -22,12 +22,11 @@ namespace AbsenceConcierge.AgentService.Workforce;
 /// </summary>
 public static class WorkforceToolsFactory
 {
-    /// <param name="zone">
-    /// The actor's timezone — the same one <see cref="Agent.Time.AgentClock"/> is
-    /// given. The mock enforces the past-date rule a second time, and a second layer
-    /// computing "today" in a different frame from the first is two answers to one
-    /// question on one request.
-    /// </param>
+    // `zone` is the actor's timezone — the same one AgentClock is given. The mock
+    // enforces the past-date rule a second time, and a second layer computing
+    // "today" in a different frame from the first is two answers to one question on
+    // one request. A plain comment rather than a <param> tag: documenting one
+    // parameter makes CS1573 demand all six, and the other five say what they are.
     public static IWorkforceTools Build(
         WorkforceWorld world,
         IConfirmationTokenStore tokens,

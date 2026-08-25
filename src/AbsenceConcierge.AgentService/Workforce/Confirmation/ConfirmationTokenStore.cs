@@ -57,11 +57,12 @@ public interface IConfirmationTokenStore
 /// endpoint plus an unbounded map is a memory exhaustion anybody can cause.
 /// </para>
 /// <para>
-/// Two changes close it: <see cref="Reject"/> removes the entry when a human
-/// declines, which gives the store a terminal state other than a successful write;
-/// and past the cap the oldest issued token is evicted. Eviction fails closed — an evicted token redeems as false, so the write
-/// is refused and the visitor is re-asked. A lost draft is a re-ask, never a write,
-/// which is the same direction the conversation store's eviction fails in.
+/// Two changes close it. <see cref="IConfirmationTokenStore.Reject"/> removes the
+/// entry when a human declines, which gives the store a terminal state other than a
+/// successful write. And past the cap the oldest issued token is evicted, which
+/// fails closed: an evicted token redeems as false, so the write is refused and the
+/// visitor is re-asked. A lost draft is a re-ask, never a write — the same direction
+/// the conversation store's eviction fails in.
 /// </para>
 /// </summary>
 public sealed class InMemoryConfirmationTokenStore(int? capacity = null) : IConfirmationTokenStore
