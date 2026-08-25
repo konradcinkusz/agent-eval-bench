@@ -63,6 +63,8 @@ public sealed class MutationTests
         var scenarios = BrokenAgents.All.Select(variant => variant.ScenarioId).ToList();
 
         Assert.Equal(scenarios.Count, scenarios.Distinct(StringComparer.Ordinal).Count());
-        Assert.Equal(4, BrokenAgents.All.Count);
+        // Seven: C-1 and C-5 through C-7 from the first pass, plus C-2, C-3 and C-4,
+        // whose assertions had never been shown able to catch anything.
+        Assert.Equal(7, BrokenAgents.All.Count);
     }
 }
