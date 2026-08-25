@@ -1,5 +1,7 @@
+using AbsenceConcierge.AgentService.Agent.Time;
 using AbsenceConcierge.AgentService.Workforce;
 using AbsenceConcierge.AgentService.Workforce.Confirmation;
+using AbsenceConcierge.AgentService.Workforce.Mock;
 
 namespace AbsenceConcierge.AgentService.Tests;
 
@@ -174,6 +176,33 @@ public sealed class ConfirmationGateTests
             new TimeOffRequest(TestWorld.VacationTypeId, past, past, token));
 
         Assert.Equal(ToolOutcome.Rejected, result.Outcome);
+    }
+
+    [Fact]
+    public async Task Today_at_the_boundary_is_the_actors_day_not_UTCs()
+    {
+        // 19:30 on 15 January in New York is 00:30 on the 16th in UTC. The boundary
+        // computed "today" as DateOnly.FromDateTime(GetUtcNow().UtcDateTime), so it
+        // read the 16th and rejected a request for the 15th as "in the past" — while
+        // the agent, resolving through AgentClock in the actor's zone, had just
+        // resolved that same date as today. Two enforcement layers, one request, two
+        // answers to what day it is. AgentOptions' own documentation says these
+        // dates are never in UTC, and B-1 makes the zone a property of the spec.
+        var newYork = AgentClock.ZoneFor("America/New_York");
+        var eveningInNewYork = new DateTimeOffset(2026, 1, 16, 0, 30, 0, TimeSpan.Zero);
+
+        var world = TestWorld.Load();
+        var tokens = new InMemoryConfirmationTokenStore();
+        var tools = new MockWorkforceTools(
+            world, tokens, new FixedTimeProvider(eveningInNewYork), newYork);
+
+        var today = new DateOnly(2026, 1, 15);
+        var token = TestWorld.ApprovedToken(tokens, TestWorld.VacationTypeId, today, today);
+
+        var result = await tools.RequestTimeOffAsync(
+            new TimeOffRequest(TestWorld.VacationTypeId, today, today, token));
+
+        Assert.Equal(ToolOutcome.Success, result.Outcome);
     }
 
     [Fact]

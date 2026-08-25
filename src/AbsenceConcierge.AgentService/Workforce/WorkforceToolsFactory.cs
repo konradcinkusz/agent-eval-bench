@@ -22,13 +22,20 @@ namespace AbsenceConcierge.AgentService.Workforce;
 /// </summary>
 public static class WorkforceToolsFactory
 {
+    /// <param name="zone">
+    /// The actor's timezone — the same one <see cref="Agent.Time.AgentClock"/> is
+    /// given. The mock enforces the past-date rule a second time, and a second layer
+    /// computing "today" in a different frame from the first is two answers to one
+    /// question on one request.
+    /// </param>
     public static IWorkforceTools Build(
         WorkforceWorld world,
         IConfirmationTokenStore tokens,
         TimeProvider timeProvider,
+        TimeZoneInfo zone,
         int maxReadAttempts,
         Func<IWorkforceTools, IWorkforceTools>? decorate = null) =>
-        Instrument(new MockWorkforceTools(world, tokens, timeProvider), maxReadAttempts, decorate);
+        Instrument(new MockWorkforceTools(world, tokens, timeProvider, zone), maxReadAttempts, decorate);
 
     /// <summary>
     /// The same chain over a backend that is not the mock.

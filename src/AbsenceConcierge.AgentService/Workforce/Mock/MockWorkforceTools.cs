@@ -22,7 +22,8 @@ namespace AbsenceConcierge.AgentService.Workforce.Mock;
 public sealed class MockWorkforceTools(
     WorkforceWorld world,
     IConfirmationTokenStore confirmationTokens,
-    TimeProvider timeProvider) : IWorkforceTools
+    TimeProvider timeProvider,
+    TimeZoneInfo zone) : IWorkforceTools
 {
     private int _requestSequence;
 
@@ -122,7 +123,14 @@ public sealed class MockWorkforceTools(
                 "The end date is before the start date."));
         }
 
-        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+        // The actor's calendar date, not UTC's. This read `GetUtcNow().UtcDateTime`
+        // while the agent resolves and validates every date through AgentClock.Today
+        // in the configured zone — so the two enforcement layers disagreed about
+        // what day it was on the same request. West of UTC that rejected a same-day
+        // request made in the evening as "in the past"; east of UTC it was a day too
+        // lenient. AgentOptions' own documentation says these dates are never in
+        // UTC, and B-1 makes the zone a property of the spec.
+        var today = DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(timeProvider.GetUtcNow(), zone).DateTime);
         if (request.StartDate < today)
         {
             return ValueTask.FromResult(ToolResult<TimeOffResult>.Rejected(

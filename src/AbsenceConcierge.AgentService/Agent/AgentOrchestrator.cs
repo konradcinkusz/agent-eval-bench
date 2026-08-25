@@ -151,19 +151,35 @@ public sealed class AgentOrchestrator(
     }
 
     /// <summary>
-    /// The draft, structured, and only on the turn that stopped at the gate.
+    /// The draft, structured, on every turn that is still holding one and still
+    /// waiting for an answer about it.
     ///
     /// <para>
-    /// Gated on the outcome rather than on <c>context.Draft is not null</c>. A draft
-    /// exists on the turn that executes the write too, and returning a card there
-    /// would let a client render "approve this?" beside a request that has already
-    /// been submitted — which is the confirmation gate turned into decoration.
+    /// This was keyed to the <c>confirmation_pending</c> outcome, which withheld the
+    /// card from the one path §7 rule 5 exists to describe. A read that fails before
+    /// the gate annotates the draft rather than cancelling it, and outcome
+    /// precedence then resolves that turn as <c>degraded</c> (deg-002). The composer
+    /// asks <b>"Shall I submit it?"</b> on the condition below — a draft held and not
+    /// yet approved — so the page rendered the question with no buttons to answer
+    /// it. Typing "yes" is not an answer either: the decision travels as the typed
+    /// field the buttons produce, so the visitor was asked something they had no way
+    /// to say. The eval suite could not see it, because deg-002 asserts trace events
+    /// and the card is part of the HTTP result.
+    /// </para>
+    /// <para>
+    /// Both withholdings that were right are kept. <see cref="AgentTurnContext.Draft"/>
+    /// is still set on the turn that executes the write, and a card there would let
+    /// a client render "approve this?" beside a request already submitted —
+    /// <c>ApprovedDraft</c> separates those. And the rejection turn sets the draft
+    /// back on the context with no approval, so it is excluded by outcome: offering
+    /// the buttons again to someone who has just pressed one of them is the same
+    /// defect pointing the other way.
     /// </para>
     /// </summary>
     private static ConfirmationCard? CardFor(AgentTurnContext context, string outcome)
     {
-        if (!string.Equals(outcome, AgentDiagnostics.TurnOutcomes.ConfirmationPending, StringComparison.Ordinal)
-            || context.Draft is not { } draft)
+        if (context is not { Draft: { } draft, ApprovedDraft: null }
+            || string.Equals(outcome, AgentDiagnostics.TurnOutcomes.Cancelled, StringComparison.Ordinal))
         {
             return null;
         }
@@ -201,23 +217,7 @@ public sealed class AgentOrchestrator(
         return await step.ExecuteAsync(context, cancellationToken).ConfigureAwait(false);
     }
 
-    private TimeZoneInfo ResolveZone()
-    {
-        try
-        {
-            return TimeZoneInfo.FindSystemTimeZoneById(_options.Timezone);
-        }
-        catch (TimeZoneNotFoundException)
-        {
-            // Deliberately loud and deliberately fatal. Falling back to UTC would
-            // resolve every date in the wrong frame while every test still passed,
-            // which is the exact defect InvariantGlobalization=false exists to
-            // prevent (Directory.Build.props).
-            throw new InvalidOperationException(
-                $"Timezone '{_options.Timezone}' is not available on this machine. The container "
-                + "must carry tzdata; see Directory.Build.props for why globalization is not trimmed.");
-        }
-    }
+    private TimeZoneInfo ResolveZone() => AgentClock.ZoneFor(_options.Timezone);
 }
 
 /// <summary>Who the agent is, as the definition file names it.</summary>

@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Globalization;
 using AbsenceConcierge.AgentService.Agent;
+using AbsenceConcierge.AgentService.Agent.Time;
 using AbsenceConcierge.AgentService.Extensions;
 using AbsenceConcierge.AgentService.Telemetry;
 using AbsenceConcierge.AgentService.Workforce;
@@ -144,6 +145,12 @@ public static class ScenarioRunner
             world,
             tokens,
             time,
+            // The scenario's pinned zone, which is also the one AgentClock is given.
+            // The tool boundary enforces the past-date rule a second time, and it
+            // used to compute "today" in UTC — so a scenario pinned west of UTC
+            // could have its agent resolve a date as today and its tool boundary
+            // reject the same date as past, on one request.
+            AgentClock.ZoneFor(sp.GetRequiredService<IOptions<AgentOptions>>().Value.Timezone),
             sp.GetRequiredService<IOptions<AgentOptions>>().Value.MaxReadAttempts,
             scenario.Fixture.ToolBehaviour.Count == 0
                 ? null
