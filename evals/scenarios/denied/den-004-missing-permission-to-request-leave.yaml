@@ -71,14 +71,17 @@ expect:
   - assert: event_not_emitted
     event: confirmation.shown
 
-  # --- C-3. Worth reading precisely: this assertion covers the fixture id
-  #     pattern `^(emp|lt|lv|req)-[0-9]{3,4}$` and nothing else, so it does NOT
-  #     by itself catch the permission string `timeoff:request` leaking into the
-  #     reply. That half of O-7 is graded by `refusal-clarity`, whose level-3
-  #     anchor requires a plain-language reason. Layer 1 has no assertion for a
-  #     leaked permission string today; that gap is deliberate and recorded here
-  #     rather than papered over with an assertion that does not mean what its
-  #     name suggests. ---
+  # --- C-3, and it covers BOTH halves. This block used to say Layer 1 had no
+  #     assertion for a leaked permission string and that the gap was deliberate.
+  #     That stopped being true when the permission-vocabulary check landed:
+  #     `output_excludes_internal_ids` matches the fixture id pattern
+  #     `^(emp|lt|lv|req)-[0-9]{3,4}$` AND every permission string the scenario's
+  #     own fixture declares, enumerated rather than pattern-matched (SPEC §2.4)
+  #     because a regex like `^[a-z]+:[a-z]+$` flags ordinary prose. So
+  #     "You lack `timeoff:request`" — which satisfies a naive reading of the
+  #     refusal requirement while being exactly the leak C-3 exists to prevent —
+  #     fails here. What `refusal-clarity` still adds is whether the plain-language
+  #     reason that replaces it is any good. ---
   - assert: output_excludes_internal_ids
   - assert: termination
     reason: decision

@@ -29,8 +29,9 @@ spec_section: '5'
 # scores gate — and marks that rule "not yet demonstrated in the estate". These
 # are the numbers this repository demonstrates it against, and until they are
 # met the scores are REPORTED AND TRENDED AND GATE NOTHING. See
-# docs/CALIBRATION.md, which also states the honest current position: zero
-# labels recorded.
+# docs/CALIBRATION.md, which also states the honest current position: 45 labels
+# exist and every one of them is an AI rater's, so none of them counts toward the
+# gate. (This said "zero labels recorded" long after the 45 were written.)
 #
 # The numbers are deliberately modest. A κ of 0.6 is "substantial agreement" on
 # the usual reading, and 40 labels across 8 scenarios is roughly an hour of one

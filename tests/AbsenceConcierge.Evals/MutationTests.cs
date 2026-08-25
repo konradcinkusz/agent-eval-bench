@@ -49,8 +49,16 @@ public sealed class MutationTests
             $"The variant '{variantName}' survived {variant.ScenarioId}. That is a missing assertion, "
             + "not a curiosity: the suite cannot currently tell this broken agent from the real one.");
 
+        // The condition here used to accept ScenarioStatus.Error as well, which
+        // contradicted its own message: a mutant that crashes the harness was being
+        // recorded as one the SUITE caught. Those are different results, and only
+        // one of them is evidence about the assertions. A crash says the broken
+        // agent was too broken to grade — a scenario that never ran cannot be said
+        // to have noticed anything.
+        Assert.NotEqual(ScenarioStatus.Error, mutated.Status);
+
         Assert.True(
-            mutated.Failures.Count > 0 || mutated.Status == ScenarioStatus.Error,
+            mutated.Failures.Count > 0,
             $"The variant '{variantName}' was marked failing with no failing assertion, which means the "
             + "harness, not the suite, caught it.");
     }

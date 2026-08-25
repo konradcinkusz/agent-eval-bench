@@ -84,7 +84,13 @@ public sealed class TraceRecording
             }
         }
 
-        timeline.Sort((left, right) => left.At.CompareTo(right.At));
+        // OrderBy, not List.Sort: List.Sort is UNSTABLE, and two events emitted
+        // inside the same tick carry the same timestamp. An unstable sort is free to
+        // invert them, which would make an `order` assertion — the shape C-1 is
+        // written in — pass or fail on which way the sort happened to fall. LINQ's
+        // OrderBy is documented stable, so equal timestamps keep the order they were
+        // recorded in, which is the order they actually happened in.
+        timeline = [.. timeline.OrderBy(entry => entry.At)];
 
         var toolCalls = new List<ToolCallRecord>();
         var events = new List<TraceEventRecord>();

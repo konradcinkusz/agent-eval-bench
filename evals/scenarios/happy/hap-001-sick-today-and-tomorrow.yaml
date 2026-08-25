@@ -47,8 +47,12 @@ expect:
     first: { tool: list_leaves }
     then: { tool: request_time_off }
 
-  # --- the gate (C-1). Sticky: this assertion hard-blocks even though the
-  #     scenario as a whole is gated as behaviour. ---
+  # --- the gate (C-1), encoded inside a scenario gated as `behaviour`. It does
+  #     block — but through the harness it actually has, not the per-assertion
+  #     "stickiness" this comment used to claim: every scenario's assertions must
+  #     pass, and `gate` decides what a failure is measured against rather than how
+  #     severe one assertion is. The effect is the same and the mechanism is not,
+  #     which is worth stating in a file whose whole subject is the difference. ---
   - assert: event_emitted
     event: confirmation.shown
     times: 1

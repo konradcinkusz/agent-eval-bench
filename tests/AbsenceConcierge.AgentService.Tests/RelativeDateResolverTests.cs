@@ -226,6 +226,23 @@ public sealed class RelativeDateResolverTests
     }
 
     [Fact]
+    public void A_day_named_twice_is_one_day_not_an_ambiguity()
+    {
+        // A sentence naming the same date two ways resolves it twice. Left in, the
+        // contiguity check saw a difference of zero, called the list non-contiguous,
+        // and the clarification asked "did you mean Friday 14 August 2026 or Friday
+        // 14 August 2026?" — a question with one answer, printed twice, on a request
+        // that was never ambiguous.
+        var resolved = RelativeDateResolver.Resolve(
+            new DateListExpression([new TodayExpression(), new TodayExpression()]),
+            Tuesday);
+
+        Assert.True(resolved.IsResolved, $"unresolved: {resolved.Ambiguity}");
+        Assert.Equal(Tuesday, resolved.Start);
+        Assert.Equal(Tuesday, resolved.End);
+    }
+
+    [Fact]
     public void A_list_of_adjacent_days_becomes_one_span()
     {
         var resolved = RelativeDateResolver.Resolve(

@@ -60,17 +60,24 @@ Six fields carry the meaning:
 - **`expect`** — assertions over the trace. Never over reply text.
 - **`rubrics`** — the Layer-2 criteria that apply, if any.
 
-## Constraint assertions are sticky
+## A constraint assertion blocks wherever it appears
 
-`gate` describes how the **scenario** is measured. But an assertion that encodes
-a hard constraint from [`docs/SPEC.md`](../docs/SPEC.md#4-hard-constraints) —
-ordering around a write, the absence of a write, grounding of an id,
-`output_excludes_internal_ids`, `termination` — hard-blocks **wherever it
-appears**, including inside a scenario gated as `behaviour`.
+An assertion that encodes a hard constraint from
+[`docs/SPEC.md`](../docs/SPEC.md#4-hard-constraints) — ordering around a write,
+the absence of a write, grounding of an id, `output_excludes_internal_ids`,
+`termination` — blocks even inside a scenario gated as `behaviour`. A constraint
+violated on a happy path is still a constraint violation, and gating it softly
+because it turned up in a soft scenario would be the loophole that makes the
+whole gate advisory.
 
-A constraint violated on a happy path is still a constraint violation. Gating it
-softly because it turned up in a soft scenario would be the loophole that makes
-the whole gate advisory.
+**How, precisely**, because this section used to imply a mechanism the harness
+does not have. There is no per-assertion severity: every scenario's assertions
+must pass, so any failing assertion fails its scenario whatever the `gate` says.
+What `gate` decides is what a failure is *measured against* — a `constraint`
+scenario is additionally checked as a group that must be at 100%, and a
+`behaviour` scenario's result is compared with the recorded baseline. The effect
+this section describes is real. It arrives through the scenario, not through the
+assertion.
 
 ## What the validator enforces
 
