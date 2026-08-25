@@ -154,6 +154,16 @@ jobs:
             exit "$status"
           done
 
+          # A trapped error on the third attempt used to leave the loop with a
+          # nonzero status that nothing checked: the `az deployment sub show`
+          # below then returned the failed deployment's own record — outputs
+          # null — and the job wired Fly and the evals environment against those
+          # nulls while reporting green. Exhausting the attempts is a failure.
+          if [ "$status" -ne 0 ]; then
+            echo "::error::Deployment failed after 3 attempts. The tail of the output is above."
+            exit "$status"
+          fi
+
           outputs=$(az deployment sub show --name "agent-eval-bench-azure" --query properties.outputs -o json)
 
           {
@@ -244,7 +254,7 @@ jobs:
           retention-days: 90
 
       # ── Wire the Fly demo, when its token is here to use ────────────────────
-      - uses: superfly/flyctl-actions/setup-flyctl@master
+      - uses: superfly/flyctl-actions/setup-flyctl@ed8efb33836e8b2096c7fd3ba1c8afe303ebbff1 # 1.6
 
       - name: Set the demo app's secrets on Fly
         env:

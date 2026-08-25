@@ -269,6 +269,27 @@ public sealed class NightlyWorkflowTests
     }
 
     [Fact]
+    public void A_missing_credential_fails_the_nightly_rather_than_warning()
+    {
+        // GitHub notifies on scheduled-workflow *failure* only, and nobody opens the
+        // summary of a green nightly — so a warning that still passes is exactly how
+        // "the keyed run" stays keyless indefinitely with nobody told, which is the
+        // silent state this workflow exists to prevent. The branch that reports the
+        // missing credential has to end the run red. This asserts the file's text,
+        // which is all a test can see; it cannot know whether the secret is set.
+        var workflow = Workflow;
+
+        var step = workflow.IndexOf("Report the missing credential", StringComparison.Ordinal);
+        Assert.True(step >= 0, "The nightly no longer has a step reporting the missing credential.");
+
+        var nextStep = workflow.IndexOf("      - name:", step, StringComparison.Ordinal);
+        var branch = nextStep < 0 ? workflow[step..] : workflow[step..nextStep];
+
+        Assert.Contains("exit 1", branch, StringComparison.Ordinal);
+        Assert.DoesNotContain("::warning::", branch, StringComparison.Ordinal);
+    }
+
+    [Fact]
     public void The_nightly_workflow_holds_no_secret_of_its_own()
     {
         // Every credential arrives from an environment secret. A value in the file is

@@ -2,7 +2,7 @@
   "name": "agent-eval-bench-tooling",
   "version": "0.0.0",
   "private": true,
-  "description": "Repository tooling only \u2014 documentation lint and link checking. This is a .NET repository; nothing here ships in any container or is referenced by any project. It exists so the lint tool has a pinned version that Dependabot tracks, instead of an npx invocation nobody updates.",
+  "description": "Repository tooling only — documentation lint and link checking. This is a .NET repository; nothing here ships in any container or is referenced by any project. It exists so the lint tool has a pinned version that Dependabot tracks, instead of an npx invocation nobody updates.",
   "license": "MIT",
   "type": "module",
   "engines": {
@@ -20,6 +20,7 @@
     "test:e2e": "playwright test --config tests/e2e/playwright.config.mjs"
   },
   "devDependencies": {
+    "@mermaid-js/mermaid-cli": "11.16.0",
     "@playwright/test": "^1.62.1",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",

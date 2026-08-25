@@ -100,8 +100,20 @@ jobs:
             echo "This is reported rather than skipped silently. A Layer 2 that never runs"
             echo "anywhere is documentation that lies (\`docs/SPEC.md\` §8.5), and the whole"
             echo "purpose of this workflow is to be the place it does run."
+            echo
+            echo "**This run fails deliberately.** A warning on a green scheduled run is not"
+            echo "a report anyone receives, so the missing credential is raised as the failure"
+            echo "notification GitHub actually sends."
           } >> "$GITHUB_STEP_SUMMARY"
-          echo "::warning::Nightly Layer 2 did not run — the judge has no credential."
+          echo "::error::Nightly Layer 2 did not run — the judge has no credential."
+
+          # GitHub notifies on scheduled-workflow *failure* only, and nobody opens the
+          # summary of a green nightly. Warning-and-passing let a never-set or
+          # rotated-away key make "the keyed run" keyless indefinitely with no signal
+          # — the exact silent state this workflow exists to prevent, and the state
+          # D-9's closure depends on not being in. production-loop.yml already fails
+          # on its missing credential; the nightly was the odd one out.
+          exit 1
 
       - name: Layer 2, full set
         if: steps.judge.outputs.configured == 'true'
