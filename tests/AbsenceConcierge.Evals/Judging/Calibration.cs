@@ -11,7 +11,8 @@ namespace AbsenceConcierge.Evals.Judging;
 /// <param name="Date">When, ISO-8601.</param>
 public sealed record HumanLabel(string Scenario, string Rubric, int Score, string Labeller, string Date);
 
-/// <param name="Labels">How many human labels exist at all.</param>
+/// <param name="Labels">How many labels exist at all, whoever wrote them.</param>
+/// <param name="HumanLabels">How many of those were written by the configured owner. The gate counts these.</param>
 /// <param name="Scenarios">How many distinct scenarios they cover.</param>
 /// <param name="Compared">Pairs where a human label and a judge score exist for the same scenario and criterion.</param>
 /// <param name="ExactAgreements">Pairs where the two scores are identical.</param>
@@ -21,6 +22,7 @@ public sealed record HumanLabel(string Scenario, string Rubric, int Score, strin
 /// <param name="Reason">Why, in a sentence a reader can act on.</param>
 public sealed record CalibrationReport(
     int Labels,
+    int HumanLabels,
     int Scenarios,
     int Compared,
     int ExactAgreements,
@@ -149,9 +151,23 @@ public static class Calibration
 
         var reasons = new List<string>();
 
-        if (all.Count < gate.MinimumLabels)
+        // WHO wrote the labels, not merely how many there are. Without this the
+        // judge could be certified by labels an AI wrote — which is what the corpus
+        // currently holds, and what CALIBRATION.md, FINDINGS §5 and SPEC §5 all say
+        // cannot certify it. Counting only the owner's handle fails closed: an empty
+        // handle means nobody human has labelled, and the gate stays shut.
+        var human = string.IsNullOrWhiteSpace(gate.OwnerHandle)
+            ? 0
+            : all.Count(label =>
+                string.Equals(label.Labeller, gate.OwnerHandle, StringComparison.OrdinalIgnoreCase));
+
+        if (human < gate.MinimumLabels)
         {
-            reasons.Add($"{all.Count} of {gate.MinimumLabels} labels");
+            reasons.Add(string.IsNullOrWhiteSpace(gate.OwnerHandle)
+                ? $"0 of {gate.MinimumLabels} human labels — no owner handle is configured, "
+                  + $"so none of the {all.Count} label(s) present count as human"
+                : $"{human} of {gate.MinimumLabels} labels under the owner's handle "
+                  + $"'{gate.OwnerHandle}' ({all.Count} label(s) exist in total)");
         }
 
         if (scenarios < gate.MinimumScenarios)
@@ -174,6 +190,7 @@ public static class Calibration
 
         return new CalibrationReport(
             all.Count,
+            human,
             scenarios,
             pairs.Count,
             exact,

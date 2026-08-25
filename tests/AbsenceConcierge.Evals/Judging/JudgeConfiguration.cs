@@ -41,6 +41,29 @@ public sealed class CalibrationGate
     public int MinimumLabels { get; set; } = 40;
     public int MinimumScenarios { get; set; } = 8;
     public double MinimumKappa { get; set; } = 0.6;
+
+    /// <summary>
+    /// The handle whose labels count as human. Empty — the default — means no human
+    /// has labelled anything, and the gate cannot open.
+    ///
+    /// <para>
+    /// This exists because the gate counted labels and never asked who wrote them.
+    /// <c>CALIBRATION.md</c> says the gate "additionally waits for human labels under
+    /// the owner's own handle" and FINDINGS §5 repeats that the label/scenario/κ
+    /// thresholds are "necessary but no longer sufficient" — but
+    /// <see cref="HumanLabel.Labeller"/> was deserialised and read nowhere. All 45
+    /// labels in <c>evals/calibration/labels.jsonl</c> carry an AI handle and already
+    /// clear the first two conditions, so the first keyed run computing κ ≥ 0.6
+    /// against them would have certified the judge with the very labels three
+    /// documents say cannot certify it.
+    /// </para>
+    /// <para>
+    /// An allow-list rather than a deny-list of model names, deliberately: a list of
+    /// known-AI handles goes stale the day a new model ships, and going stale here
+    /// means opening the gate. Naming the one handle that counts fails closed.
+    /// </para>
+    /// </summary>
+    public string OwnerHandle { get; set; } = string.Empty;
 }
 
 /// <summary>

@@ -41,6 +41,14 @@ calibration:
   minimum_labels: 40
   minimum_scenarios: 8
   minimum_kappa: 0.6
+  # WHOSE labels count. Empty means no human has labelled anything, which is the
+  # honest current position: all 45 labels in evals/calibration/labels.jsonl were
+  # written by an AI rater and say so. The gate used to count labels without ever
+  # reading who wrote them, so those 45 already cleared the two conditions above —
+  # and the first keyed run computing κ ≥ 0.6 against them would have certified the
+  # judge with the very labels CALIBRATION.md, FINDINGS §5 and SPEC §5 all say
+  # cannot certify it. Set this to the owner's handle when they have labelled.
+  owner_handle: ''
 
 rubrics:
   grounding:
