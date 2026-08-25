@@ -48,7 +48,12 @@ test.describe('the confirmation card', () => {
     // The clock is pinned to Tuesday 2026-08-11, so "today and tomorrow" is
     // exactly this range and exactly two working days — the same arithmetic
     // hap-001 asserts from inside the trace, now visible through the glass.
-    await expect(page.locator('#card-dates')).toHaveText('2026-08-11 to 2026-08-12');
+    // The readable form leads and the exact value stays beside it. A range shown
+    // only as "2026-08-11 to 2026-08-12" is the precise answer to a question no
+    // approver is asking: what B-11 requires them to check is WHICH days, and
+    // that is a weekday, not a hyphenated number.
+    await expect(page.locator('#card-dates')).toContainText('Tue 11 – Wed 12 Aug 2026');
+    await expect(page.locator('#card-dates .iso')).toHaveText('2026-08-11 → 2026-08-12');
     await expect(page.locator('#card-days')).toHaveText('2');
     await expect(page.locator('#card-type')).toContainText('Sick leave');
     await expect(page.locator('#card-conflicts')).toHaveText('Checked — nothing overlaps');
@@ -143,6 +148,81 @@ test.describe('the confirmation card', () => {
     expect(turn.reply.length).toBeGreaterThan(0);
 
     await expect(page.locator('#card')).toBeHidden();
+  });
+});
+
+// Until these existed, only the HIDDEN state of the card's optional rows was
+// asserted through a browser. That is half a check: `hidden` being honoured on a
+// draft with nothing to say proves the attribute works, and proves nothing about
+// whether the row renders anything worth reading when there IS something to say —
+// which is the state an approver actually has to act on. F-12 was found in the
+// hidden direction; nothing was watching the other one.
+test.describe('the card when the optional rows have something to say', () => {
+  test('a span across a weekend shows which days were not counted', async ({ page }) => {
+    await page.goto('/');
+
+    // Fri 14 to Tue 18 August, said on Tuesday the 11th. Three working days, and
+    // the two the agent did not count are the Saturday and the Sunday. The 15th is
+    // also Assumption in this fixture, and it is reported as a weekend rather than
+    // a holiday — a holiday landing on a non-working day costs the employee
+    // nothing, and reporting it as an excluded holiday would imply it did.
+    await send(page, 'I need the 14th to the 18th of August off as vacation');
+
+    await expect(page.locator('#card')).toBeVisible();
+    await expect(page.locator('#card-dates')).toContainText('Fri 14 – Tue 18 Aug 2026');
+    await expect(page.locator('#card-days')).toHaveText('3');
+
+    const excluded = page.locator('#card-excluded-row');
+    await expect(excluded).toBeVisible();
+    await expect(page.locator('#card-excluded')).toHaveText(
+      'Sat 15 Aug — weekend, Sun 16 Aug — weekend');
+
+    // B-11 in one assertion: the weekday is on the page, so the person approving
+    // can check the exclusion instead of taking the count on trust.
+    await expect(page.locator('#card-attachment-row')).toBeHidden();
+  });
+
+  test('sick leave past the threshold shows the certificate requirement', async ({ page }) => {
+    await page.goto('/');
+
+    // Five working days of sick leave against a fixture threshold of three, so
+    // B-14's requirement is surfaced BEFORE the approval rather than after it: a
+    // user who approves and only then learns of a document they cannot produce has
+    // been handed a request that will bounce. Monday the 24th deliberately, not the
+    // 17th: the 17th-to-21st week overlaps the booking on 20-22 August, and any
+    // overlap is a question rather than a draft (hap-004).
+    await send(page, "I've been signed off sick from the 24th to the 28th of August");
+
+    await expect(page.locator('#card')).toBeVisible();
+    await expect(page.locator('#card-dates')).toContainText('Mon 24 – Fri 28 Aug 2026');
+    await expect(page.locator('#card-days')).toHaveText('5');
+
+    const attachment = page.locator('#card-attachment-row');
+    await expect(attachment).toBeVisible();
+    await expect(page.locator('#card-attachment')).toContainText('medical certificate');
+
+    // No weekend inside Monday-to-Friday, so the other optional row stays absent.
+    await expect(page.locator('#card-excluded-row')).toBeHidden();
+  });
+
+  test('an overlapping request is a question with no card to approve', async ({ page }) => {
+    await page.goto('/');
+
+    // lv-3001 sits on 20-22 August for the acting user, so this collides with it.
+    // hap-004's failure worth catching is the polite one: an agent that spots the
+    // overlap, mentions it in a subordinate clause and drafts the request anyway,
+    // leaving a human to notice the double booking in a card they are about to
+    // approve. This is that assertion from the visitor's side — the question is on
+    // the page AND there is nothing to press.
+    await send(page, "I'd like the 20th to the 21st of August off as vacation");
+
+    await expect(page.locator('#turns li').last()).toContainText('overlaps');
+    await expect(page.locator('#card')).toBeHidden();
+
+    // Which is also why the card's `conflicts_found` wording is unreachable today:
+    // ConflictCheckStep stops the turn on any overlap, so no draft exists to carry
+    // that state. The branch is kept as a defensive rendering, not asserted as a
+    // behaviour the agent can currently produce.
   });
 });
 
@@ -242,8 +322,10 @@ test.describe('the response itself', () => {
   test('past the per-minute window the service answers 429 and the page says so', async ({ page }) => {
     await page.goto('/');
 
-    // Burst until the fixed window closes. The ceiling is 30/minute in this
-    // harness and the suite runs serially, so the loop always crosses it.
+    // Burst until the fixed window closes. The loop is bounded above the
+    // harness ceiling and the suite runs serially, so it always crosses it —
+    // deliberately not restating the number, which was written as 30 while the
+    // config said 40 and would go stale again on the next adjustment.
     let status = 200;
     for (let i = 0; i < 60 && status !== 429; i += 1) {
       const response = await page.request.post('/agent/turn', {

@@ -149,6 +149,18 @@ h2 { margin: 0 0 0.75rem; font-size: 1.05rem; }
 .card dt { flex: 0 0 10rem; color: var(--muted); font-size: 0.85rem; }
 .card dd { margin: 0; flex: 1; }
 
+/* The exact value, beside the readable one. Small and muted because it is the
+   cross-check, not the answer: an approver reads "Fri 14 - Tue 18 Aug 2026" and
+   glances at the ISO only to confirm what will actually be submitted. Its own
+   line so a narrow screen never breaks the readable form to fit it. */
+.card dd .iso {
+  display: block;
+  margin-top: 0.15rem;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-variant-numeric: tabular-nums;
+}
+
 .degraded {
   margin: 0 0 1rem;
   padding: 0.6rem 0.8rem;

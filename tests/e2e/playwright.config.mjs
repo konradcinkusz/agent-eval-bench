@@ -114,11 +114,13 @@ export default defineConfig({
       // conversation; the per-minute window is spent by the LAST test, so its
       // number only needs to be small enough to cross in a burst — and large
       // enough that the rest of the suite cannot cross it by accident. The
-      // ordinary tests spend ~28 limited requests worst-case; 30 left a
+      // ordinary tests spend ~34 limited requests worst-case; 30 left a
       // two-request margin before an unrelated test started failing with a
-      // 429 it never asserts, and 40 is still well inside the burst's 60.
+      // 429 it never asserts, and the last test's burst loop is adaptive up to
+      // 60, so a ceiling below that is always crossed. 52 keeps a comfortable
+      // margin now that three tests exercise the card's SHOWN optional rows.
       Demo__MaxTurnsPerConversation: '8',
-      Demo__RequestsPerMinutePerClient: '40',
+      Demo__RequestsPerMinutePerClient: '52',
     },
   },
 });
