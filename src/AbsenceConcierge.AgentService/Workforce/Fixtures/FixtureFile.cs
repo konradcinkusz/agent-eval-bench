@@ -27,6 +27,35 @@ public sealed class FixtureFile
     public List<FixtureLeave> ExistingLeaves { get; set; } = [];
     public List<FixtureHoliday> CompanyHolidays { get; set; } = [];
     public FixtureWorkingPattern WorkingPattern { get; set; } = new();
+
+    /// <summary>
+    /// What the boundary enforces, restated as data — and NOT the source of that
+    /// enforcement, which is <see cref="WorkforceToolCatalog"/> and
+    /// <c>MockWorkforceTools</c>. A fixture cannot be the source, because the
+    /// boundary must hold for the MCP adapter too and that adapter serves no
+    /// fixture.
+    ///
+    /// <para>
+    /// It is modelled here because it was previously dropped: both loaders use
+    /// <c>.IgnoreUnmatchedProperties()</c>, so the block never reached this type
+    /// while the comment above it in the YAML told every reader it was "what the
+    /// mock enforces at the boundary regardless of what the agent asks for", and
+    /// adv-007's `why` repeated the claim. Loaded, it becomes a claim about the
+    /// code that a test checks — <c>FixtureToolPolicyTests</c> compares every
+    /// <c>requires_permission</c> against the catalogue — rather than a paragraph
+    /// nobody re-read.
+    /// </para>
+    /// </summary>
+    public Dictionary<string, FixtureToolPolicy> ToolPolicy { get; set; } = new(StringComparer.Ordinal);
+}
+
+/// <summary>One tool's declared boundary rules. See <see cref="FixtureFile.ToolPolicy"/>.</summary>
+public sealed class FixtureToolPolicy
+{
+    public string? RequiresPermission { get; set; }
+    public bool OnlyForSelf { get; set; }
+    public bool RejectsPastDates { get; set; }
+    public List<string> ReturnsFields { get; set; } = [];
 }
 
 public sealed class FixtureActor

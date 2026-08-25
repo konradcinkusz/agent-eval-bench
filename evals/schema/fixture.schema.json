@@ -1,0 +1,154 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/konradcinkusz/agent-eval-bench/evals/schema/fixture.schema.json",
+  "title": "Fixture world",
+  "description": "A shared world the mock tools serve and the scenarios name. Strict (`additionalProperties: false` everywhere) for a reason this repository learned the hard way: both loaders build their deserializer with `.IgnoreUnmatchedProperties()`, so a key nothing reads is dropped in silence. Five were — `balances`, `tool_policy`, `email_domain_handle`, `role` and `half_day` — while a comment beside one of them told every reader it was what the mock enforced. Data that nothing loads, described as load-bearing, is the documentation-that-lies failure the rest of this directory exists to prevent. Every key below reaches `WorkforceWorld`; a key that does not reach it fails here instead of lying quietly.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "name", "actor", "employees", "leave_types", "working_pattern"],
+  "properties": {
+    "version": {
+      "type": "integer",
+      "minimum": 1,
+      "description": "Fixture format version. Bumped when a loaded key changes shape."
+    },
+    "name": {
+      "type": "string",
+      "description": "The name a scenario's `fixture.base` refers to. Must match the filename."
+    },
+    "description": {
+      "type": "string",
+      "description": "What this world is for, in prose. Read by humans only."
+    },
+    "actor": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["employee_id", "display_name", "team", "permissions"],
+      "description": "The acting user every scenario runs as unless it overrides them.",
+      "properties": {
+        "employee_id": { "type": "string" },
+        "display_name": { "type": "string" },
+        "team": { "type": "string" },
+        "manager_employee_id": { "type": "string" },
+        "permissions": {
+          "type": "array",
+          "items": { "enum": ["directory:read", "timeoff:read", "timeoff:request"] },
+          "description": "The permission fixture is the authority the agent may not exceed (C-2). Enumerated so a typo is an error rather than a permission nobody holds — which would pass every denied-path scenario for the wrong reason."
+        }
+      }
+    },
+    "employees": {
+      "type": "array",
+      "description": "Colleagues the directory can return. `find_employee` returns employee_id, display_name and team, and nothing else reaches the agent.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["employee_id", "display_name", "team"],
+        "properties": {
+          "employee_id": { "type": "string" },
+          "display_name": { "type": "string" },
+          "team": { "type": "string" }
+        }
+      }
+    },
+    "leave_types": {
+      "type": "array",
+      "minItems": 1,
+      "description": "What can be requested. `id` is what a write must carry, and it must be grounded in an earlier `list_leave_types` result (C-5).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "name"],
+        "properties": {
+          "id": { "type": "string" },
+          "name": { "type": "string" },
+          "requires_approval": { "type": "boolean" },
+          "counts_against_balance": { "type": "boolean" },
+          "max_consecutive_days": { "type": "integer", "minimum": 1 },
+          "allows_half_days": { "type": "boolean" },
+          "requires_attachment_after_days": {
+            "type": "integer",
+            "minimum": 1,
+            "description": "Beyond this many working days a certificate is required, and the agent must surface it in the draft before approval (B-14)."
+          }
+        }
+      }
+    },
+    "existing_leaves": {
+      "type": "array",
+      "description": "Bookings already on the calendar, so a conflict check has something to find.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["id", "employee_id", "leave_type_id", "start_date", "end_date", "status"],
+        "properties": {
+          "id": { "type": "string" },
+          "employee_id": { "type": "string" },
+          "leave_type_id": { "type": "string" },
+          "start_date": { "type": "string", "format": "date" },
+          "end_date": { "type": "string", "format": "date" },
+          "status": { "enum": ["approved", "pending_approval", "rejected", "cancelled"] },
+          "comment": {
+            "type": "string",
+            "description": "Free text from whoever made the booking. Deliberately modelled: two adversarial scenarios plant an instruction here, and a field the loader dropped would leave them asserting against a payload that never reached the agent."
+          }
+        }
+      }
+    },
+    "company_holidays": {
+      "type": "array",
+      "description": "Days nobody works. A holiday landing on a non-working day is counted once, not twice.",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["date", "name"],
+        "properties": {
+          "date": { "type": "string", "format": "date" },
+          "name": { "type": "string" }
+        }
+      }
+    },
+    "working_pattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["working_days"],
+      "properties": {
+        "working_days": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "enum": ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
+          }
+        },
+        "hours_per_day": { "type": "integer", "minimum": 1, "maximum": 24 }
+      }
+    },
+    "tool_policy": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "What the boundary enforces, restated as data. It is NOT the source of that enforcement — `WorkforceToolCatalog` and `MockWorkforceTools` are, and a fixture cannot be, because the boundary must hold for the MCP adapter too, which serves no fixture. This block is a claim about the code, checked against it by a test rather than believed. It was previously dropped by every loader while a comment above it said it was what the mock enforced.",
+      "propertyNames": {
+        "enum": ["get_current_user", "find_employee", "list_leave_types", "list_leaves", "request_time_off"]
+      },
+      "additionalItems": false,
+      "patternProperties": {
+        "^.*$": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "requires_permission": {
+              "enum": ["directory:read", "timeoff:read", "timeoff:request"],
+              "description": "Checked against WorkforceToolCatalog.RequiredPermission by a test, so a drift between this file and the code is a failing build rather than a comment nobody re-read."
+            },
+            "only_for_self": { "type": "boolean" },
+            "rejects_past_dates": { "type": "boolean" },
+            "returns_fields": {
+              "type": "array",
+              "items": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

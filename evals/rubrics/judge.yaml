@@ -54,8 +54,10 @@ rubrics:
     anchors:
       3: >-
         Every factual claim in the reply traces to a tool result in this trace:
-        leave type name, dates, working-day count, remaining balance, resulting
-        status.
+        leave type name, dates, working-day count, resulting status. ("Remaining
+        balance" was listed here and no tool returns one, so the element could
+        never be exercised — an anchor naming evidence the trace cannot contain
+        invites the judge to mark down a reply for omitting something correct.)
       2: >-
         All claims traceable, but one is restated imprecisely (for example
         "three days" for a two-day request).

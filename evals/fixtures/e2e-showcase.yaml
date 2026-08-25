@@ -39,15 +39,12 @@ employees:
   - employee_id: emp-002
     display_name: Sam Rivera
     team: Engineering
-    email_domain_handle: s.rivera
   - employee_id: emp-003
     display_name: Sam Rivera
     team: Design
-    email_domain_handle: sam.rivera
   - employee_id: emp-004
     display_name: Priya Raman
     team: Engineering
-    role: Manager
   - employee_id: emp-005
     display_name: Dana Okafor
     team: Operations
@@ -90,14 +87,6 @@ leave_types:
     max_consecutive_days: 30
     allows_half_days: false
 
-balances:
-  - leave_type_id: lt-201
-    remaining_days: 12.5
-    unit: days
-  - leave_type_id: lt-203
-    remaining_days: 112
-    unit: days
-
 existing_leaves:
   - id: lv-3001
     employee_id: emp-001
@@ -105,7 +94,6 @@ existing_leaves:
     start_date: '2026-08-20'
     end_date: '2026-08-22'
     status: approved
-    half_day: false
 
   - id: lv-3002
     employee_id: emp-001
@@ -113,7 +101,6 @@ existing_leaves:
     start_date: '2026-12-24'
     end_date: '2026-12-31'
     status: approved
-    half_day: false
 
   - id: lv-3003
     employee_id: emp-002
@@ -121,7 +108,6 @@ existing_leaves:
     start_date: '2026-08-10'
     end_date: '2026-08-14'
     status: approved
-    half_day: false
 
 working_pattern:
   working_days: [monday, tuesday, wednesday, thursday, friday]

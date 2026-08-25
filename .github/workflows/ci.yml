@@ -141,6 +141,15 @@ jobs:
       - name: Validate eval scenarios
         run: npm run validate:scenarios
 
+      # Fixtures had no schema while scenarios had one since Phase 1, and both C#
+      # loaders use `.IgnoreUnmatchedProperties()` — so a key nothing reads was
+      # dropped in silence rather than refused. Five were, and a comment above one
+      # of them told every reader it was what the mock enforced at the boundary.
+      # The schema is strict, so adding a fixture key now means adding it to
+      # FixtureFile too, which is the point.
+      - name: Validate eval fixtures
+        run: npm run validate:fixtures
+
       # The agent definition is behaviour with no code diff, and until this step
       # nothing compiled it, typed it, or compared it to the service it describes.
       # It checks the strict schema, that one version appears in all three places
