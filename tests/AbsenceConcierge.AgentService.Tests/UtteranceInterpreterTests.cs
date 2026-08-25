@@ -65,6 +65,51 @@ public sealed class DateExpressionParserTests
     }
 
     [Fact]
+    public void A_month_crossing_range_does_not_carry_the_month_back()
+    {
+        // The other half of back-propagation, and the reason it is conditional.
+        // "The 30th to the 2nd of May" has its 30th in APRIL. Stamping May on both
+        // ends made the resolver — which resolves a span's end forward from its
+        // start — run 30 May to 2 May of the next year: an eleven-month booking,
+        // well-formed and unquestioned, out of a three-day request.
+        var parsed = DateExpressionParser.Parse("I need the 30th to the 2nd of May off");
+
+        var span = Assert.IsType<DateSpanExpression>(parsed);
+        var from = Assert.IsType<CalendarDayExpression>(span.From);
+        var to = Assert.IsType<CalendarDayExpression>(span.To);
+
+        Assert.Equal((30, (int?)null), (from.Day, from.Month));
+        Assert.Equal((2, (int?)5), (to.Day, to.Month));
+    }
+
+    [Fact]
+    public void A_month_named_first_does_not_carry_forward_across_a_descent()
+    {
+        // The same rule in the other direction: "the 30th of May to the 2nd" has
+        // its 2nd in June, and borrowing May forward would wrap the span a year.
+        var parsed = DateExpressionParser.Parse("I need the 30th of May to the 2nd off");
+
+        var span = Assert.IsType<DateSpanExpression>(parsed);
+        Assert.Equal((30, (int?)5), (Assert.IsType<CalendarDayExpression>(span.From).Day,
+            Assert.IsType<CalendarDayExpression>(span.From).Month));
+        Assert.Null(Assert.IsType<CalendarDayExpression>(span.To).Month);
+    }
+
+    [Fact]
+    public void An_incidental_to_between_two_dates_is_not_a_range()
+    {
+        // The range test reads the text BETWEEN the outermost atoms, and used to
+        // ask only whether a connector appeared anywhere in it. "Friday off to
+        // visit my mum, and Monday" is two separate days; read as a span it drafts
+        // Friday through Monday — four days nobody asked for, confidently. The
+        // connector now has to be all that lies between the atoms.
+        var parsed = DateExpressionParser.Parse("I'd like Friday off to visit my mum, and Monday");
+
+        var list = Assert.IsType<DateListExpression>(parsed);
+        Assert.Equal(2, list.Parts.Count);
+    }
+
+    [Fact]
     public void A_comma_separated_list_is_a_list_and_not_a_range()
     {
         var parsed = DateExpressionParser.Parse("Book me the 26th, 27th and 28th of August off as vacation");
@@ -158,6 +203,14 @@ public sealed class DeterministicUtteranceInterpreterTests
     [InlineData("Book Friday off for Sam Rivera in Design, he asked me to sort it.", "Sam Rivera", PersonRole.Subject)]
     [InlineData("I want the same week off as Sam.", "Sam", PersonRole.DateReference)]
     [InlineData("Book me Monday off as vacation, Dana Okafor is covering for me that day", "Dana Okafor", PersonRole.Mention)]
+    // SPEC §6's own O-3 note, and ScopeGuardStep's own comment, both name this
+    // sentence as the ordinary one the refusal must not catch. "for" here
+    // introduces a cover arrangement, not the subject of the request; read as a
+    // subject the agent refused a first-person booking, which is the inverse of
+    // the defect O-3 exists to prevent. Note the row above: the name is still
+    // found and still looked up — only the ROLE changed.
+    [InlineData("Book Friday off, I'm covering for Sam", "Sam", PersonRole.Mention)]
+    [InlineData("Book Friday off, I'm filling in for Sam Rivera", "Sam Rivera", PersonRole.Mention)]
     public void A_name_carries_the_role_it_plays_in_the_sentence(
         string utterance,
         string expectedName,

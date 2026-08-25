@@ -155,6 +155,23 @@ public sealed class SpanishInterpretationTests
         Assert.Equal(2, list.Parts.Count);
     }
 
+    [Fact]
+    public void An_incidental_a_between_two_dates_is_not_a_range()
+    {
+        // "a" is among the commonest words in Spanish, and the range test used to
+        // ask only whether a connector appeared ANYWHERE between the outermost
+        // atoms. "El lunes empiezo a las 9, quiero el viernes libre" therefore
+        // parsed as Monday-to-Friday and drafted five days off for a request that
+        // named one — a confident, well-formed booking of days nobody asked for.
+        // The connector now has to be all that lies between the two dates.
+        var list = Assert.IsType<DateListExpression>(
+            ParseEs("El lunes empiezo a las 9, quiero el viernes libre"));
+
+        Assert.Equal(2, list.Parts.Count);
+        Assert.Equal(DayOfWeek.Monday, Assert.IsType<ComingWeekdayExpression>(list.Parts[0]).Day);
+        Assert.Equal(DayOfWeek.Friday, Assert.IsType<ComingWeekdayExpression>(list.Parts[1]).Day);
+    }
+
     // ── The classification order, unchanged across languages ───────────────────
 
     [Fact]

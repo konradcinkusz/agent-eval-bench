@@ -208,6 +208,24 @@ public sealed class RelativeDateResolverTests
     }
 
     [Fact]
+    public void A_month_crossing_span_resolves_into_the_month_before_the_named_one()
+    {
+        // "The 30th to the 2nd of May", said in April. The parser leaves the 30th
+        // monthless rather than back-propagating May across a descending pair, so
+        // next-occurrence resolution puts it on 30 April and the span is the three
+        // days that were asked for. With May stamped on both ends this resolved to
+        // 30 May 2026 – 2 May 2027: eleven months, and no question asked.
+        var resolved = RelativeDateResolver.Resolve(
+            new DateSpanExpression(
+                new CalendarDayExpression(30, null, null),
+                new CalendarDayExpression(2, 5, null)),
+            new DateOnly(2026, 4, 15));
+
+        Assert.Equal(new DateOnly(2026, 4, 30), resolved.Start);
+        Assert.Equal(new DateOnly(2026, 5, 2), resolved.End);
+    }
+
+    [Fact]
     public void A_list_of_adjacent_days_becomes_one_span()
     {
         var resolved = RelativeDateResolver.Resolve(

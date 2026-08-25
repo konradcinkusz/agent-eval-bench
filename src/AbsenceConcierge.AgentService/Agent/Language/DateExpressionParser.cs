@@ -246,20 +246,49 @@ public static partial class DateExpressionParser
         }
     }
 
+    /// <summary>
+    /// The month is named once — "19 to 21 August", "del 19 al 21 de agosto" — and
+    /// the atoms without one borrow it. The borrowing is refused when it would make
+    /// the day sequence descend.
+    ///
+    /// <para>
+    /// That refusal is the whole of this method's second version. "The 30th to the
+    /// 2nd of May" stamped May on both ends; <see cref="Time.RelativeDateResolver"/>
+    /// resolves a span's end forward <em>from its start</em>, so 30 May ran to 2 May
+    /// of the FOLLOWING year: an eleven-month booking drafted confidently, with no
+    /// clarifying question, out of a three-day request — which is the exact failure
+    /// the propagation was added to prevent, manufactured by the propagation itself.
+    /// Left monthless, the 30th resolves by next occurrence to 30 April and the span
+    /// is the three days that were asked for.
+    /// </para>
+    /// </summary>
     private static List<Atom> PropagateMonth(List<Atom> atoms)
     {
-        var month = atoms.LastOrDefault(a => a.Month is not null)?.Month;
+        var sourceIndex = atoms.FindLastIndex(atom => atom.Month is not null);
 
-        if (month is null)
+        if (sourceIndex < 0 || atoms[sourceIndex].Month is not { } month)
         {
             return atoms;
         }
 
+        // The day the named month is attached to. When the month arrived on
+        // something that is not a calendar day there is nothing to order against,
+        // and the borrowing stays unconditional.
+        var anchorDay = (atoms[sourceIndex].Expression as CalendarDayExpression)?.Day;
+
+        // A day named BEFORE the month must not fall later in it than the day the
+        // month is attached to, and one named after must not fall earlier. Either
+        // ordering makes the sequence descend, and a descending span resolves
+        // forward into the next year rather than back into the previous month.
+        bool Borrows(int candidateDay, int atomIndex) =>
+            anchorDay is not { } anchor
+            || (atomIndex < sourceIndex ? candidateDay <= anchor : candidateDay >= anchor);
+
         return
         [
-            .. atoms.Select(atom => atom switch
+            .. atoms.Select((atom, index) => atom switch
             {
-                { Month: null, Expression: CalendarDayExpression day } =>
+                { Month: null, Expression: CalendarDayExpression day } when Borrows(day.Day, index) =>
                     atom with { Expression = day with { Month = month }, Month = month },
                 _ => atom,
             }),
@@ -271,6 +300,20 @@ public static partial class DateExpressionParser
     /// than a list. "the 20th to the 24th" and "del 20 al 24" are spans; "the 26th,
     /// 27th and 28th" is a list that happens to be contiguous, and the difference
     /// matters because the resolver refuses to close a gap in a list.
+    ///
+    /// <para>
+    /// The connector has to be <em>all</em> that lies between the atoms, which is
+    /// the fix for a net that used to catch whole clauses. The patterns were applied
+    /// as a substring search over the text between the OUTERMOST atoms, so any
+    /// incidental connector anywhere in it made the sentence a span: Spanish
+    /// "El lunes empiezo <b>a</b> las 9, quiero el viernes libre" drafted Monday to
+    /// Friday — five days for a one-day request — and English shares the flaw
+    /// through "to" ("Friday off <b>to</b> visit my mum, and Monday"). That is a
+    /// confident, well-formed draft for days nobody asked for, which the spec names
+    /// as its central enemy, and it bypassed one layer up the very guess
+    /// <see cref="Time.RelativeDateResolver"/> refuses to make when it declines to
+    /// bridge a non-contiguous list.
+    /// </para>
     /// </summary>
     private static bool IsRange(string utterance, List<Atom> atoms, UtteranceLanguage language)
     {
@@ -414,7 +457,13 @@ public static partial class DateExpressionParser
     [GeneratedRegex(@"\btomorrow\b", RegexOptions.IgnoreCase)]
     private static partial Regex TomorrowPattern();
 
-    [GeneratedRegex(@"(\bto\b|\bthrough\b|\buntil\b|\btill\b|–|—|-->|\s-\s)", RegexOptions.IgnoreCase)]
+    // Anchored: the connector, optionally an article, and nothing else. Matched
+    // against the text BETWEEN two atoms, so "the 20th to the 24th" leaves " to "
+    // and "Friday off to visit my mum, and Monday" leaves a clause that is not a
+    // connector and is no longer read as one.
+    [GeneratedRegex(
+        @"^[\s,]*(?:up\s+)?(?:to|through|until|till|–|—|-->|-)[\s,]*(?:the\s+)?$",
+        RegexOptions.IgnoreCase)]
     private static partial Regex RangeConnectorPattern();
 
     // ── Spanish patterns ─────────────────────────────────────────────────────────
@@ -470,8 +519,12 @@ public static partial class DateExpressionParser
     [GeneratedRegex(@"\bma[ñn]ana\b", RegexOptions.IgnoreCase)]
     private static partial Regex SpanishTomorrowPattern();
 
-    // "del 3 al 7", "de lunes a viernes", "hasta el jueves". "a" and "al" only
-    // count between two atoms, which is the only place this pattern is applied.
-    [GeneratedRegex(@"(\bal\b|\ba\b|\bhasta\b|–|—|-->|\s-\s)", RegexOptions.IgnoreCase)]
+    // "del 3 al 7", "de lunes a viernes", "hasta el jueves". Anchored for the same
+    // reason as the English pattern, and more urgently: "a" is among the commonest
+    // words in Spanish, so "between two atoms" was nowhere near a narrow enough
+    // condition to carry the weight this test puts on it.
+    [GeneratedRegex(
+        @"^[\s,]*(?:al|a|hasta|–|—|-->|-)[\s,]*(?:el|la|los|las)?[\s,]*(?:d[ií]a[\s,]*)?$",
+        RegexOptions.IgnoreCase)]
     private static partial Regex SpanishRangeConnectorPattern();
 }

@@ -228,16 +228,37 @@ public sealed partial class DeterministicUtteranceInterpreter : IUtteranceInterp
     {
         var spanish = language == UtteranceLanguage.Spanish;
 
-        var subject = (spanish ? SpanishSubjectMarkerPattern() : SubjectMarkerPattern()).Match(utterance);
+        var subjectPattern = spanish ? SpanishSubjectMarkerPattern() : SubjectMarkerPattern();
 
-        if (subject.Success)
+        foreach (Match subject in subjectPattern.Matches(utterance))
         {
             var name = subject.Groups["name"].Value.Trim();
 
-            if (name.Length > 0 && !IsNotAName(name))
+            if (name.Length == 0 || IsNotAName(name))
             {
-                return new PersonReference(name, PersonRole.Subject);
+                continue;
             }
+
+            // "for" does not always introduce a subject, and ScopeGuardStep's own
+            // comment names the counter-example: "book Friday off, I'm covering for
+            // Sam" is an ordinary sentence, and SPEC §6 says so too — O-3's
+            // "deliberate asymmetry" exists precisely because banning the name
+            // outright "would make the agent useless at ordinary sentences". Read as
+            // a subject it was refused under O-3: the agent turning away the person
+            // it exists to serve, which is the inverse of the defect the aggressive
+            // refusal is there to prevent. Being hard to talk into writing for
+            // someone else is right; being impossible to talk into writing for
+            // yourself is not.
+            //
+            // Only an ADJACENT cover verb counts. A verb tested anywhere in the
+            // sentence would be the same over-wide net one layer down, where
+            // "contains a connector" used to read whole clauses as date ranges.
+            if (CoverArrangementPattern().IsMatch(utterance[..subject.Index]))
+            {
+                continue;
+            }
+
+            return new PersonReference(name, PersonRole.Subject);
         }
 
         var reference = (spanish ? SpanishDateReferenceMarkerPattern() : DateReferenceMarkerPattern())
@@ -357,6 +378,20 @@ public sealed partial class DeterministicUtteranceInterpreter : IUtteranceInterp
 
     [GeneratedRegex(@"\bas\s+(?<name>[A-Z][a-z]+(?:\s+[A-Z][a-z]+)?)\b", RegexOptions.None)]
     private static partial Regex DateReferenceMarkerPattern();
+
+    /// <remarks>
+    /// The verbs after which "for" introduces a cover arrangement rather than the
+    /// subject of the request. Anchored at the end and matched against the text
+    /// immediately preceding the marker, so only an adjacent verb disqualifies it:
+    /// "book Friday off for Dana" keeps its subject, "I'm covering for Sam" does
+    /// not have one.
+    /// </remarks>
+    [GeneratedRegex(
+        @"\b(?:cover(?:s|ed|ing)?|fill(?:s|ed|ing)?\s+in|stand(?:s|ing)?\s+in|stood\s+in"
+        + @"|sit(?:s|ting)?\s+in|sat\s+in|substitut(?:e|es|ed|ing)|deputis(?:e|es|ed|ing)"
+        + @"|deputiz(?:e|es|ed|ing)|cubr(?:o|e|es|iendo)|sustitu(?:yo|ye|yes|yendo))\s+$",
+        RegexOptions.IgnoreCase)]
+    private static partial Regex CoverArrangementPattern();
 
     // ── Spanish classification ───────────────────────────────────────────────────
     //
