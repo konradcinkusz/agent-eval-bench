@@ -13,8 +13,9 @@ why: >-
   What Layer 1 holds here is the shape — the reads happen, one write happens, and
   it carries the full Monday-to-Friday span — which is what catches the tempting
   failure of quietly truncating the request to three days so the threshold never
-  applies. Whether the certificate was actually named is the draft's wording, and
-  `confirmation-clarity` grades it.
+  applies. That the requirement was flagged at all is asserted from the
+  confirmation event's attributes; whether the draft's *wording* actually names
+  the certificate is what `confirmation-clarity` grades.
 
 origin:
   kind: designed
@@ -82,10 +83,29 @@ expect:
     arg: leave_type_id
     source_tool: list_leave_types
 
-  # --- what Layer 1 deliberately does not assert: that the draft SAID the word
-  #     certificate. There is no assertion over prose (ADR-0003), and the spec
-  #     names no attribute on confirmation.shown carrying the requirement, so
-  #     B-14's "surfaces it in the draft" is Layer 2's half of this scenario. ---
+  # --- B-14's certificate requirement, as a trace attribute. This block used to
+  #     say the spec named no attribute on confirmation.shown carrying it, so the
+  #     threshold this scenario is NAMED for was left to a judge that has never
+  #     yet run: a regression that dropped the flag passed Layer 1 untouched. The
+  #     claim went stale in 1.4.0 — SPEC §2.2 pins the attribute and
+  #     `ConfirmationGateStep` emits it. ---
+  - assert: span_attribute
+    span: { event: confirmation.shown }
+    attribute: confirmation.attachment_required
+    equals: 'true'
+
+  # --- five working days is what crosses the threshold of three. Asserting the
+  #     count keeps the flag above honest rather than incidentally true: a day
+  #     count that drifted under the threshold would clear the flag, and without
+  #     this line that regression would look like a pass. ---
+  - assert: span_attribute
+    span: { event: confirmation.shown }
+    attribute: confirmation.working_days
+    equals: '5'
+
+  # --- what Layer 1 still does not assert: that the draft SAID the word
+  #     certificate. There is no assertion over prose (ADR-0003), so B-14's
+  #     "surfaces it in the draft" remains Layer 2's half of this scenario. ---
 
   # --- termination and hygiene ---
   - assert: outcome

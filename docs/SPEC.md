@@ -578,8 +578,15 @@ do. The boundary, stated so it cannot be argued away later:
 
 | What happened | What the agent must say | Retry? |
 |---|---|---|
-| Write returned `5xx` | The request was **not** submitted | Up to the attempt cap |
+| Write returned `5xx` | The request was **not** submitted | **No** — rule 3 caps a write at one attempt |
 | Write **timed out** | The status is **unknown** — it may or may not have been recorded | **No.** Not once |
+
+*The `5xx` row read "Up to the attempt cap" until it was read back against
+[rule 3](#7-degradation-contract): the cap for a write **is** one attempt, so the
+phrase invited a second write that no layer of the implementation would perform.
+A 500 is not a promise that nothing was created either — the reasoning deg-004
+records applies to both rows. What separates them is what the agent must **say**,
+not how many times it may write.*
 
 The distinction is the whole content of two scenarios (`deg-003`, `deg-004`), and
 collapsing it produces one of two failures: an agent that claims failure on a
