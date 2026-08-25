@@ -78,8 +78,16 @@ public sealed class DateExpressionParserTests
         var from = Assert.IsType<CalendarDayExpression>(span.From);
         var to = Assert.IsType<CalendarDayExpression>(span.To);
 
-        Assert.Equal((30, (int?)null), (from.Day, from.Month));
-        Assert.Equal((2, (int?)5), (to.Day, to.Month));
+        // Asserted component by component rather than as tuples. The tuple form
+        // needed an `(int?)` cast on each expected value to type the literal, which
+        // CodeQL flagged as a useless upcast — correctly: the conversion is
+        // implicit. Separately is also what a failure reads better as, since the
+        // message names the one value that moved.
+        Assert.Equal(30, from.Day);
+        Assert.Null(from.Month);
+
+        Assert.Equal(2, to.Day);
+        Assert.Equal(5, to.Month);
     }
 
     [Fact]
@@ -90,8 +98,10 @@ public sealed class DateExpressionParserTests
         var parsed = DateExpressionParser.Parse("I need the 30th of May to the 2nd off");
 
         var span = Assert.IsType<DateSpanExpression>(parsed);
-        Assert.Equal((30, (int?)5), (Assert.IsType<CalendarDayExpression>(span.From).Day,
-            Assert.IsType<CalendarDayExpression>(span.From).Month));
+        var from = Assert.IsType<CalendarDayExpression>(span.From);
+
+        Assert.Equal(30, from.Day);
+        Assert.Equal(5, from.Month);
         Assert.Null(Assert.IsType<CalendarDayExpression>(span.To).Month);
     }
 
