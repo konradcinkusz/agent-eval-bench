@@ -35,13 +35,48 @@ public interface IConfirmationTokenStore
     /// confirmation") a property of the boundary rather than of the agent's restraint.
     /// </summary>
     bool TryRedeem(string token, ConfirmationDraft submitted);
+
+    /// <summary>
+    /// Called when a human declines. Until this existed the store had no terminal
+    /// state but redemption: entries left only on a successful write, so every
+    /// declined draft kept one for the process lifetime. The A6 state machine names
+    /// the edge now that the code has it.
+    /// </summary>
+    void Reject(string token);
 }
 
-public sealed class InMemoryConfirmationTokenStore : IConfirmationTokenStore
+/// <summary>
+/// The in-memory store, bounded.
+///
+/// <para>
+/// It was the one map in this service with neither a bound nor an expiry, in the
+/// component the documentation elevates most. Entries left only on redemption, so a
+/// rejected confirmation, an abandoned card and an evicted conversation each leaked
+/// one for the process lifetime — while the conversation store and the client-quota
+/// store are both explicitly bounded, with comments explaining that a public
+/// endpoint plus an unbounded map is a memory exhaustion anybody can cause.
+/// </para>
+/// <para>
+/// Two changes close it. <see cref="IConfirmationTokenStore.Reject"/> removes the
+/// entry when a human declines, which gives the store a terminal state other than a
+/// successful write. And past the cap the oldest issued token is evicted, which
+/// fails closed: an evicted token redeems as false, so the write is refused and the
+/// visitor is re-asked. A lost draft is a re-ask, never a write — the same direction
+/// the conversation store's eviction fails in.
+/// </para>
+/// </summary>
+public sealed class InMemoryConfirmationTokenStore(int? capacity = null) : IConfirmationTokenStore
 {
-    private sealed record Entry(ConfirmationDraft Draft, bool Approved);
+    /// <summary>Matches the conversation cap: each conversation holds at most one pending draft.</summary>
+    public const int DefaultCapacity = 10_000;
+
+    private sealed record Entry(ConfirmationDraft Draft, bool Approved, long Issued);
 
     private readonly ConcurrentDictionary<string, Entry> _entries = new(StringComparer.Ordinal);
+    private readonly Lock _evicting = new();
+    private readonly int _capacity = Math.Max(1, capacity ?? DefaultCapacity);
+
+    private long _stamp;
 
     public string Issue(ConfirmationDraft draft)
     {
@@ -53,8 +88,22 @@ public sealed class InMemoryConfirmationTokenStore : IConfirmationTokenStore
             .Replace('/', '_')
             .TrimEnd('=');
 
-        _entries[token] = new Entry(draft, Approved: false);
+        _entries[token] = new Entry(draft, Approved: false, Issued: Interlocked.Increment(ref _stamp));
+
+        if (_entries.Count > _capacity)
+        {
+            Evict();
+        }
+
         return token;
+    }
+
+    public void Reject(string token)
+    {
+        if (!string.IsNullOrEmpty(token))
+        {
+            _entries.TryRemove(token, out _);
+        }
     }
 
     public bool Approve(string token)
@@ -106,5 +155,36 @@ public sealed class InMemoryConfirmationTokenStore : IConfirmationTokenStore
 
         // Single use, and removal is atomic so a concurrent double-submit loses.
         return _entries.TryRemove(token, out _);
+    }
+
+    private void Evict()
+    {
+        lock (_evicting)
+        {
+            // Down to the cap, oldest issued first — the same shape the conversation
+            // store uses, and for the same reason: a linear scan per eviction is fine
+            // at this size, and only somebody already past the cap ever pays for it.
+            // A monotonic stamp rather than a clock, because eviction needs an order
+            // and the wall clock can move backwards.
+            while (_entries.Count > _capacity)
+            {
+                string? oldestKey = null;
+                var oldestStamp = long.MaxValue;
+
+                foreach (var (key, entry) in _entries)
+                {
+                    if (entry.Issued < oldestStamp)
+                    {
+                        oldestStamp = entry.Issued;
+                        oldestKey = key;
+                    }
+                }
+
+                if (oldestKey is null || !_entries.TryRemove(oldestKey, out _))
+                {
+                    break;
+                }
+            }
+        }
     }
 }

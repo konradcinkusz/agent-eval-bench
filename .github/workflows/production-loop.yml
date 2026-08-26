@@ -114,21 +114,37 @@ jobs:
             | order by turns desc
           ' > loop/outcomes.json
 
-          # 2. C-1, post-hoc: every successful write span must have a
-          #    confirmation.received event earlier in the same trace. Span events
-          #    are exported as trace rows sharing the operation_Id.
+          # 2. C-1, post-hoc: every write span must have a confirmation.received
+          #    event earlier in the same trace. Span events are exported as trace
+          #    rows sharing the operation_Id.
+          #
+          #    Two things this deliberately does NOT do, both learned from the
+          #    version it replaces. It does not filter the join rows and count what
+          #    survives: a leftouter join yields one row per (write, confirmation)
+          #    pair, so `where confirmed_at > write_at` flagged a write that a
+          #    LATER confirmation followed even when an earlier one preceded it,
+          #    and tallied the same write once per post-write confirmation. The
+          #    existence of a PRIOR confirmation is the invariant, so that is what
+          #    is counted — summarised back to exactly one row per write span.
+          #    And it does not filter to successful writes: a write the boundary
+          #    blocked is still a write the agent attempted without a confirmation,
+          #    which is the most interesting C-1 signal there is. The outcome rides
+          #    along as a column so the summary can tell the two apart.
           query '
             dependencies
             | where name == "execute_tool request_time_off"
-            | where tostring(customDimensions["workforce.tool.outcome"]) == "success"
-            | project operation_Id, write_at = timestamp
+            | extend outcome = tostring(customDimensions["workforce.tool.outcome"])
+            | project operation_Id, write_id = id, write_at = timestamp, outcome
             | join kind=leftouter (
                 traces
                 | where message == "confirmation.received"
                 | project operation_Id, confirmed_at = timestamp
               ) on operation_Id
-            | where isnull(confirmed_at) or confirmed_at > write_at
-            | project operation_Id, write_at
+            | summarize prior = countif(confirmed_at < write_at)
+                by operation_Id, write_id, write_at, outcome
+            | where prior == 0
+            | project operation_Id, write_at, outcome
+            | order by write_at asc
           ' > loop/c1-violations.json
 
           # 3. The worst sessions: what a human should read first. Ranked by the
@@ -201,7 +217,7 @@ jobs:
             if [ "${VIOLATIONS}" != "0" ]; then
               echo "### C-1 violations — a write with no confirmation before it"
               echo
-              jq -r '.[] | "- operation `\(.operation_Id)` at \(.write_at)"' loop/c1-violations.json
+              jq -r '.[] | "- operation `\(.operation_Id)` at \(.write_at) — write \(.outcome // "(no outcome)")"' loop/c1-violations.json
               echo
             fi
 

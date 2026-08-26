@@ -1,12 +1,23 @@
 # Compliance
 
 The two checklists this repository is measured against, worked through line by line.
-Every item is **yes**, **N/A with the reason**, or **no with a link to the row in
-[`DEVIATIONS.md`](DEVIATIONS.md) that tracks it**. There is no fourth answer, and in
-particular there is no "partially".
+Every item is **yes**, **N/A with the reason**, **partly**, or **no** — and the last
+two carry a link to the row in [`DEVIATIONS.md`](DEVIATIONS.md) that tracks them.
 
-A checklist that is all ticks is a checklist somebody filled in. Two items below are
-"no", four are N/A, and each of the six says why in the place a reader will look.
+**"Partly" is the answer that has to earn itself.** It is allowed only where the row
+names *what is missing* and points at the deviation holding it open. Without both it
+is a tick with a hedge in front of it, which is worse than a no.
+
+A checklist that is all ticks is a checklist somebody filled in. Of the 28 rows
+below, **20 are yes, 4 are N/A and 4 are partly**; none is a flat no. Each of the
+eight non-yes rows says why in the place a reader will look.
+
+*This preamble used to forbid "partly" by name and count two "no" rows. Both had
+stopped being true: the two were narrowed to "partly" one at a time as the machinery
+landed, and the preamble stayed where it was — so the document's own summary
+contradicted its own table, four rows answering the one word it said did not exist.
+It is restated here rather than quietly corrected, because that is exactly the drift
+this file is supposed to catch in everything else.*
 
 ## 1. Reference architecture §3 — the constitution's compliance checklist
 
@@ -70,7 +81,11 @@ build should know about are:
 - **D-9** — Layer 2 has never run against a live model. Zero scores.
 - **D-10** — the MCP adapter has never run against a live server.
 - **D-12** — production trace scoring, the review cadence and post-hoc constraint
-  paging are not built.
+  paging are **built and scheduled**, and have never carried real traffic. The
+  corpus still holds no `origin.kind: production-trace` scenario. (This line said
+  "are not built" while §2 rows 8 and 9 said the machinery exists end to end;
+  [`DEVIATIONS.md`](DEVIATIONS.md) D-12 has the narrowed version, and it is the one
+  that was right.)
 
-Three of those four close the same way: by this thing running somewhere, with a
-credential, in front of someone. None of them can be closed by a build.
+All four close the same way: by this thing running somewhere, with a credential, in
+front of someone. None of them can be closed by a build.

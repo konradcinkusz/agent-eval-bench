@@ -1,5 +1,7 @@
+using AbsenceConcierge.AgentService.Agent.Time;
 using AbsenceConcierge.AgentService.Workforce;
 using AbsenceConcierge.AgentService.Workforce.Confirmation;
+using AbsenceConcierge.AgentService.Workforce.Mock;
 
 namespace AbsenceConcierge.AgentService.Tests;
 
@@ -174,6 +176,76 @@ public sealed class ConfirmationGateTests
             new TimeOffRequest(TestWorld.VacationTypeId, past, past, token));
 
         Assert.Equal(ToolOutcome.Rejected, result.Outcome);
+    }
+
+    [Fact]
+    public async Task Today_at_the_boundary_is_the_actors_day_not_UTCs()
+    {
+        // 19:30 on 15 January in New York is 00:30 on the 16th in UTC. The boundary
+        // computed "today" as DateOnly.FromDateTime(GetUtcNow().UtcDateTime), so it
+        // read the 16th and rejected a request for the 15th as "in the past" — while
+        // the agent, resolving through AgentClock in the actor's zone, had just
+        // resolved that same date as today. Two enforcement layers, one request, two
+        // answers to what day it is. AgentOptions' own documentation says these
+        // dates are never in UTC, and B-1 makes the zone a property of the spec.
+        var newYork = AgentClock.ZoneFor("America/New_York");
+        var eveningInNewYork = new DateTimeOffset(2026, 1, 16, 0, 30, 0, TimeSpan.Zero);
+
+        var world = TestWorld.Load();
+        var tokens = new InMemoryConfirmationTokenStore();
+        var tools = new MockWorkforceTools(
+            world, tokens, new FixedTimeProvider(eveningInNewYork), newYork);
+
+        var today = new DateOnly(2026, 1, 15);
+        var token = TestWorld.ApprovedToken(tokens, TestWorld.VacationTypeId, today, today);
+
+        var result = await tools.RequestTimeOffAsync(
+            new TimeOffRequest(TestWorld.VacationTypeId, today, today, token));
+
+        Assert.Equal(ToolOutcome.Success, result.Outcome);
+    }
+
+    [Fact]
+    public void A_rejected_token_is_removed_rather_than_kept_for_the_process_lifetime()
+    {
+        // The store used to drop an entry only on redemption, so a rejected
+        // confirmation, an abandoned card and an evicted conversation each leaked
+        // one until the process died — the one map here with neither a bound nor an
+        // expiry, in the component the docs elevate most, while the conversation and
+        // client-quota stores are both explicitly bounded. `rejected` is a terminal
+        // state in the A6 state machine and the store never reached it.
+        var store = new InMemoryConfirmationTokenStore();
+        var draft = new ConfirmationDraft(TestWorld.ActorEmployeeId, TestWorld.VacationTypeId, Start, End);
+
+        var token = store.Issue(draft);
+        store.Approve(token);
+        store.Reject(token);
+
+        // Gone, and gone in the safe direction: an approved-then-rejected token
+        // must not authorise anything afterwards.
+        Assert.False(store.TryRedeem(token, draft));
+        Assert.False(store.Approve(token));
+    }
+
+    [Fact]
+    public void Past_the_cap_the_oldest_token_is_evicted_and_fails_closed()
+    {
+        // A bound, because a public endpoint plus an unbounded map is a memory
+        // exhaustion nobody has to be clever to cause. Eviction fails closed: the
+        // write is refused and the visitor is re-asked, never written for.
+        var store = new InMemoryConfirmationTokenStore(capacity: 2);
+        var draft = new ConfirmationDraft(TestWorld.ActorEmployeeId, TestWorld.VacationTypeId, Start, End);
+
+        var oldest = store.Issue(draft);
+        store.Approve(oldest);
+
+        var second = store.Issue(draft);
+        store.Approve(second);
+        var third = store.Issue(draft);
+        store.Approve(third);
+
+        Assert.False(store.TryRedeem(oldest, draft));
+        Assert.True(store.TryRedeem(third, draft));
     }
 
     [Fact]

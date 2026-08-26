@@ -57,7 +57,10 @@ jobs:
       - name: Render diagrams
         run: |
           set -euo pipefail
-          npm install --no-save @mermaid-js/mermaid-cli
+          # mermaid-cli is a pinned devDependency, so this installs the version the
+          # lockfile records rather than whatever the registry's floating latest is
+          # on the day the PDFs happen to be built.
+          npm ci
           npm run render:diagrams
 
       - name: Build English edition

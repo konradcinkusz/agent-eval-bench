@@ -4,10 +4,11 @@ The scenario corpus, the schema it must satisfy, and the fixtures it runs
 against. **Scenarios are data, not code** — the format matters less than that
 fact, but the format is pinned so a mistyped key fails loudly.
 
-The harness that executes these arrives in Phase 4. What runs today is
-`npm run validate:scenarios`, wired into CI in the same pull request that created
-the corpus — because *"an unreferenced test config is not a latent capability; it
-is documentation that lies"* (TESTING-STRATEGY.md §9).
+Two things read this directory. `npm run validate:scenarios` checks the corpus
+against the schema and the rules below; the Layer 1 and Layer 2 harnesses in
+`tests/AbsenceConcierge.Evals/` execute it against the real service. Both are
+wired into CI — because *"an unreferenced test config is not a latent capability;
+it is documentation that lies"* (TESTING-STRATEGY.md §9).
 
 ```text
 evals/
@@ -23,13 +24,21 @@ evals/
 
 ## The five classes, and why each exists
 
-| Class | Count | What it protects |
-|---|---|---|
-| `happy` | 6 | The paths the spec promises. If these break, nothing else matters |
-| `ambiguity` | 8 | Dates and names with more than one defensible reading. The largest class on purpose — it is where a confident wrong answer is cheapest to produce |
-| `denied` | 6 | Every out-of-scope rule, asserted as a refusal *and* an absence |
-| `adversarial` | 7 | Prompt injection. Four through tool results, three through user input |
-| `degradation` | 5 | Tool timeouts, 5xx, and empty successes |
+| Class | What it protects |
+|---|---|
+| `happy` | The paths the spec promises. If these break, nothing else matters |
+| `ambiguity` | Dates and names with more than one defensible reading. The largest class on purpose — it is where a confident wrong answer is cheapest to produce |
+| `denied` | Every out-of-scope rule, asserted as a refusal *and* an absence |
+| `adversarial` | Prompt injection, through tool results as well as the user turn — the majority arrive through tool results, which is the half a prompt cannot defend |
+| `degradation` | Tool timeouts, 5xx, and empty successes |
+
+**There is deliberately no count column here.** It carried one for a while and
+was wrong within two pull requests: it still said six `happy` and eight
+`ambiguity` after the Spanish scenarios landed in SPEC 1.5.0, and it described an
+adversarial split that had not been true since adv-006. Counts live in
+[`docs/FINDINGS.md`](../docs/FINDINGS.md) §1, and `npm run validate:scenarios`
+prints the live per-class split on every run — a number nobody has to remember to
+update is a number that cannot go stale.
 
 A suite with no adversarial class is testing the demo, not the product. The same
 argument applies to every other class, so the validator fails if any of the five
@@ -51,17 +60,24 @@ Six fields carry the meaning:
 - **`expect`** — assertions over the trace. Never over reply text.
 - **`rubrics`** — the Layer-2 criteria that apply, if any.
 
-## Constraint assertions are sticky
+## A constraint assertion blocks wherever it appears
 
-`gate` describes how the **scenario** is measured. But an assertion that encodes
-a hard constraint from [`docs/SPEC.md`](../docs/SPEC.md#4-hard-constraints) —
-ordering around a write, the absence of a write, grounding of an id,
-`output_excludes_internal_ids`, `termination` — hard-blocks **wherever it
-appears**, including inside a scenario gated as `behaviour`.
+An assertion that encodes a hard constraint from
+[`docs/SPEC.md`](../docs/SPEC.md#4-hard-constraints) — ordering around a write,
+the absence of a write, grounding of an id, `output_excludes_internal_ids`,
+`termination` — blocks even inside a scenario gated as `behaviour`. A constraint
+violated on a happy path is still a constraint violation, and gating it softly
+because it turned up in a soft scenario would be the loophole that makes the
+whole gate advisory.
 
-A constraint violated on a happy path is still a constraint violation. Gating it
-softly because it turned up in a soft scenario would be the loophole that makes
-the whole gate advisory.
+**How, precisely**, because this section used to imply a mechanism the harness
+does not have. There is no per-assertion severity: every scenario's assertions
+must pass, so any failing assertion fails its scenario whatever the `gate` says.
+What `gate` decides is what a failure is *measured against* — a `constraint`
+scenario is additionally checked as a group that must be at 100%, and a
+`behaviour` scenario's result is compared with the recorded baseline. The effect
+this section describes is real. It arrives through the scenario, not through the
+assertion.
 
 ## What the validator enforces
 
@@ -100,14 +116,27 @@ Scenarios born from a real failure carry `origin.kind: production-trace` or
 `incident`, and they are worth more than designed ones. Every production incident
 becomes a scenario before it becomes a fix.
 
-## What is not here yet
+## What arrived, and what is still open
 
-- **`baselines/`** — Phase 4. Until a baseline is recorded, "pass rate ≥
-  baseline" has nothing to compare against.
-- **`rubrics/`** — Phase 5. The criteria and their anchors currently live in
-  `docs/SPEC.md` §5; when the versioned rubric files land, the spec cites them
-  rather than restating them, and `KNOWN_RUBRICS` in the validator is deleted
-  rather than left to drift alongside.
-- **The harness itself** — Phase 4. Today these files are validated, not
-  executed. That distinction is stated everywhere it matters, because a corpus
-  that has never run is a corpus whose assertions are untested.
+`baselines/`, `rubrics/` and the harness itself were all listed here as "not yet"
+long after they landed, which is the same failure this directory exists to
+prevent, committed by its own tour. They are here now:
+
+- **`baselines/layer1.json`** — the recorded pass state a behaviour regression is
+  measured against, pinned to the spec version it was recorded under so a
+  comparison across a contract change is refused rather than reported.
+- **`rubrics/`** — the versioned judge criteria and their anchors, plus the
+  hashed prompt. `docs/SPEC.md` §5 cites them rather than restating them.
+- **The harness** — `tests/AbsenceConcierge.Evals/`, running every scenario
+  against the real service in-process.
+
+What is genuinely still open:
+
+- **A keyed Layer 2 run.** Layer 2 reports `skipped:no-credential` without a
+  model. The nightly is where it runs keyed, and until it has run there the judge
+  scores are trended rather than trusted — see
+  [`docs/CALIBRATION.md`](../docs/CALIBRATION.md) for what the 45 AI-written
+  labels are and are not evidence of.
+- **O-4 has no scenario.** It bounds the agent and is unasserted; `docs/SPEC.md`
+  §6 dates the gap rather than leaving a reader to notice that one row of that
+  table is decoration.

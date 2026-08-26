@@ -208,6 +208,41 @@ public sealed class RelativeDateResolverTests
     }
 
     [Fact]
+    public void A_month_crossing_span_resolves_into_the_month_before_the_named_one()
+    {
+        // "The 30th to the 2nd of May", said in April. The parser leaves the 30th
+        // monthless rather than back-propagating May across a descending pair, so
+        // next-occurrence resolution puts it on 30 April and the span is the three
+        // days that were asked for. With May stamped on both ends this resolved to
+        // 30 May 2026 – 2 May 2027: eleven months, and no question asked.
+        var resolved = RelativeDateResolver.Resolve(
+            new DateSpanExpression(
+                new CalendarDayExpression(30, null, null),
+                new CalendarDayExpression(2, 5, null)),
+            new DateOnly(2026, 4, 15));
+
+        Assert.Equal(new DateOnly(2026, 4, 30), resolved.Start);
+        Assert.Equal(new DateOnly(2026, 5, 2), resolved.End);
+    }
+
+    [Fact]
+    public void A_day_named_twice_is_one_day_not_an_ambiguity()
+    {
+        // A sentence naming the same date two ways resolves it twice. Left in, the
+        // contiguity check saw a difference of zero, called the list non-contiguous,
+        // and the clarification asked "did you mean Friday 14 August 2026 or Friday
+        // 14 August 2026?" — a question with one answer, printed twice, on a request
+        // that was never ambiguous.
+        var resolved = RelativeDateResolver.Resolve(
+            new DateListExpression([new TodayExpression(), new TodayExpression()]),
+            Tuesday);
+
+        Assert.True(resolved.IsResolved, $"unresolved: {resolved.Ambiguity}");
+        Assert.Equal(Tuesday, resolved.Start);
+        Assert.Equal(Tuesday, resolved.End);
+    }
+
+    [Fact]
     public void A_list_of_adjacent_days_becomes_one_span()
     {
         var resolved = RelativeDateResolver.Resolve(

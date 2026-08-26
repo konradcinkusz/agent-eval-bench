@@ -1,9 +1,20 @@
 # Absence Concierge — behaviour specification
 
 - **Agent slug**: `absence-concierge`
-- **Spec version**: 1.6.0
+- **Spec version**: 1.7.0
 - **Status**: Accepted — this is the contract. Code is measured against it, not the other way round.
-- **Date**: 2026-08-22 (1.5.0, 1.4.0, 1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+- **Date**: 2026-08-25 (1.6.0: 2026-08-22; 1.5.0, 1.4.0, 1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+
+**What changed in 1.7.0**, working through the open findings from the deep review:
+
+| Change | Why |
+|---|---|
+| [§7.2](#72-a-definite-failure-and-an-indeterminate-one-are-different-answers)'s `5xx` row no longer says "Up to the attempt cap" | It read as permission for a second write on a definite failure. The cap for a write **is** one attempt ([§7](#7-degradation-contract) rule 3's carve-out), `ToolAttemptPolicy` has always returned 1, and deg-003's ceiling was the slack that let a regression through. What separates the two rows is what the agent must **say**, not how many times it may write |
+| The interpreter no longer reads "for &lt;Name&gt;" as a subject when a cover verb sits immediately before it | [§6](#6-out-of-scope)'s O-3 note calls the asymmetry deliberate because banning the name outright "would make the agent useless at ordinary sentences" — and the marker was refusing the note's own example, "book Friday off, I'm covering for Sam". Refusing a first-person request is the inverse of the defect O-3 prevents |
+| Date ranges: a month is not borrowed across a descending pair, and a connector must be all that lies between two date atoms | Both produced confident, well-formed drafts for days nobody asked for — "the 30th to the 2nd of May" as an eleven-month span, and any Spanish sentence with an incidental "a" as a week |
+| The tool boundary computes "today" in the actor's timezone | [B-1](#3-expected-behaviours) makes the zone a property of the spec, and the boundary was computing its past-date check in UTC while the agent computed it in the configured zone. Two enforcement layers, one request, two answers to what day it is |
+| A turn holding an unapproved draft returns its `ConfirmationCard` whatever the outcome | [§7](#7-degradation-contract) rule 5 says a failed read before the gate annotates the draft rather than cancelling it. The composer asks "Shall I submit it?" on that path and the card was withheld, so the demo asked a question it gave no way to answer |
+| The confirmation token store is bounded, and a rejection releases its token | `rejected` had no path out of the store, so every declined draft kept an entry for the process lifetime — the one map in the service with neither a bound nor an expiry |
 
 **What changed in 1.6.0**, on finding F-14 — a turn that threw reported `completed`:
 
@@ -578,8 +589,15 @@ do. The boundary, stated so it cannot be argued away later:
 
 | What happened | What the agent must say | Retry? |
 |---|---|---|
-| Write returned `5xx` | The request was **not** submitted | Up to the attempt cap |
+| Write returned `5xx` | The request was **not** submitted | **No** — rule 3 caps a write at one attempt |
 | Write **timed out** | The status is **unknown** — it may or may not have been recorded | **No.** Not once |
+
+*The `5xx` row read "Up to the attempt cap" until it was read back against
+[rule 3](#7-degradation-contract): the cap for a write **is** one attempt, so the
+phrase invited a second write that no layer of the implementation would perform.
+A 500 is not a promise that nothing was created either — the reasoning deg-004
+records applies to both rows. What separates them is what the agent must **say**,
+not how many times it may write.*
 
 The distinction is the whole content of two scenarios (`deg-003`, `deg-004`), and
 collapsing it produces one of two failures: an agent that claims failure on a

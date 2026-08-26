@@ -190,6 +190,14 @@ public static class RelativeDateResolver
 
         dates.Sort();
 
+        // "today and today", or a sentence naming one day two ways, resolves the same
+        // date twice. Left in, the gap check below sees a difference of zero, calls it
+        // non-contiguous, and the clarification asks "did you mean Friday 14 August
+        // 2026 or Friday 14 August 2026?" — a question with one answer, printed twice.
+        // A day named twice is one day.
+        var deduplicated = dates.Distinct().ToList();
+        dates = deduplicated;
+
         for (var i = 1; i < dates.Count; i++)
         {
             if (dates[i].DayNumber - dates[i - 1].DayNumber != 1)

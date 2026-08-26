@@ -15,10 +15,14 @@
 // "PDFs are build output" rule in architecture-standards'
 // docs/research/00-RESEARCH-DOCUMENTATION.md).
 //
-// Requires @mermaid-js/mermaid-cli, which drives a headless Chromium. Locally
-// that is `npx mmdc`; in CI the workflow installs it. If a browser is present at
-// PUPPETEER_EXECUTABLE_PATH or CHROME_BIN it is used, otherwise mermaid-cli's own
-// bundled download is left to resolve itself.
+// Requires @mermaid-js/mermaid-cli, which drives a headless Chromium. It is a
+// pinned devDependency, so `npm ci` provides it and Dependabot tracks it — the
+// same reasoning package.json gives for the lint tool, "a pinned version instead
+// of an npx invocation nobody updates". This script resolves the LOCAL bin and
+// never the registry: plain `npx mmdc` used to reach past a fresh clone's empty
+// node_modules and resolve a squatter package literally named `mmdc`. If a
+// browser is present at PUPPETEER_EXECUTABLE_PATH or CHROME_BIN it is used,
+// otherwise mermaid-cli's own bundled download is left to resolve itself.
 
 import { mkdirSync, readdirSync, writeFileSync, rmSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
@@ -28,6 +32,20 @@ import { spawnSync } from 'node:child_process';
 const ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const SRC = join(ROOT, 'docs', 'diagrams');
 const OUT = join(SRC, 'rendered');
+
+// The local bin, not `npx mmdc`. A fresh clone that has not run `npm ci` gets an
+// actionable message here rather than npm silently fetching the `mmdc` squatter
+// (a dummy package whose only content is a floating dependency on the real one)
+// and failing with "could not determine executable to run".
+const MMDC = join(ROOT, 'node_modules', '.bin', process.platform === 'win32' ? 'mmdc.cmd' : 'mmdc');
+
+if (!existsSync(MMDC)) {
+  console.error(
+    'render-diagrams: @mermaid-js/mermaid-cli is not installed.\n' +
+    "  It is a pinned devDependency — run `npm ci` (or `npm install`) first.",
+  );
+  process.exit(1);
+}
 
 const filters = process.argv.slice(2);
 
@@ -64,9 +82,8 @@ let failed = 0;
 for (const file of sources) {
   const slug = file.replace(/\.mmd$/, '');
   const result = spawnSync(
-    'npx',
+    MMDC,
     [
-      'mmdc',
       '-i', join(SRC, file),
       '-o', join(OUT, `${slug}.pdf`),
       '-p', puppeteerConfig,

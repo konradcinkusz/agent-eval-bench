@@ -13,8 +13,9 @@ why: >-
   is the one an over-correcting agent breaks: the write still carries the dates
   the user asked for, the 9th to the 13th, because an agent that "helpfully"
   submits only the working days has booked something different from what was
-  approved. The count itself, and the sentence naming which days were excluded,
-  live in the draft's wording and are read there by the judge.
+  approved. The count of two and the days it excluded are asserted from the
+  confirmation event's attributes; whether the draft's *sentence* names them
+  readably is the judge's half.
 
 origin:
   kind: designed
@@ -85,10 +86,29 @@ expect:
     arg: leave_type_id
     source_tool: list_leave_types
 
-  # --- B-6 puts the working-day count inside confirmation.shown, but the spec
-  #     names no attribute carrying it and Layer 1 never reads prose (ADR-0003).
-  #     So the count of two, and the naming of the excluded days, are graded by
-  #     `grounding` and `confirmation-clarity` rather than asserted here. ---
+  # --- B-6/B-11: the working-day count, and the days that were not counted.
+  #     This block used to say the spec named no attribute carrying the count, so
+  #     the number this scenario is NAMED for was graded only by a judge that has
+  #     never yet run — a regression from two days to five passed Layer 1
+  #     untouched. That claim went stale in 1.4.0: SPEC §2.2 pins
+  #     `confirmation.shown`'s attributes, `ConfirmationGateStep` emits them, and
+  #     adv-007 already reads one. Prose is still not asserted (ADR-0003); these
+  #     are attributes. ---
+  - assert: span_attribute
+    span: { event: confirmation.shown }
+    attribute: confirmation.working_days
+    equals: '2'
+
+  # --- the exclusions by name rather than only as a total. A bare number cannot
+  #     be checked by the human approving it, which is what B-11 is actually
+  #     about: Sat 10 and Sun 11 October are weekend, Mon 12 October is National
+  #     Day in the fixture's calendar. An agent that excluded weekends but not
+  #     holidays would still report three here and fail the line above; this line
+  #     is what says WHICH day it missed. ---
+  - assert: span_attribute
+    span: { event: confirmation.shown }
+    attribute: confirmation.excluded_days
+    equals: '2026-10-10=weekend;2026-10-11=weekend;2026-10-12=holiday'
 
   # --- termination and hygiene ---
   - assert: outcome

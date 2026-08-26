@@ -84,6 +84,15 @@ for attempt in 1 2 3; do
   exit "${status}"
 done
 
+# A trapped error on the third attempt used to leave the loop with a nonzero
+# status that nothing checked: the `az deployment sub show` below then returned
+# the failed deployment's own record — outputs null — and the script printed
+# "Provisioned." and exited 0. Exhausting the attempts is a failure, and says so.
+if [ "${status}" -ne 0 ]; then
+  echo "error: deployment failed after 3 attempts (tail above)." >&2
+  exit "${status}"
+fi
+
 outputs=$(az deployment sub show --name "${DEPLOYMENT_NAME}" --query properties.outputs -o json)
 
 resource_group=$(echo "${outputs}" | jq -r '.resourceGroupName.value')

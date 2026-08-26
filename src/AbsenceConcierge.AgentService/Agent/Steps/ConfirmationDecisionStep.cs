@@ -43,6 +43,12 @@ public sealed class ConfirmationDecisionStep(IConfirmationTokenStore tokens) : I
 
         if (context.Request.Decision == ConfirmationDecision.Reject)
         {
+            // The token is dead the moment a human says no, and this is the only
+            // place that knows it. Without this the store's sole terminal state was
+            // a successful write, so every declined draft kept an entry for the
+            // process lifetime.
+            tokens.Reject(token);
+
             context.EmitEvent(AgentDiagnostics.Events.ConfirmationRejected);
             context.Outcomes.Record(AgentDiagnostics.TurnOutcomes.Cancelled);
             context.Draft = draft;

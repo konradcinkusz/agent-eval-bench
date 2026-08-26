@@ -83,22 +83,108 @@ function set(id, value) {
   document.getElementById(id).textContent = value;
 }
 
+// ── Dates a human can check ─────────────────────────────────────────────────
+//
+// The wire carries ISO dates and the card used to show them raw: "2026-08-11 to
+// 2026-08-12". That is the exact value and it is nearly unreadable at the one
+// moment it matters most — B-11's requirement is that the human APPROVING can
+// check which days are going, and nobody checks a weekend by counting hyphens.
+// So the readable form leads and the ISO stays beside it, smaller: the approver
+// reads "Tue 11 – Wed 12 Aug 2026" and can still see exactly what will be sent.
+//
+// Formatted from the ISO parts through Date.UTC and read back with the getUTC*
+// accessors, never through Date.parse of a local-time string. A bare
+// "2026-08-11" parsed as local time in a zone west of UTC is 10 August, which
+// would print the wrong weekday for the day being booked — the same
+// frame error the tool boundary itself carried until recently, reintroduced in
+// the one place a human would have believed it.
+const DAY_NAMES = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function parseIsoDate(iso) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(iso ?? '');
+  if (!match) return null;
+
+  const [, year, month, day] = match.map(Number);
+  const date = new Date(Date.UTC(year, month - 1, day));
+
+  // Date.UTC rolls 2026-02-30 into March rather than refusing it. A date that
+  // did not survive the round trip is not one to print a confident weekday for.
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+    ? date
+    : null;
+}
+
+function readableDay(date, { withMonth = true, withYear = true } = {}) {
+  const parts = [`${DAY_NAMES[date.getUTCDay()]} ${date.getUTCDate()}`];
+  if (withMonth) parts.push(MONTH_NAMES[date.getUTCMonth()]);
+  if (withYear) parts.push(String(date.getUTCFullYear()));
+  return parts.join(' ');
+}
+
+// "Fri 14 – Tue 18 Aug 2026" when both ends share a month, widening only as far
+// as the ambiguity requires: to the month when they differ, to the year when
+// that differs too. Repeating "Aug 2026" on both ends of a five-day span is
+// noise a reader has to look past to find the two numbers that matter.
+function readableRange(startIso, endIso) {
+  const start = parseIsoDate(startIso);
+  const end = parseIsoDate(endIso);
+
+  if (!start || !end) return startIso === endIso ? startIso : `${startIso} to ${endIso}`;
+  if (startIso === endIso) return readableDay(start);
+
+  const sameYear = start.getUTCFullYear() === end.getUTCFullYear();
+  const sameMonth = sameYear && start.getUTCMonth() === end.getUTCMonth();
+
+  return `${readableDay(start, { withMonth: !sameMonth, withYear: !sameYear })} – ${readableDay(end)}`;
+}
+
+// The server sends each excluded day as "2026-08-15 — weekend" (or a holiday's
+// name). Only the date half is rewritten; the reason is the server's words.
+function readableExcluded(entry) {
+  const separator = ' — ';
+  const at = String(entry).indexOf(separator);
+  if (at < 0) return entry;
+
+  const date = parseIsoDate(String(entry).slice(0, at));
+  return date
+    ? `${readableDay(date, { withYear: false })}${separator}${String(entry).slice(at + separator.length)}`
+    : entry;
+}
+
 function showCard(confirmation, degradations) {
   set('card-type', confirmation.leaveTypeName);
-  set('card-dates', confirmation.startDate === confirmation.endDate
+
+  // Built with createElement, never innerHTML — rule 2 at the top of this file
+  // holds for values the service produced as much as for fixture strings.
+  const dates = document.getElementById('card-dates');
+  dates.replaceChildren();
+  dates.append(document.createTextNode(readableRange(confirmation.startDate, confirmation.endDate)));
+
+  const iso = document.createElement('span');
+  iso.className = 'iso';
+  iso.textContent = confirmation.startDate === confirmation.endDate
     ? confirmation.startDate
-    : `${confirmation.startDate} to ${confirmation.endDate}`);
+    : `${confirmation.startDate} → ${confirmation.endDate}`;
+  dates.append(iso);
+
   set('card-days', String(confirmation.workingDays));
 
   const excluded = confirmation.excludedDays ?? [];
   document.getElementById('card-excluded-row').hidden = excluded.length === 0;
-  set('card-excluded', excluded.join(', '));
+  set('card-excluded', excluded.map(readableExcluded).join(', '));
 
   document.getElementById('card-attachment-row').hidden = !confirmation.attachmentRequired;
   set('card-attachment', 'A medical certificate, because of how long this is.');
 
   // `not_run` is shown rather than hidden. Whether existing bookings were actually
   // checked is a fact somebody needs before approving, not an internal detail.
+  //
+  // `conflicts_found` is unreachable as the agent stands: ConflictCheckStep stops
+  // the turn on any overlap and asks (hap-004), so no draft exists to carry that
+  // state to a card. Kept as a defensive rendering rather than deleted — the
+  // mapping is one line, and the alternative is a card that prints a raw enum on
+  // the day that behaviour changes.
   set('card-conflicts', {
     clean: 'Checked — nothing overlaps',
     conflicts_found: 'Checked — something overlaps',

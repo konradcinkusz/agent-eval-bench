@@ -3,6 +3,7 @@ using AbsenceConcierge.AgentService.Agent;
 using AbsenceConcierge.AgentService.Agent.Language;
 using AbsenceConcierge.AgentService.Agent.Llm;
 using AbsenceConcierge.AgentService.Agent.Steps;
+using AbsenceConcierge.AgentService.Agent.Time;
 using AbsenceConcierge.AgentService.Demo;
 using AbsenceConcierge.AgentService.Telemetry;
 using AbsenceConcierge.AgentService.Workforce;
@@ -50,7 +51,12 @@ public static class ServiceCollectionExtensions
         services.Configure<McpOptions>(configuration.GetSection(McpOptions.SectionName));
 
         services.TryAddSingleton(TimeProvider.System);
-        services.AddSingleton<IConfirmationTokenStore, InMemoryConfirmationTokenStore>();
+        // Bounded from the same options the conversation cap uses: one pending draft
+        // per conversation is the natural ceiling, and an unbounded map behind a
+        // public endpoint is a memory exhaustion nobody has to be clever to cause.
+        services.AddSingleton<IConfirmationTokenStore>(sp =>
+            new InMemoryConfirmationTokenStore(
+                sp.GetRequiredService<IOptions<DemoOptions>>().Value.MaxConfirmationTokens));
 
         services.AddSingleton<IFixtureLoader>(sp => new FixtureLoader(
             sp.GetRequiredService<ILogger<FixtureLoader>>(),
@@ -72,7 +78,8 @@ public static class ServiceCollectionExtensions
         {
             var options = sp.GetRequiredService<IOptions<WorkforceToolsOptions>>().Value;
             var mcp = sp.GetRequiredService<IOptions<McpOptions>>().Value;
-            var maxReadAttempts = sp.GetRequiredService<IOptions<AgentOptions>>().Value.MaxReadAttempts;
+            var agent = sp.GetRequiredService<IOptions<AgentOptions>>().Value;
+            var maxReadAttempts = agent.MaxReadAttempts;
             var logger = sp.GetRequiredService<ILogger<MockWorkforceTools>>();
 
             if (string.Equals(options.Mode, WorkforceToolsMode.Mcp, StringComparison.OrdinalIgnoreCase))
@@ -114,6 +121,7 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<WorkforceWorld>(),
                 sp.GetRequiredService<IConfirmationTokenStore>(),
                 sp.GetRequiredService<TimeProvider>(),
+                AgentClock.ZoneFor(agent.Timezone),
                 maxReadAttempts);
         });
 

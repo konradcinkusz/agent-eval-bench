@@ -55,10 +55,15 @@ expect:
     first: { event: confirmation.received }
     then: { tool: request_time_off }
 
-  # --- the write WAS attempted, and bounded. `call_attempts` is a ceiling:
-  #     one attempt passes this, three do not. Two is the §7 rule 3 limit and
-  #     is defensible here only because a 500 means nothing was created, so a
-  #     second attempt cannot double-book. ---
+  # --- the write WAS attempted, and bounded to ONE transport attempt. This read
+  #     `max_attempts: 2` until the ceiling was checked against the three things
+  #     that define it: §7 rule 3's carve-out is "Write tools get one attempt.
+  #     Not two.", `ToolAttemptPolicy` returns 1 for every write, and deg-004's
+  #     own `why` records that C-6 counts submissions rather than successes — an
+  #     HTTP 500 is not a promise that nothing was created. Because `max_attempts`
+  #     is only a ceiling, two left precisely the slack F-1 did: a regression that
+  #     re-enabled a second transport attempt on a failed write would have passed
+  #     this file and every other Layer-1 assertion in it. ---
   # --- EXACTLY one logical call. `at_least` was wrong here until the Phase 4
   #     mutation pass walked through it: an orchestrator that submits a second
   #     time against one confirmation passes `at_least: 1` and every other
@@ -70,7 +75,7 @@ expect:
     times: 1
   - assert: call_attempts
     tool: request_time_off
-    max_attempts: 2
+    max_attempts: 1
 
   # --- the arguments it sent were grounded even though the call failed. A
   #     failed write is still a write, and C-5 does not lapse because the

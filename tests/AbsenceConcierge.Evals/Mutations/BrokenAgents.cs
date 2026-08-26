@@ -54,7 +54,44 @@ public static class BrokenAgents
 
         new("obeys-an-instruction-in-a-tool-result", "adv-003-injection-via-leave-type-name",
             services => Replace<ConfirmationGateStep, ObeysToolResultInstructionStep>(services)),
+
+        // The three below close the gap SPEC §8.6 left open: C-2, C-3 and C-4 had no
+        // mutant, so the assertions guarding them had never been shown able to catch
+        // anything. The repository's own line is the argument — "a suite that has
+        // never failed is a suite nobody has tested" — and F-1, the defect the first
+        // mutation run found, was exactly a constraint whose assertions could not
+        // fail.
+        new("ignores-the-permission-fixture", "den-004-missing-permission-to-request-leave",
+            services => Replace<ScopeGuardStep, IgnoresThePermissionFixtureStep>(services)),
+
+        new("leaks-an-internal-identifier", "hap-003-single-day-vacation-friday",
+            ReplaceComposer<LeaksAnInternalIdentifierComposer>),
+
+        new("ends-a-turn-by-exhaustion", "hap-004-overlap-with-existing-booking-is-reported",
+            services => services.PostConfigure<AgentOptions>(options => options.MaxSteps = 1)),
     ];
+
+    /// <summary>
+    /// The C-3 mutant is not a step — the composer is where user-facing prose is
+    /// produced, and C-3 is a property of that prose — so it is swapped at its own
+    /// registration rather than in the pipeline.
+    /// </summary>
+    private static void ReplaceComposer<TMutant>(IServiceCollection services)
+        where TMutant : class, IReplyComposer
+    {
+        for (var index = 0; index < services.Count; index++)
+        {
+            if (services[index].ServiceType == typeof(IReplyComposer))
+            {
+                services[index] = ServiceDescriptor.Singleton<IReplyComposer, TMutant>();
+                return;
+            }
+        }
+
+        throw new InvalidOperationException(
+            "No IReplyComposer is registered. The mutation pass and the composition have drifted, "
+            + "which means this variant is no longer breaking what it claims to break.");
+    }
 
     /// <summary>
     /// Swaps one step for another <b>at the same index</b>. Replacing in place rather
@@ -203,5 +240,77 @@ internal sealed class ObeysToolResultInstructionStep(IConfirmationTokenStore tok
         context.ApprovedToken = token;
 
         return ValueTask.FromResult(StepSignal.Continue);
+    }
+}
+
+/// <summary>
+/// Breaks C-2: keeps every other refusal and drops the permission check.
+///
+/// <para>
+/// A copy of <see cref="ScopeGuardStep"/> without its O-7 branch, rather than a
+/// guard that refuses nothing — a mutant that broke four rules at once would prove
+/// the suite catches <em>something</em>, which is not the question. This one is
+/// wrong about exactly one thing: it treats the permission fixture as advisory.
+/// </para>
+/// </summary>
+internal sealed class IgnoresThePermissionFixtureStep : IAgentStep
+{
+    public string Name => "scope_guard";
+
+    public bool AppliesTo(AgentTurnContext context) => context?.Intent is not null;
+
+    public ValueTask<StepSignal> ExecuteAsync(AgentTurnContext context, CancellationToken cancellationToken)
+    {
+        var intent = context!.Intent!;
+
+        var rule = intent.Kind switch
+        {
+            IntentKind.ApproveOrRejectLeave => AgentDiagnostics.RefusalRules.ApprovalIsAManagerAction,
+            IntentKind.CancelOrEditBooking => AgentDiagnostics.RefusalRules.CannotModifyBookings,
+            IntentKind.PayrollOrPolicyQuestion => AgentDiagnostics.RefusalRules.PayrollBelongsToHr,
+            IntentKind.MedicalAdvice => AgentDiagnostics.RefusalRules.NoMedicalJudgement,
+            _ => null,
+        };
+
+        if (rule is not null)
+        {
+            context.Refuse(rule);
+            return ValueTask.FromResult(StepSignal.Stop);
+        }
+
+        if (intent.Person is { Role: PersonRole.Subject })
+        {
+            context.Refuse(AgentDiagnostics.RefusalRules.OnlyForTheSignedInUser);
+            return ValueTask.FromResult(StepSignal.Stop);
+        }
+
+        // The O-7 branch that belongs here is gone. The actor's permissions are read
+        // by nothing, so a request the fixture forbids proceeds to a draft.
+        return ValueTask.FromResult(StepSignal.Continue);
+    }
+}
+
+/// <summary>
+/// Breaks C-3: composes the real reply and appends an internal identifier.
+///
+/// <para>
+/// Deliberately a decorator rather than a rewrite. The prose stays correct and
+/// useful — which is the failure mode worth catching, because a reply that reads
+/// perfectly and carries one id past the boundary is the one a human reviewer signs
+/// off. <c>output_excludes_internal_ids</c> is asserted by every scenario in the
+/// corpus and had, until now, never been shown able to fail.
+/// </para>
+/// </summary>
+internal sealed class LeaksAnInternalIdentifierComposer(DeterministicReplyComposer inner) : IReplyComposer
+{
+    public async ValueTask<string> ComposeAsync(
+        AgentTurnContext context,
+        string outcome,
+        CancellationToken cancellationToken = default)
+    {
+        var reply = await inner.ComposeAsync(context, outcome, cancellationToken).ConfigureAwait(false);
+        var leaked = context?.SelectedLeaveType?.Id ?? context?.Draft?.LeaveType.Id ?? "lt-201";
+
+        return $"{reply} (ref {leaked})";
     }
 }

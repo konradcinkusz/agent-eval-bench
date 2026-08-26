@@ -253,10 +253,13 @@ into producing a token that was never issued.
 stateDiagram-v2
     [*] --> Issued : Issue(draft) — on confirmation.shown
     Issued --> Approved : Approve(token) — a human clicked
-    Issued --> [*] : never approved, so no write is possible
+    Issued --> Rejected : Reject(token) — a human declined
+    Issued --> Evicted : past the cap, oldest issued first
     Approved --> Redeemed : TryRedeem succeeds — draft matches
     Approved --> Approved : TryRedeem with a different draft — REFUSED
     Redeemed --> [*] : entry removed atomically
+    Rejected --> [*] : entry removed
+    Evicted --> [*] : entry removed
 
     note right of Issued
         Shown but not approved.
@@ -272,6 +275,16 @@ stateDiagram-v2
         That is C-6 as a property of
         the boundary, not of the
         agent's restraint.
+    end note
+
+    note right of Evicted
+        The store is bounded, so it
+        cannot grow without limit
+        behind a public endpoint.
+        An evicted token redeems as
+        false: the write is refused
+        and the visitor is re-asked.
+        Failing closed is the point.
     end note
 ```
 

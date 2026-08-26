@@ -1,3 +1,5 @@
+using AbsenceConcierge.AgentService.Agent;
+using AbsenceConcierge.AgentService.Agent.Time;
 using AbsenceConcierge.AgentService.Workforce.Confirmation;
 using AbsenceConcierge.AgentService.Workforce.Fixtures;
 using AbsenceConcierge.AgentService.Workforce.Mock;
@@ -42,7 +44,11 @@ public static class TestWorld
     {
         world ??= Load();
         var tokens = new InMemoryConfirmationTokenStore();
-        var tools = new MockWorkforceTools(world, tokens, new FixedTimeProvider(Now));
+        var tools = new MockWorkforceTools(
+            world,
+            tokens,
+            new FixedTimeProvider(Now),
+            AgentClock.ZoneFor(new AgentOptions().Timezone));
         return (tools, tokens, world);
     }
 

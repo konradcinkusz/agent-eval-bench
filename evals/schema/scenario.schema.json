@@ -187,6 +187,10 @@
         {
           "additionalProperties": false,
           "required": ["assert", "tool"],
+          "not": {
+            "required": ["times", "at_least"],
+            "description": "Both together is a silent no-op: the evaluator reads `times` and ignores `at_least`, so an author who wrote both would believe a bound the harness never checked. F-1 was exactly this shape of slack."
+          },
           "properties": {
             "assert": { "const": "tool_called" },
             "tool": { "$ref": "#/$defs/toolName" },
@@ -226,6 +230,10 @@
         {
           "additionalProperties": false,
           "required": ["assert", "event"],
+          "not": {
+            "required": ["times", "at_least"],
+            "description": "Both together is a silent no-op: the evaluator reads `times` and ignores `at_least`."
+          },
           "properties": {
             "assert": { "const": "event_emitted" },
             "event": { "$ref": "#/$defs/eventName" },

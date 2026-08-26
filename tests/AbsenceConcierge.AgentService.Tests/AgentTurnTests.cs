@@ -371,6 +371,35 @@ public sealed class AgentTurnTests
 
         Assert.Equal(0, harness.TimesCalled(WorkforceToolCatalog.RequestTimeOff));
         Assert.Contains("not been able to verify", result.Reply, StringComparison.OrdinalIgnoreCase);
+
+        // And the structured draft a client renders approve/reject from. This was
+        // withheld on exactly this path: CardFor keyed off the confirmation_pending
+        // outcome, and precedence resolves this turn as degraded — so the reply
+        // asked "Shall I submit it?" while the page had no buttons to answer with,
+        // and typing "yes" is not an approval either (the decision travels as the
+        // typed field the buttons produce). The eval suite cannot see this, because
+        // deg-002 asserts trace events and the card is part of the HTTP result.
+        Assert.NotNull(result.Confirmation);
+        Assert.Equal(AgentDiagnostics.ConflictCheckStates.NotRun, result.Confirmation!.ConflictCheck);
+        Assert.Contains("Shall I submit it?", result.Reply, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public async Task A_rejected_draft_returns_no_card_to_press_again()
+    {
+        // The other edge of the same condition, and the reason it is not simply
+        // "a draft is held and unapproved": the rejection turn puts the draft back
+        // on the context with no approval, so that condition alone would offer the
+        // buttons a second time to someone who has just pressed one of them.
+        using var harness = AgentHarness.Build();
+
+        var offered = await harness.SayAsync("r1", "Can you book Thursday and Friday off as vacation?");
+        Assert.NotNull(offered.Confirmation);
+
+        var rejected = await harness.DecideAsync("r1", ConfirmationDecision.Reject, "No, don't submit that");
+
+        Assert.Equal(AgentDiagnostics.TurnOutcomes.Cancelled, rejected.Outcome);
+        Assert.Null(rejected.Confirmation);
     }
 
     [Fact]

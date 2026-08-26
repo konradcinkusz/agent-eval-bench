@@ -28,4 +28,28 @@ public sealed class AgentClock(TimeProvider timeProvider, TimeZoneInfo zone)
 
     /// <summary>The actor's local calendar date. Everything downstream is date arithmetic.</summary>
     public DateOnly Today => DateOnly.FromDateTime(TimeZoneInfo.ConvertTime(Instant, zone).DateTime);
+
+    /// <summary>
+    /// The configured zone, or a loud failure. Shared rather than private to the
+    /// orchestrator because the tool boundary needs the same answer: it enforces the
+    /// past-date rule a second time, and two layers disagreeing about what day it is
+    /// on one request is the quiet frame error this class exists to prevent.
+    /// </summary>
+    public static TimeZoneInfo ZoneFor(string id)
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(id);
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            // Deliberately loud and deliberately fatal. Falling back to UTC would
+            // resolve every date in the wrong frame while every test still passed,
+            // which is the exact defect InvariantGlobalization=false exists to
+            // prevent (Directory.Build.props).
+            throw new InvalidOperationException(
+                $"Timezone '{id}' is not available on this machine. The container "
+                + "must carry tzdata; see Directory.Build.props for why globalization is not trimmed.");
+        }
+    }
 }

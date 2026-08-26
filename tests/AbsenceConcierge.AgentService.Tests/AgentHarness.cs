@@ -2,6 +2,7 @@ using System.Diagnostics;
 using AbsenceConcierge.AgentService.Agent;
 using AbsenceConcierge.AgentService.Agent.Language;
 using AbsenceConcierge.AgentService.Agent.Steps;
+using AbsenceConcierge.AgentService.Agent.Time;
 using AbsenceConcierge.AgentService.Telemetry;
 using AbsenceConcierge.AgentService.Workforce;
 using AbsenceConcierge.AgentService.Workforce.Confirmation;
@@ -116,7 +117,10 @@ public sealed class AgentHarness : IDisposable
         var time = new FixedTimeProvider(now ?? TestWorld.Now);
         var tokens = new InMemoryConfirmationTokenStore();
 
-        IWorkforceTools inner = new MockWorkforceTools(world, tokens, time);
+        // The same zone the agent is given. Two enforcement layers computing
+        // "today" in different frames is the defect this argument closes.
+        IWorkforceTools inner = new MockWorkforceTools(
+            world, tokens, time, AgentClock.ZoneFor(agentOptions.Timezone));
 
         if (faults is not null)
         {

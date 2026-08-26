@@ -32,6 +32,28 @@ public sealed class Layer2Tests
 
         var below = report.Rubrics.Where(rubric => !rubric.MeetsThreshold).ToList();
 
+        // SPEC §5's closing sentence: "Until agreement is recorded, judge scores are
+        // reported and trended but do not block — stated here so the gap is a
+        // decision rather than drift." This test asserted whenever `Ran` was true and
+        // never consulted the calibration report, and nightly.yml runs this project
+        // WITH the key — so the first keyed nightly would have failed the workflow on
+        // a rubric mean, which is the uncalibrated judge blocking a pipeline that the
+        // spec forbids by name. Reported loudly instead, in the shape
+        // Improvements_over_the_baseline already uses.
+        if (!report.Calibration.Gating)
+        {
+            if (below.Count > 0)
+            {
+                Console.WriteLine(
+                    "Rubrics below threshold, REPORTED AND NOT GATING: "
+                    + string.Join(", ", below.Select(r => $"{r.Rubric} {r.Mean:F2} < {r.Threshold:F2}"))
+                    + $". {report.Calibration.Reason}");
+            }
+
+            Assert.True(true, "reporting only — the judge is not calibrated");
+            return;
+        }
+
         Assert.True(
             below.Count == 0,
             "Rubrics below threshold: "
@@ -54,6 +76,22 @@ public sealed class Layer2Tests
         // asserted something no tool returned. The mean says the agent is usually
         // grounded; the floor is what says it was never confidently wrong.
         var breached = report.Rubrics.Where(rubric => !rubric.MeetsFloor).ToList();
+
+        // Gated for the same reason as the threshold above: an uncalibrated judge
+        // reports, it does not block (SPEC §5).
+        if (!report.Calibration.Gating)
+        {
+            if (breached.Count > 0)
+            {
+                Console.WriteLine(
+                    "Rubrics below their floor, REPORTED AND NOT GATING: "
+                    + string.Join(", ", breached.Select(r => $"{r.Rubric} lowest {r.Lowest} < {r.Floor}"))
+                    + $". {report.Calibration.Reason}");
+            }
+
+            Assert.True(true, "reporting only — the judge is not calibrated");
+            return;
+        }
 
         Assert.True(
             breached.Count == 0,
@@ -137,11 +175,45 @@ public sealed class Layer2Tests
 
         var gate = JudgeConfiguration.Current.Calibration;
 
+        // Every condition Summarise applies, enumerated. This omitted MinimumScenarios
+        // and could therefore fail while the gate was behaving correctly — a suite
+        // reporting a bug in itself for doing its job. Provenance is here for the same
+        // reason: a condition the gate applies and this test does not know about is a
+        // false alarm waiting for the run that trips it.
         Assert.True(
-            calibration.Gating || calibration.Labels < gate.MinimumLabels || calibration.Kappa is null
+            calibration.Gating
+                || calibration.HumanLabels < gate.MinimumLabels
+                || calibration.Scenarios < gate.MinimumScenarios
+                || calibration.Kappa is null
                 || calibration.Kappa < gate.MinimumKappa,
             "The calibration report says the judge may not gate, but every stated condition is met. "
             + "That is a bug in the gate, not a finding about the judge.");
+    }
+
+    [Fact]
+    public void Labels_an_AI_wrote_cannot_open_the_gate()
+    {
+        // The half of the gate that did not exist. CALIBRATION.md says the gate
+        // "additionally waits for human labels under the owner's own handle" and
+        // FINDINGS §5 repeats that the count/coverage/κ thresholds are "necessary but
+        // no longer sufficient" — while Summarise computed Gating from those three
+        // alone and never read Labeller at all. Every label in the corpus carries an
+        // AI handle and they already clear the first two conditions, so the first
+        // keyed run computing κ ≥ 0.6 against them would have certified the judge
+        // with the very labels three documents say cannot certify it.
+        var calibration = Layer2Run.Report.Calibration;
+        var gate = JudgeConfiguration.Current.Calibration;
+
+        Assert.True(
+            string.IsNullOrWhiteSpace(gate.OwnerHandle),
+            $"An owner handle ('{gate.OwnerHandle}') is configured, so this test no longer describes "
+            + "the repository's state. It should be rewritten to assert the owner's labels DO count.");
+
+        Assert.Equal(0, calibration.HumanLabels);
+        Assert.False(
+            calibration.Gating,
+            $"The gate opened on {calibration.Labels} label(s), none of them human.");
+        Assert.Contains("human", calibration.Reason, StringComparison.OrdinalIgnoreCase);
     }
 }
 
@@ -266,6 +338,27 @@ public sealed class NightlyWorkflowTests
         Assert.Contains("EVAL_LAYER2_SCOPE: full", workflow, StringComparison.Ordinal);
         Assert.Contains("Llm__JudgeModel", workflow, StringComparison.Ordinal);
         Assert.Contains("secrets.", workflow, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_missing_credential_fails_the_nightly_rather_than_warning()
+    {
+        // GitHub notifies on scheduled-workflow *failure* only, and nobody opens the
+        // summary of a green nightly — so a warning that still passes is exactly how
+        // "the keyed run" stays keyless indefinitely with nobody told, which is the
+        // silent state this workflow exists to prevent. The branch that reports the
+        // missing credential has to end the run red. This asserts the file's text,
+        // which is all a test can see; it cannot know whether the secret is set.
+        var workflow = Workflow;
+
+        var step = workflow.IndexOf("Report the missing credential", StringComparison.Ordinal);
+        Assert.True(step >= 0, "The nightly no longer has a step reporting the missing credential.");
+
+        var nextStep = workflow.IndexOf("      - name:", step, StringComparison.Ordinal);
+        var branch = nextStep < 0 ? workflow[step..] : workflow[step..nextStep];
+
+        Assert.Contains("exit 1", branch, StringComparison.Ordinal);
+        Assert.DoesNotContain("::warning::", branch, StringComparison.Ordinal);
     }
 
     [Fact]
