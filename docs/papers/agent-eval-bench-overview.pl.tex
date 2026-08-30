@@ -378,7 +378,7 @@ Takie jest uzasadnienie ADR-0004: przypnij model agenta i model sędziego
 osobno i nigdy nie schodź po cichu na inny. Jeśli przypięty model jest
 niedostępny, przebieg się nie odbywa --- nie jest po cichu obsłużony przez
 zastępstwo. \finding{Brakujący przebieg to uczciwa luka; przebieg zastępczy to
-zła odpowiedź w cudzej, właściwej etykiecie.} Zestaw, który po cichu odpowiada
+zła odpowiedź nosząca właściwą etykietę.} Zestaw, który po cichu odpowiada
 innym modelem, nie mierzy badanego systemu, a co gorsza --- robiąc to, raportuje
 zieleń.
 
@@ -548,7 +548,7 @@ Badanym okazem jest rozwiązanie .NET Aspire z dokładnie jedną usługą wdraż
 
 Jedna z tych możliwości została celowo pominięta: w żadnym punkcie potoku nie ma interfejsu Swagger ani OpenAPI. To ujawnienie informacji --- mapa tras, kształty DTO i reguły walidacji, podane na tacy --- a ,,wyłączone na produkcji'' to przełącznik, który ktoś przestawi w złą stronę podczas sesji debugowania. Usługa ma cztery trasy i są one udokumentowane prozą.
 
-Rysunek~\ref{fig:turn} pokazuje, co faktycznie bierze udział w jednej turze: endpoint, orkiestrator, jedenastokrokowy potok, token store potwierdzenia, granicę narzędziową, kompozytor odpowiedzi oraz diagnostykę, która zamienia to wszystko w ślad wykonania. Dwa z tych bloków są zacieniowane i to właśnie one dźwigają własność bezpieczeństwa: magazyn tokenów i granica narzędziowa. Cała reszta to aranżacja.
+Rysunek~\ref{fig:turn} pokazuje, co faktycznie bierze udział w jednej turze: endpoint, orkiestrator, jedenastokrokowy potok, token store potwierdzenia, granicę narzędziową, kompozytor odpowiedzi oraz diagnostykę, która zamienia to wszystko w ślad wykonania. Dwa z tych bloków są zacieniowane i to właśnie one dźwigają własność bezpieczeństwa: token store i granica narzędziowa. Cała reszta to aranżacja.
 
 \begin{figure}[htbp]
 \centering
@@ -613,7 +613,7 @@ Pisanie scenariuszy wykryło \emph{sześć} defektów w specyfikacji jeszcze prz
 
 \subsection{Siedem twardych warunków}
 
-Są oceniane na 100\% i twardo blokują merge. Nie są aspiracjami i nie podlegają ocenie sędziego: każdy z nich jest deterministyczną własnością śladu wykonania.
+Są oceniane na 100\% i twardo blokują scalenie. Nie są aspiracjami i nie podlegają ocenie sędziego: każdy z nich jest deterministyczną własnością śladu wykonania.
 
 \begin{table}[htbp]
 \centering
@@ -916,7 +916,7 @@ Oprzyrządowanie wymusza to, zamiast zalecać: rubryka deklarująca skalę z bra
 
 \subsubsection*{Co jest przypięte}
 
-Plik rubryki i prompt sędziego są przypięte skrótem SHA-256, a oba skróty są odnotowywane w każdym raporcie. Edycja rubryki jest edycją przyrządu pomiarowego, a skrót sprawia, że widać to w diffie, zamiast pozostawać niewidocznym w liczbie. Model sędziego jest przypięty niezależnie od modelu agenta --- ADR-0004 --- a zapisywany jest ten model, który faktycznie odpowiedział, a nie ten, na który liczyła konfiguracja. Brakujący przebieg to uczciwa luka; podmieniony to zła odpowiedź w cudzej etykiecie.
+Plik rubryki i prompt sędziego są przypięte skrótem SHA-256, a oba skróty są odnotowywane w każdym raporcie. Edycja rubryki jest edycją przyrządu pomiarowego, a skrót sprawia, że widać to w diffie, zamiast pozostawać niewidocznym w liczbie. Model sędziego jest przypięty niezależnie od modelu agenta --- ADR-0004 --- a zapisywany jest ten model, który faktycznie odpowiedział, a nie ten, na który liczyła konfiguracja. Brakujący przebieg to uczciwa luka; podmieniony to zła odpowiedź nosząca właściwą etykietę.
 
 \subsubsection*{Uczciwy stan rzeczy}
 
@@ -1185,10 +1185,10 @@ Cokolwiek niesklasyfikowanego & Domyślnie nierozstrzygnięte. \\
 \bottomrule
 \end{tabularx}
 \caption{Która awaria jest którą na poziomie transportu. Domyślną odpowiedzią dla wszystkiego nierozpoznanego jest odpowiedź niepewna, bo kosztem błędnego ,,na pewno się nie udało'' jest człowiek składający ten sam wniosek urlopowy dwa razy.}
-\label{tab:transport}
+\label{tab:transport-inflight}
 \end{table}
 
-Wartość domyślna w ostatnim wierszu tabeli~\ref{tab:transport} jest tą nośną. Domyślne ,,na pewno się nie udało'' produkuje zdanie pewne siebie, czyste i błędne oraz zdublowaną rezerwację; domyślne ,,nie wiadomo'' produkuje zdanie niezgrabne i człowieka, który sprawdza. Reszta kontraktu idzie tą samą linią: częściowy wynik z jawną adnotacją, nigdy wynik zmyślony --- brakujący stan urlopu raportuje się jako nieznany, nie jako zero --- nigdy cicha pętla ponowień, nigdy cichy sukces, a nieudany odczyt przed bramką nigdy nie staje się zapisem.
+Wartość domyślna w ostatnim wierszu tabeli~\ref{tab:transport-inflight} jest tą nośną. Domyślne ,,na pewno się nie udało'' produkuje zdanie pewne siebie, czyste i błędne oraz zdublowaną rezerwację; domyślne ,,nie wiadomo'' produkuje zdanie niezgrabne i człowieka, który sprawdza. Reszta kontraktu idzie tą samą linią: częściowy wynik z jawną adnotacją, nigdy wynik zmyślony --- brakujący stan urlopu raportuje się jako nieznany, nie jako zero --- nigdy cicha pętla ponowień, nigdy cichy sukces, a nieudany odczyt przed bramką nigdy nie staje się zapisem.
 
 Uczciwa uwaga na koniec brzmi tak: raportowanie niepewności to słabsza odpowiedź. Właściwą jest klucz idempotencji dostarczony przez klienta, który niepewność rozstrzyga, zamiast ją opowiadać, a którego standardy tego środowiska technologicznego w ogóle nie obejmują --- wyszukiwanie idempotencji w nich zwraca wyłącznie provisioning infrastruktury. Ta luka jest zgłoszona z powrotem jako rozszerzenie E-7, zamiast być tutaj po cichu obchodzona.
 
@@ -1279,7 +1279,7 @@ Walidator napisany w zupełnie innym celu & F-7 \\
 Czerwony build & F-6, F-8 \\
 Przebieg etykietowania kalibracyjnego, przeprowadzony zanim jakikolwiek sędzia cokolwiek ocenił & F-9, F-10, F-11 \\
 Robienie screenshota do pliku README & F-12 \\
-Czytanie magazynu tokenów z myślą o współbieżności & F-13 \\
+Czytanie token store'a z myślą o współbieżności & F-13 \\
 Czytanie ścieżki błędu orkiestratora & F-14 \\
 \midrule
 Uruchomienie zestawu testów przeciwko agentowi i odczytanie wyniku & \textcolor{accentred}{\textbf{żadne}} \\
@@ -1459,8 +1459,8 @@ opisem, a nie decyzją. Każda z sześciu poniższych taką alternatywę nazywa.
     \item \textbf{ADR-0004, przypnij osobno model agenta i model sędziego i nigdy
     nie podmieniaj ich po cichu.} Odrzuca wygodę podstawiania dowolnego
     dostępnego modelu, gdy przypiętego nie ma, ponieważ \emph{brakujący przebieg
-    jest uczciwą luką; przebieg z podmienionym modelem to błędna odpowiedź z
-    właściwą etykietą.}
+    to uczciwa luka; przebieg z podmienionym modelem to zła odpowiedź nosząca
+    właściwą etykietę.}
     \item \textbf{ADR-0005, SDK MCP mieszka za sesją o jednej metodzie.} Odrzuca
     rozlewanie się typów z SDK po całym potoku;
     \texttt{grep -rl '\textasciicircum{}using ModelContextProtocol' src/} zwraca dokładnie jeden plik,
@@ -1647,7 +1647,7 @@ precyzyjniej, niż zrobiłaby to parafraza.
 Ten artykuł otwierały dwa pytania i oba dotyczą eval benchu, a nie
 agenta HR, który stoi przed nim.
 
-\textbf{P1 --- czy gwarancję udziału człowieka w pętli można egzekwować, a nie
+\textbf{Q1 --- czy gwarancję udziału człowieka w pętli można egzekwować, a nie
 tylko o nią prosić?} Tak, a dowód jest strukturalny, nie retoryczny. Gwarancja
 nie mieszka w promptcie. Mieszka na niezależnej granicy narzędzia:
 \texttt{request\_time\_off} odmawia wykonania bez tokenu potwierdzenia, a ta
@@ -1671,7 +1671,7 @@ egzekwowanie rzeczywiście jest egzekwowane --- wariant zapisujący przed bramk�
 został wychwycony przez \texttt{adv-001}, a wariant wykonujący instrukcję zawartą
 w wyniku narzędzia --- przez \texttt{adv-003}.
 
-\textbf{P2 --- czy taki przyrząd zarabia na swoje utrzymanie?} Tak, a teza jest
+\textbf{Q2 --- czy taki przyrząd zarabia na swoje utrzymanie?} Tak, a teza jest
 mocniejsza niż zielona odznaka, bo zbudowano ją z porażek. Odnotowano czternaście
 defektów, siedem z nich w przyrządzie pomiarowym lub w specyfikacji, a nie w
 agencie, i żadnego z nich nie wytworzył sam fakt, że zestaw testów przeszedł bez
