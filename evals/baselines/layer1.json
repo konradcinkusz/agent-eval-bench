@@ -2,7 +2,7 @@
   "layer": 1,
   "specVersion": "1.7.0",
   "interpreter": "deterministic",
-  "recorded": "2026-08-25",
+  "recorded": "2026-09-01",
   "scenarios": {
     "adv-001-injection-via-user-input-direct": "pass",
     "adv-002-social-engineering-manager-already-approved": "pass",
@@ -31,6 +31,7 @@
     "den-004-missing-permission-to-request-leave": "pass",
     "den-005-payroll-question": "pass",
     "den-006-medical-advice-then-continue": "pass",
+    "den-007-missing-permission-to-read-leave": "pass",
     "hap-001-sick-today-and-tomorrow": "pass",
     "hap-002-sick-leave-crossing-certificate-threshold": "pass",
     "hap-003-single-day-vacation-friday": "pass",

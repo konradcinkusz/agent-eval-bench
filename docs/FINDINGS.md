@@ -11,10 +11,10 @@ which is the list of things the green build says nothing about.
 
 | | Count |
 |---|---|
-| Scenarios | **35** (32 English; 3 Spanish since SPEC 1.5.0) |
-| Assertions across them | **313** |
-| Of those, **absence** assertions (`tool_not_called`, `event_not_emitted`) | **60** (19%) |
-| Constraint-gated scenarios (hard-block at 100%) | **20** |
+| Scenarios | **36** (33 English; 3 Spanish since SPEC 1.5.0) |
+| Assertions across them | **325** |
+| Of those, **absence** assertions (`tool_not_called`, `event_not_emitted`) | **64** (20%) |
+| Constraint-gated scenarios (hard-block at 100%) | **21** |
 | Behaviour-gated scenarios (measured against a baseline) | **15** |
 | Fixture worlds | 1 base + a sparse delta per scenario (plus the e2e world with the hostile leave-type name) |
 | Deliberately broken agent variants the suite must catch | **4** |
@@ -24,30 +24,30 @@ By class:
 
 | Class | Scenarios | Assertions | Mean per scenario |
 |---|---|---|---|
-| `happy` | 8 | 90 | 11.2 |
+| `happy` | 8 | 94 | 11.8 |
 | `ambiguity` | 9 | 76 | 8.4 |
 | `adversarial` | 7 | 59 | 8.4 |
-| `denied` | 6 | 42 | 7.0 |
+| `denied` | 7 | 50 | 7.1 |
 | `degradation` | 5 | 46 | 9.2 |
 
 By assertion type:
 
 | Type | Count | |
 |---|---|---|
+| `event_emitted` | 49 | |
 | `tool_called` | 48 | |
-| `event_emitted` | 48 | |
-| `outcome` | 38 | |
-| `termination` | 35 | one per scenario — C-4 is not optional |
-| `output_excludes_internal_ids` | 35 | one per scenario — C-3 is not optional |
-| `event_not_emitted` | 33 | |
-| `tool_not_called` | 27 | |
+| `outcome` | 39 | |
+| `termination` | 36 | one per scenario — C-4 is not optional |
+| `output_excludes_internal_ids` | 36 | one per scenario — C-3 is not optional |
+| `event_not_emitted` | 34 | |
+| `tool_not_called` | 30 | |
 | `order` | 25 | this is where C-1 lives |
 | `argument_grounded` | 10 | C-5 |
 | `tool_called_with` | 8 | |
 | `call_attempts` | 5 | |
-| `span_attribute` | 1 | |
+| `span_attribute` | 5 | |
 
-**The 19% figure is the one worth looking at.** One assertion in five says
+**The 20% figure is the one worth looking at.** One assertion in five says
 something did *not* happen. That ratio is not aspiration; it is enforced —
 [`scripts/validate-scenarios.mjs`](../scripts/validate-scenarios.mjs) fails any
 `denied` or `adversarial` scenario without an absence assertion, because
@@ -55,7 +55,7 @@ asserting that the agent refused, without asserting that the forbidden call did
 not happen, is half a test. An agent that refuses politely and calls the tool
 anyway passes the other half.
 
-Current Layer 1 state: **35 of 35 pass**, recorded in
+Current Layer 1 state: **36 of 36 pass**, recorded in
 [`evals/baselines/layer1.json`](../evals/baselines/layer1.json). Runtime is
 published per run in `TestResults/eval-report.json` and in the sticky pull request
 comment; it is not quoted here, because a number copied into prose is a number
@@ -278,7 +278,7 @@ reads as discipline in a commit log and as drift in aggregate. It is the second.
 agent was written against a specification that already existed, by the same
 person, in the same week — so it does what the spec says, and the suite agrees.
 That is the expected result and it is worth stating plainly, because the
-alternative framing ("35 of 35 green") invites a reader to conclude the suite
+alternative framing ("36 of 36 green") invites a reader to conclude the suite
 proved the agent correct. It did not. What it proved is that the agent and the
 specification agree, and the value delivered so far came from the specification
 and the instrument disagreeing with *each other*.
@@ -348,7 +348,7 @@ not eliminated. [SPEC §8.2](SPEC.md#82-determinism-and-what-100-quantifies-over
 bounds what a green Layer 1 is allowed to mean: the orchestration and the
 constraint layer work, not that the agent understood the sentence.
 
-**All 35 scenarios have `origin.kind: designed`.** Not one came from a real
+**All 36 scenarios have `origin.kind: designed`.** Not one came from a real
 failure, because there has not been one — nothing has run in production. The
 machinery to convert a production trace into a scenario exists and is tested
 ([`PRODUCTION.md` §2](PRODUCTION.md#2-from-a-production-trace-to-a-scenario)); it
@@ -400,7 +400,7 @@ already.
 
 | What | Measured | SPEC §8.1 budget | Headroom |
 |---|---|---|---|
-| Layer 1, whole corpus (35 scenarios), in-process | 0.47 s / 0.87 s / 0.86 s across three runs — ≈ 13–25 ms per scenario | ≤ 3 minutes | ~200× |
+| Layer 1, whole corpus (35 scenarios at the time of measurement; 36 today), in-process | 0.47 s / 0.87 s / 0.86 s across three runs — ≈ 13–25 ms per scenario | ≤ 3 minutes | ~200× |
 | The entire `dotnet test` pass (305 tests: unit + trace contract + Layer 1 + mutation + judge machinery), binaries prebuilt | ≈ 5.0 s | — | — |
 | Layer 2, judged set, per run | Tokens and dollars are printed by the first keyed run's report (`azure.yml` → `first-judged-run` artifact, `estimatedCostUsd` when the price variables are set) and belong there, not here, until one exists | ≤ 20 min nightly; PR smoke ≤ $0.50 | — |
 
