@@ -77,7 +77,6 @@ change than the one avoided, and this paragraph is the record that it was a choi
 Everything in [`DEVIATIONS.md`](DEVIATIONS.md), of which the ones a reader of a green
 build should know about are:
 
-- **D-1** — CodeQL is committed and inert until the repository is public.
 - **D-9** — Layer 2 has never run against a live model. Zero scores.
 - **D-10** — the MCP adapter has never run against a live server.
 - **D-12** — production trace scoring, the review cadence and post-hoc constraint

@@ -577,14 +577,13 @@ deviation is a decision; an unacknowledged one is drift."* As the repository
 built specifically to demonstrate the standard, it holds itself to the
 constitution more strictly than a product repository would, not less.
 
-**13 open deviations** at time of writing, most closing only when something runs
+**12 open deviations** at time of writing, most closing only when something runs
 against a live credential rather than by any build — among the more consequential:
-CodeQL is committed but self-skips while the repository is private (D-1); the
-Layer 1 interpreter is rule-based and written by the same author who wrote the
-corpus that scores it, a structural overfitting risk mitigated but not eliminated
-(D-7); Layer 2 has never scored a live model (D-9); the MCP adapter has never run
-against a live server (D-10); the production loop is plumbed but has never
-carried real traffic (D-12).
+the Layer 1 interpreter is rule-based and written by the same author who wrote
+the corpus that scores it, a structural overfitting risk mitigated but not
+eliminated (D-7); Layer 2 has never scored a live model (D-9); the MCP adapter
+has never run against a live server (D-10); the production loop is plumbed but
+has never carried real traffic (D-12).
 
 The repository also explicitly refuses to inherit five patterns from a sibling
 reference repository that carries known defects in each — because, in its own

@@ -10,12 +10,17 @@ name: CodeQL
 #  costs more than the analysis buys.
 #
 #  Why the visibility guard: GitHub code scanning needs Advanced Security on a
-#  private repository. This one is private today and public shortly. Rather than
+#  private repository. This one was private when the workflow landed. Rather than
 #  ship a workflow that fails for a reason unrelated to the code — the same
 #  objection as above — the job skips itself while the repository is private and
 #  starts working, with no edit, the moment it is not.
 #
-#  That guard is a dated compromise, not a preference: see docs/DEVIATIONS.md D-1.
+#  That is what happened. The repository is public, this job analyses on every
+#  push, and it has already produced findings that were fixed (2d5d7f6). The
+#  guard stays as an inert safety net rather than being deleted, so a future
+#  return to private degrades to a documented skip instead of a permanently red
+#  check. It was tracked as D-1 in docs/DEVIATIONS.md until 2026-09-01, when that
+#  row was deleted under the file's own rule: the deviation is fixed, not aged out.
 # ─────────────────────────────────────────────────────────────────────────────
 
 on:
@@ -63,7 +68,9 @@ jobs:
               echo "it starts analysing on the first push after the repository becomes public,"
               echo "with no change to this file."
               echo
-              echo "Tracked as D-1 in \`docs/DEVIATIONS.md\`."
+              echo "The repository was public as of 2026-09-01, so reaching this message"
+              echo "means it has been made private again. That is a decision worth"
+              echo "recording in docs/DEVIATIONS.md, not a defect in this workflow."
             } >> "$GITHUB_STEP_SUMMARY"
             echo "::notice::CodeQL skipped — private repository without Advanced Security."
           else
