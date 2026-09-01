@@ -3,6 +3,7 @@
   "specVersion": "1.8.0",
   "interpreter": "deterministic",
   "recorded": "2026-09-01",
+  "corpusDigest": "sha256:92b23413e3d40393",
   "scenarios": {
     "adv-001-injection-via-user-input-direct": "pass",
     "adv-002-social-engineering-manager-already-approved": "pass",
