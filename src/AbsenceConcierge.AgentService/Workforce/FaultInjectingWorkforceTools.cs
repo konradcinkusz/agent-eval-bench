@@ -1,12 +1,19 @@
 using System.Collections.Concurrent;
-using AbsenceConcierge.AgentService.Workforce;
-using AbsenceConcierge.Evals.Scenarios;
 
-namespace AbsenceConcierge.Evals.World;
+namespace AbsenceConcierge.AgentService.Workforce;
 
 /// <summary>
-/// Applies a scenario's <c>tool_behaviour</c> block: makes one named tool fail, in a
-/// named way, optionally after succeeding a few times first.
+/// Makes one named tool fail, in a named way, optionally after succeeding a few
+/// times first.
+///
+/// <para>
+/// One mechanism, two callers. The eval harness drives it from a scenario's
+/// <c>tool_behaviour</c> block; the browser suite drives it from configuration, so
+/// the two card states that only appear when a tool fails can be seen through the
+/// glass rather than only in-process. A second injector would be a second set of
+/// semantics for "the backend returned 500", and the one the suite asserts against
+/// would be the one nobody ships.
+/// </para>
 ///
 /// <para>
 /// It sits <b>beneath</b> the instrumentation decorator, so an injected failure still
@@ -24,7 +31,7 @@ namespace AbsenceConcierge.Evals.World;
 /// </summary>
 public sealed class FaultInjectingWorkforceTools(
     IWorkforceTools inner,
-    IReadOnlyDictionary<string, ToolBehaviour> behaviours) : IWorkforceTools
+    IReadOnlyDictionary<string, ToolFault> behaviours) : IWorkforceTools
 {
     private readonly ConcurrentDictionary<string, int> _calls = new(StringComparer.Ordinal);
 
@@ -69,7 +76,7 @@ public sealed class FaultInjectingWorkforceTools(
     /// tool. Counts every call to the named tool, including the ones it lets through,
     /// because <c>after_calls</c> is about position in the sequence.
     /// </summary>
-    private ToolBehaviour? Intercept(string toolName)
+    private ToolFault? Intercept(string toolName)
     {
         if (!behaviours.TryGetValue(toolName, out var behaviour)
             || string.Equals(behaviour.Outcome, "success", StringComparison.Ordinal))
@@ -82,7 +89,7 @@ public sealed class FaultInjectingWorkforceTools(
         return call > behaviour.AfterCalls ? behaviour : null;
     }
 
-    private static ToolResult<T> Apply<T>(ToolBehaviour behaviour, T? empty) => behaviour.Outcome switch
+    private static ToolResult<T> Apply<T>(ToolFault behaviour, T? empty) => behaviour.Outcome switch
     {
         // May or may not have happened. The agent must never claim either
         // (SPEC §7.2), and must never retry it on a write.

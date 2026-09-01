@@ -48,6 +48,21 @@ function chromium() {
 const port = Number(process.env.E2E_PORT ?? 5233);
 const baseURL = `http://127.0.0.1:${port}`;
 
+// A second service, identical but for one setting: list_leaves fails. Two states
+// of the confirmation card — the degradation note, and the NOT-CHECKED conflict
+// row — exist only when a tool has failed, and no amount of typing at the first
+// server produces them.
+//
+// A second server rather than a per-request switch: a runtime surface that makes
+// tools fail on demand is one more thing reachable from the network on a public
+// page, and the service already refuses to expose a submit endpoint for exactly
+// that kind of reason. This one is a process that exists for ninety seconds on a
+// developer's machine.
+const faultPort = Number(process.env.E2E_FAULT_PORT ?? 5234);
+const faultBaseURL = `http://127.0.0.1:${faultPort}`;
+
+export { faultBaseURL };
+
 export default defineConfig({
   testDir: here,
   outputDir: join(here, '.artifacts'),
@@ -73,7 +88,7 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
 
-  webServer: {
+  webServer: [{
     command: [
       'dotnet run',
       '--project', join(repoRoot, 'src', 'AbsenceConcierge.AgentService'),
@@ -123,4 +138,35 @@ export default defineConfig({
       Demo__RequestsPerMinutePerClient: '52',
     },
   },
+  {
+    command: [
+      'dotnet run',
+      '--project', join(repoRoot, 'src', 'AbsenceConcierge.AgentService'),
+      '--configuration', 'Release',
+      '--no-build',
+      '--no-launch-profile',
+    ].join(' '),
+    url: `${faultBaseURL}/health`,
+    reuseExistingServer: false,
+    timeout: 120_000,
+    stdout: 'pipe',
+    stderr: 'pipe',
+
+    env: {
+      ASPNETCORE_ENVIRONMENT: 'Production',
+      ASPNETCORE_URLS: faultBaseURL,
+      WorkforceTools__Mode: 'Mock',
+      WorkforceTools__Fixture: 'e2e-showcase',
+      Agent__Timezone: 'Europe/Madrid',
+      Agent__PinnedUtcNow: '2026-08-11T09:15:00+02:00',
+      Demo__MaxTurnsPerConversation: '8',
+      Demo__RequestsPerMinutePerClient: '52',
+
+      // The one difference, and it is deg-002's fault exactly: the conflict
+      // check is what breaks. Everything else in the pipeline works, so the
+      // card that comes back is a precise statement about one phase — which is
+      // what makes both rows assertable in a single turn rather than two.
+      WorkforceTools__Faults__list_leaves__Outcome: 'http_500',
+    },
+  }],
 });

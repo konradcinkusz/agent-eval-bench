@@ -14,6 +14,16 @@
 #                            would also publish them: everything in `[env]` ends up
 #                            in the image config and in `fly config show`.
 #
+#   WorkforceTools__Faults__* Makes named tools fail on purpose, for the browser
+#                            suite. Two states of the confirmation card only exist
+#                            when a tool has failed, and Playwright cannot reach
+#                            them by typing. Absent here for the same reason as the
+#                            MCP settings and by the same mechanism: no key means
+#                            the decorator is never constructed, so this is
+#                            unreachable rather than switched off. A deployment
+#                            that set it would be injecting failures into real
+#                            traffic, and the service logs a warning saying so.
+#
 #   Llm__ApiKey              A secret, so it is set with `flyctl secrets set` and
 #                            never appears in a committed file. Absent, the live
 #                            composer is never constructed and the page says so.

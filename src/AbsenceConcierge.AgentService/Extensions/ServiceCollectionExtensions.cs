@@ -25,6 +25,29 @@ public sealed class WorkforceToolsOptions
 
     /// <summary>Fixture file name, without extension, under <c>fixtures/</c>.</summary>
     public string Fixture { get; set; } = "meridian-labs";
+
+    /// <summary>
+    /// Makes named tools fail, for the browser suite and nothing else.
+    ///
+    /// <para>
+    /// Two states of the confirmation card — the degradation note, and the
+    /// NOT-CHECKED conflict row — exist only when a tool has failed, and until this
+    /// existed they could be exercised in-process and never through the glass. The
+    /// eval harness injects at the same seam from a scenario's
+    /// <c>tool_behaviour</c> block; this is the same mechanism reached from
+    /// configuration, not a second one.
+    /// </para>
+    /// <para>
+    /// <b>Absent, not off, on the public deployment</b> — the same control as
+    /// <c>WorkforceTools:Mcp:*</c> (ADR-0005). <c>flyio/demo.fly.toml</c> sets no
+    /// key under here, so the decorator is never constructed there rather than
+    /// constructed and disabled. It touches tool results only: no state is written,
+    /// no gate is consulted, and the confirmation path is untouched — a
+    /// convenience endpoint that submitted would hand every adversarial scenario a
+    /// way around C-6, and this must not become the same mistake somewhere else.
+    /// </para>
+    /// </summary>
+    public Dictionary<string, ToolFault> Faults { get; set; } = [];
 }
 
 public static class WorkforceToolsMode
@@ -122,10 +145,39 @@ public static class ServiceCollectionExtensions
                 sp.GetRequiredService<IConfirmationTokenStore>(),
                 sp.GetRequiredService<TimeProvider>(),
                 AgentClock.ZoneFor(agent.Timezone),
-                maxReadAttempts);
+                maxReadAttempts,
+                Faults(options, logger));
         });
 
         return services;
+    }
+
+    /// <summary>
+    /// The fault decorator, or null when no fault is configured — which is the case
+    /// on every deployment, because the setting exists for the browser suite.
+    ///
+    /// <para>
+    /// It logs at warning, loudly, for the same reason the pinned clock does: a
+    /// service quietly failing its own tools because somebody left a setting behind
+    /// is a very expensive kind of quiet.
+    /// </para>
+    /// </summary>
+    private static Func<IWorkforceTools, IWorkforceTools>? Faults(
+        WorkforceToolsOptions options,
+        ILogger logger)
+    {
+        if (options.Faults.Count == 0)
+        {
+            return null;
+        }
+
+        logger.LogWarning(
+            "{Section}:Faults is configured, so {Tools} will fail on purpose. This exists for the "
+            + "browser suite; a deployment that sets it is injecting failures into real traffic.",
+            WorkforceToolsOptions.SectionName,
+            string.Join(", ", options.Faults.Keys.Order(StringComparer.Ordinal)));
+
+        return inner => new FaultInjectingWorkforceTools(inner, options.Faults);
     }
 
     /// <summary>
