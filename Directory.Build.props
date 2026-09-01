@@ -149,13 +149,40 @@
                 responsively. These tests are in-memory, synchronous in
                 substance, and cannot hang; threading a token through twenty-five
                 call sites would add noise to precisely the files whose
-                readability is their value. REVISIT when the suite gains tests
-                that do real IO — the eval harness in Phase 4 will, and the rule
-                should come back on for that project.
+                readability is their value. Scoped to this project only — see the
+                property group below, where it is on for the eval harness.
 
       Everything that could indicate a real defect stays on.
     -->
-    <NoWarn>$(NoWarn);CA1707;CA1859;CA1861;CA1515;xUnit1051</NoWarn>
+    <NoWarn>$(NoWarn);CA1707;CA1859;CA1861;CA1515</NoWarn>
+  </PropertyGroup>
+
+  <!--
+    xUnit1051 stays suppressed for the unit tests and is ON for the eval harness.
+
+    The rule wants TestContext.Current.CancellationToken passed to anything that
+    takes one, so a hung test can be cancelled responsively. In
+    AbsenceConcierge.AgentService.Tests that is twenty-five call sites through
+    assertions that are in-memory and synchronous in substance and cannot hang —
+    noise in precisely the files whose readability is their value.
+
+    The eval harness is the project that reaches a network, so it is the one
+    where a hang is possible and the rule earns its keep. It costs nothing today:
+    every test method in it is `public void`, the whole project holds four awaits
+    and none is in a test body, and the judge's one HTTP call bounds itself with
+    a 60-second timeout rather than a token. The point is that it starts costing
+    something the moment somebody writes the first async test against the judge,
+    which is exactly when a hang becomes possible and exactly when nobody would
+    think to turn the rule back on.
+
+    This replaces a promise. The suppression's own comment used to say "REVISIT
+    when the suite gains tests that do real IO — the eval harness in Phase 4
+    will, and the rule should come back on for that project." Phase 4 shipped and
+    nothing revisited it, so the note had quietly become a description of a
+    future that was not coming.
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
   </PropertyGroup>
 
 </Project>
