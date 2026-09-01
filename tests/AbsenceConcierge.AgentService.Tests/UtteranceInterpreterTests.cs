@@ -172,6 +172,44 @@ public sealed class DateExpressionParserTests
         Assert.Null(DateExpressionParser.Parse("I need 2 days off at some point"));
     }
 
+    [Theory]
+    [InlineData("I need 2 days off, maybe next week")]
+    [InlineData("I need 3 days off, the band is marching")]
+    public void A_word_that_merely_contains_a_month_is_not_a_month(string utterance)
+    {
+        // The gate that licenses bare numbers used to ask Contains("may"), which
+        // "maybe" and "marching" both satisfy. One substring turned a quantity
+        // into a booking.
+        Assert.Null(DateExpressionParser.Parse(utterance));
+    }
+
+    [Fact]
+    public void An_ordinal_elsewhere_does_not_make_a_quantity_a_date()
+    {
+        // The licence used to be sentence-wide: the 5th's suffix vouched for the
+        // 2, and the turn booked both. A number a duration noun follows is
+        // counting, whatever else the sentence contains.
+        var parsed = DateExpressionParser.Parse("I need 2 days off starting the 5th");
+
+        var calendarDay = Assert.IsType<CalendarDayExpression>(parsed);
+        Assert.Equal(5, calendarDay.Day);
+    }
+
+    [Fact]
+    public void A_month_elsewhere_still_reaches_a_bare_number_that_dates()
+    {
+        // The other side of the same rule, and the regression to watch: the fix
+        // must not become "local evidence only". Nothing next to the 19 says it
+        // is a date — only August, three words later, does (amb-007).
+        var parsed = DateExpressionParser.Parse("Book 19 and 20 August off");
+
+        var list = Assert.IsType<DateListExpression>(parsed);
+        Assert.Collection(
+            list.Parts,
+            part => Assert.Equal(19, Assert.IsType<CalendarDayExpression>(part).Day),
+            part => Assert.Equal(20, Assert.IsType<CalendarDayExpression>(part).Day));
+    }
+
     [Fact]
     public void A_sentence_with_no_date_parses_to_nothing()
     {
