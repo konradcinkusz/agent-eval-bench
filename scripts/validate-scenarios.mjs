@@ -331,3 +331,66 @@ if (empty.length > 0) {
   console.error('All five classes are mandatory (AI-EVALS.md §3).');
   process.exit(1);
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  The schema proves it can reject.
+//
+//  Everything above shows the schema accepts 37 good documents, which is the
+//  half that cannot fail. E2E-ACCEPTANCE-TESTING.md §2 is blunt about what that
+//  is worth: a real assertion "only proves it can pass — not that it can catch
+//  anything", and AI-EVALS.md §9 now says the same for eval suites. A schema is
+//  an assertion about every scenario anyone will ever write, so it earns the
+//  same treatment.
+//
+//  Each case below was a hole. `list_leave_typez` validated, injected no fault,
+//  and left a degradation scenario running against a world where everything
+//  succeeded — passing, because a scenario asserting graceful degradation is
+//  satisfied by a turn that never degraded.
+// ─────────────────────────────────────────────────────────────────────────────
+const REJECTION_CASES = [
+  {
+    what: 'a tool name that does not exist',
+    mutate: (f) => ({ ...f, tool_behaviour: { list_leave_typez: { outcome: 'timeout' } } }),
+  },
+  {
+    what: 'an unknown key inside a tool behaviour',
+    mutate: (f) => ({ ...f, tool_behaviour: { list_leave_types: { outcome: 'timeout', nope: 1 } } }),
+  },
+  {
+    what: 'a tool behaviour with no outcome',
+    mutate: (f) => ({ ...f, tool_behaviour: { list_leave_types: { latency_ms: 10 } } }),
+  },
+  { what: 'a timezone that is not a zone', mutate: (f) => ({ ...f, timezone: 'not a zone' }) },
+  { what: 'a timezone path too deep to be one', mutate: (f) => ({ ...f, timezone: 'A/B/C/D' }) },
+];
+
+const specimen = parseYaml(readFileSync(files[0], 'utf8'));
+const notRejected = [];
+
+for (const { what, mutate } of REJECTION_CASES) {
+  const doc = { ...specimen, id: 'deg-000-schema-self-check', fixture: mutate(specimen.fixture) };
+  if (validate(doc)) {
+    notRejected.push(what);
+  }
+}
+
+// The converse, so the rules above cannot be satisfied by a schema that rejects
+// everything: a three-component IANA zone is legitimate and must still validate.
+// The old two-component pattern turned away America/Argentina/Buenos_Aires, which
+// was enforcing the shape of the one zone this corpus happens to use.
+if (!validate({
+  ...specimen,
+  id: 'deg-000-schema-self-check',
+  fixture: { ...specimen.fixture, timezone: 'America/Argentina/Buenos_Aires' },
+})) {
+  notRejected.push('WRONGLY REJECTED a valid three-component IANA zone');
+}
+
+if (notRejected.length > 0) {
+  console.error('\nvalidate-scenarios: the schema no longer catches:');
+  for (const what of notRejected) {
+    console.error(`  → ${what}`);
+  }
+  console.error('\nA schema that only ever accepts is a schema nobody knows works.');
+  process.exit(1);
+}
