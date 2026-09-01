@@ -1,3 +1,4 @@
+using AbsenceConcierge.AgentService.Telemetry;
 using AbsenceConcierge.Evals.Assertions;
 using AbsenceConcierge.Evals.Execution;
 using AbsenceConcierge.Evals.Extraction;
@@ -182,4 +183,59 @@ public sealed class ExtractionTests : IDisposable
     private static LoadedScenario Corpus(string id) =>
         ScenarioLoader.LoadAll().Single(scenario =>
             string.Equals(scenario.Id, id, StringComparison.Ordinal));
+    [Fact]
+    public void A_trace_that_hit_the_iteration_cap_does_not_become_a_scenario_demanding_it()
+    {
+        // The extractor reads worst-sessions uploads, so its input is sessions that
+        // went wrong. Pinning the reason the trace showed meant a session whose last
+        // turn exhausted the cap produced a scenario REQUIRING the agent to exhaust
+        // the cap — inverting C-4 for every future run, under a production-trace
+        // origin, which is the provenance a reader trusts most.
+        var run = RunWithTerminations(
+            AgentDiagnostics.TerminationReasons.Decision,
+            AgentDiagnostics.TerminationReasons.IterationCap);
+
+        var scenario = ScenarioExtractor.From(run, Request());
+
+        var termination = Assert.Single(scenario.Expect, a => a.Assert == "termination");
+        Assert.Equal(AgentDiagnostics.TerminationReasons.Decision, termination.Reason);
+
+        // …and the file says why it will fail against its own source, so a reviewer
+        // can tell a real defect from a broken harness without an afternoon of it.
+        Assert.Contains("turn 1 ended as 'iteration_cap'", scenario.Why, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void A_trace_that_ended_properly_gets_no_note()
+    {
+        // The other edge: the fix must not be "always rewrite and always complain".
+        var run = RunWithTerminations(
+            AgentDiagnostics.TerminationReasons.Decision,
+            AgentDiagnostics.TerminationReasons.Decision);
+
+        var scenario = ScenarioExtractor.From(run, Request());
+
+        var termination = Assert.Single(scenario.Expect, a => a.Assert == "termination");
+        Assert.Equal(AgentDiagnostics.TerminationReasons.Decision, termination.Reason);
+        Assert.DoesNotContain("NOTE:", scenario.Why, StringComparison.Ordinal);
+    }
+
+    private static ExtractionRequest Request() =>
+        new(
+            "hap-999-synthetic",
+            "happy",
+            new ScenarioFixture { Base = "meridian-labs", Clock = "2026-08-11T09:00:00+02:00", Timezone = "Europe/Madrid" },
+            [new ScenarioTurn { Role = "user", Content = "anything" }],
+            Reference: "synthetic trace, no production session involved",
+            Date: "2026-09-01");
+
+    private static ScenarioRun RunWithTerminations(params string[] reasons)
+    {
+        var turns = reasons
+            .Select((reason, index) => new TurnRecord(index, "completed", reason, "reply"))
+            .ToList();
+
+        return new ScenarioRun(TraceRecording.From([], turns), null!, []);
+    }
+
 }
