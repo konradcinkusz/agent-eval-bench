@@ -325,4 +325,49 @@ public sealed class SpanishInterpretationTests
 
         Assert.Equal(IntentKind.CancelOrEditBooking, intent.Kind);
     }
+
+    [Fact]
+    public void A_named_spanish_sentence_on_an_english_deployment_still_reads()
+    {
+        // Naming someone used to switch the fallback off. NameLikePattern takes no
+        // language, so the English reading of this sentence found "Sam Rivera" as a
+        // bare Mention, that counted as content, and the Spanish reading — which
+        // has the intent, the date and the actual role — was never consulted.
+        var intent = DeterministicUtteranceInterpreter.InterpretWithFallback(
+            "Necesito el 3 de marzo libre para Sam Rivera",
+            UtteranceLanguage.English);
+
+        Assert.Equal(IntentKind.RequestTimeOff, intent.Kind);
+        Assert.IsType<CalendarDayExpression>(intent.Dates);
+        Assert.Equal(new PersonReference("Sam Rivera", PersonRole.Subject), intent.Person);
+    }
+
+    [Fact]
+    public void A_named_english_sentence_on_a_spanish_deployment_still_reads()
+    {
+        // The same defect in the other direction, and the one that matters most:
+        // the person arrived as a Mention rather than a Subject, so the scope guard
+        // saw an incidental reference where the sentence asks the agent to book for
+        // somebody else (O-3).
+        var intent = DeterministicUtteranceInterpreter.InterpretWithFallback(
+            "Book Friday off for Sam",
+            UtteranceLanguage.Spanish);
+
+        Assert.Equal(IntentKind.RequestTimeOff, intent.Kind);
+        Assert.IsType<ComingWeekdayExpression>(intent.Dates);
+        Assert.Equal(new PersonReference("Sam", PersonRole.Subject), intent.Person);
+    }
+
+    [Fact]
+    public void A_name_neither_language_can_place_is_still_reported()
+    {
+        // The other edge of the same rule, on the sentence O-3's "deliberate
+        // asymmetry" is written about. Both readings find only a Mention, so
+        // neither is evidence — but the name must not be dropped on the way out.
+        var intent = DeterministicUtteranceInterpreter.InterpretWithFallback(
+            "I'm covering for Dana Okafor",
+            UtteranceLanguage.English);
+
+        Assert.Equal(new PersonReference("Dana Okafor", PersonRole.Mention), intent.Person);
+    }
 }

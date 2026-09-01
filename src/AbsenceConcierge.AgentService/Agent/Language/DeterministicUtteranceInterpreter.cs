@@ -114,14 +114,37 @@ public sealed partial class DeterministicUtteranceInterpreter : IUtteranceInterp
             claimsApproval);
     }
 
+    /// <summary>
+    /// "Did <i>this language</i> read anything?" — which is a narrower question than
+    /// "is this intent blank?", and the difference is the whole of the fallback.
+    ///
+    /// <para>
+    /// A <see cref="PersonRole.Mention"/> is not an answer to it. Subject and
+    /// DateReference come from language-specific markers — <c>for</c> against
+    /// <c>para</c> — so finding one is evidence the sentence was read. A Mention
+    /// comes from <c>NameLikePattern</c>, which takes no language and matches any
+    /// capitalised word, so <b>both</b> readings always find it. Counting it as
+    /// content made the first reading non-empty for every sentence that names
+    /// anybody, and the fallback never ran: an es-ES locale reading "Book Friday
+    /// off for Sam" returned Unclear with no date, discarding a perfectly good
+    /// English reading — and downgrading Sam from Subject to Mention, so the scope
+    /// guard saw a passing reference where the sentence asked to book for someone
+    /// else.
+    /// </para>
+    ///
+    /// <para>
+    /// Nothing is lost when both languages find only a Mention: the caller returns
+    /// the primary reading when the fallback is empty too, so the name survives.
+    /// </para>
+    /// </summary>
     private static bool IsEmpty(Intent intent) =>
         intent is
         {
             Kind: IntentKind.Unclear,
             Dates: null,
             LeaveTypeHint: null,
-            Person: null,
             ClaimsPriorApproval: false,
+            Person: null or { Role: PersonRole.Mention },
         };
 
     /// <summary>
