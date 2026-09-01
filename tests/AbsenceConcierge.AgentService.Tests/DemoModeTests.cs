@@ -1,4 +1,8 @@
 using AbsenceConcierge.AgentService.Agent;
+using AbsenceConcierge.AgentService.Extensions;
+using AbsenceConcierge.AgentService.Workforce;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
 using AbsenceConcierge.AgentService.Agent.Llm;
 using AbsenceConcierge.AgentService.Demo;
 using Microsoft.Extensions.Options;
@@ -310,6 +314,81 @@ public sealed class DemoModeTests
         budget.TryReserve(50);
         return budget;
     }
+
+    // ── The fault seam ──────────────────────────────────────────────────────────
+
+    [Theory]
+    [InlineData(null, true)]
+    [InlineData("http_500", false)]
+    public async Task A_tool_fails_only_when_a_fault_is_configured_for_it(string? outcome, bool expectSuccess)
+    {
+        // Asserted through behaviour, not through the resolved type. The fault
+        // decorator sits BENEATH the instrumentation one — WorkforceToolsFactory
+        // wraps whatever it decorates — so `IsNotType<FaultInjectingWorkforceTools>`
+        // is trivially true whether the seam is on or off, and a test asserting it
+        // passes with the gate forced open. Calling the tool is the only question
+        // that has a different answer.
+        var settings = new Dictionary<string, string?>
+        {
+            ["WorkforceTools:Fixture"] = "meridian-labs",
+            ["Demo:MaxConfirmationTokens"] = "8",
+        };
+
+        if (outcome is not null)
+        {
+            settings["WorkforceTools:Faults:list_leaves:Outcome"] = outcome;
+        }
+
+        var services = new ServiceCollection()
+            .AddLogging()
+            .AddWorkforceTools(new ConfigurationBuilder().AddInMemoryCollection(settings).Build());
+
+        services.Configure<AgentOptions>(_ => { });
+        services.Configure<DemoOptions>(_ => { });
+
+        using var provider = services.BuildServiceProvider();
+
+        var result = await provider.GetRequiredService<IWorkforceTools>()
+            .ListLeavesAsync(TestContext.Current.CancellationToken);
+
+        Assert.Equal(expectSuccess, result.IsSuccess);
+    }
+
+    [Fact]
+    public void The_public_deployment_carries_no_fault_configuration()
+    {
+        // Unreachable rather than switched off, and this is the assertion that
+        // keeps it that way. A future edit that adds a fault to the demo would
+        // otherwise be a one-line change with no test between it and production.
+        var config = File.ReadAllText(DemoFlyToml());
+
+        // Only the [env] block matters, and the search is anchored to the start of
+        // a line: the header comment above it discusses `[env]` in prose, and
+        // names this very setting on purpose to explain why it is absent — so an
+        // unanchored search finds the explanation and fails on it.
+        var section = config.IndexOf("\n[env]", StringComparison.Ordinal);
+        Assert.True(section >= 0, "demo.fly.toml has no [env] section.");
+
+        var env = config[section..];
+
+        // The configuration key, not the word. "Faults" case-insensitively is also
+        // inside "defaults", which this file says twice — the same substring trap
+        // that let "maybe" arm the date parser's bare-number gate.
+        Assert.DoesNotContain("WorkforceTools__Faults", env, StringComparison.Ordinal);
+    }
+
+    private static string DemoFlyToml()
+    {
+        var directory = new DirectoryInfo(AppContext.BaseDirectory);
+
+        while (directory is not null && !File.Exists(Path.Combine(directory.FullName, "AbsenceConcierge.slnx")))
+        {
+            directory = directory.Parent;
+        }
+
+        Assert.NotNull(directory);
+        return Path.Combine(directory!.FullName, "flyio", "demo.fly.toml");
+    }
 }
 
 /// <summary>A clock a test can move, for the one behaviour that is about time passing.</summary>
@@ -320,4 +399,5 @@ public sealed class MovableTimeProvider(DateTimeOffset start) : TimeProvider
     public override DateTimeOffset GetUtcNow() => _now;
 
     public void Advance(TimeSpan by) => _now = _now.Add(by);
+
 }
