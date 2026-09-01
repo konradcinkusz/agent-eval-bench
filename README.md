@@ -16,7 +16,7 @@
 </p>
 
 **A spec-first evaluation bench for tool-using agents.** A behaviour contract written
-before the agent existed, 35 scenarios stored as data, and a two-layer harness that
+before the agent existed, 36 scenarios stored as data, and a two-layer harness that
 grades the *execution trace* — which tools were called, with what arguments, in what
 order, and what was **not** done — so a prompt edit, a model swap or a hostile input
 that changes how an agent behaves fails a build instead of a customer.
@@ -60,7 +60,7 @@ Top to bottom, that is the whole repository:
    behaviours, the hard constraints and the refusals, and every behaviour cites the
    scenarios that prove it. It was written and accepted before any agent existed, which
    is what stops the specification from being back-fitted to whatever got built.
-1. **The dataset is data, not code.** The 35 scenarios under `evals/scenarios/` are
+1. **The dataset is data, not code.** The 36 scenarios under `evals/scenarios/` are
    YAML — five classes, a shared fictional world plus a per-scenario delta, validated
    against a [strict JSON Schema](evals/schema/scenario.schema.json) on every push.
    Nothing in the dataset is .NET-specific; [`evals/README.md`](evals/README.md) is the
@@ -96,7 +96,7 @@ for both on one page.
 | | | |
 |---|---|---|
 | **The contract** | 16 behaviours · 7 hard constraints | [`docs/SPEC.md`](docs/SPEC.md) was written and accepted before any agent code. Writing the scenarios then found six defects **in the spec**, fixed before implementation began. |
-| **The evidence** | 35 scenarios · 313 assertions | 60 of them (19%) assert **absence** — that a call was not made, an event not emitted. An agent that refuses politely and calls the tool anyway fails the other half. |
+| **The evidence** | 36 scenarios · 325 assertions | 64 of them (20%) assert **absence** — that a call was not made, an event not emitted. An agent that refuses politely and calls the tool anyway fails the other half. |
 | **The gate** | 1 write per confirmation, max | The token is single-use and bound to the exact draft shown. Double submission on a retry — the classic agent-loop defect — is a hard constraint (C-6), not a hope. |
 | **What it caught** | 14 defects, 7 of them in the instrument | Seven were in the measuring apparatus or the specification rather than in the agent, and none was found by the suite merely passing. Four deliberately broken agents prove the suite can fail — a suite that has never failed is a suite nobody has tested. |
 
@@ -300,11 +300,11 @@ client ([D-10](docs/DEVIATIONS.md)).
 **All ten phases are complete.** The contract, the agent, both eval layers, the gates,
 the production story, the findings, one page, and a tag-driven deployment.
 
-The spec and the 35 scenarios came first and are validated in CI. The agent runs as a
+The spec and the 36 scenarios came first and are validated in CI. The agent runs as a
 step pipeline whose order *is* the specification — establish the actor, read a decision
 if one arrived, understand the request, refuse it if out of scope, resolve the dates,
 retrieve the leave types, check for conflicts, draft, **gate**, execute, reply — and
-those 35 scenarios execute against it on every push: constraint scenarios hard-block at
+those 36 scenarios execute against it on every push: constraint scenarios hard-block at
 100%, behaviour scenarios are measured against a recorded baseline, and four
 deliberately broken agents prove the suite can fail. A pull request gets **one comment,
 updated in place, carrying the diff** rather than a dashboard. Two coupling rules are
@@ -322,7 +322,7 @@ executed against a real thing. Each is a numbered row in
 | **Layer 2** — five rubrics with an anchor per level, a judge prompt hashed into every report, a model pinned separately from the agent's, 45 calibration labels and a stated gate | a live model. Every judged scenario reports `skipped:no-credential`, because no credential ships with a public repository. The keyed nightly workflow is what fixes that | [D-9](docs/DEVIATIONS.md) |
 | **The MCP adapter** — the live integration behind a one-method session seam, with OAuth 2.0 and dynamic client registration, tested against a fake session | a live server. The payload mapping — the part most likely to be wrong — is written from the protocol and the SDK's documentation | [D-10](docs/DEVIATIONS.md), [D-11](docs/DEVIATIONS.md) |
 | **The deployment** — one Fly app, mock by default, scale-to-zero, live model behind an access code, gated on the eval suite | anything. No Fly account is wired to this repository, and that is written down rather than implied by a badge | [D-2](docs/DEVIATIONS.md) |
-| **The production loop** — spans to Application Insights, a daily pass that scores every turn on the shared trace schema and runs C-1 post-hoc, worst-session upload feeding trace-to-scenario extraction | real traffic. All 35 scenarios are still `designed`; none was extracted from a production failure | [D-12](docs/DEVIATIONS.md) |
+| **The production loop** — spans to Application Insights, a daily pass that scores every turn on the shared trace schema and runs C-1 post-hoc, worst-session upload feeding trace-to-scenario extraction | real traffic. All 36 scenarios are still `designed`; none was extracted from a production failure | [D-12](docs/DEVIATIONS.md) |
 
 **What a green Layer 1 run does not prove** is that the agent understands English: on
 the gated path the interpreter is rule-based, so green means the orchestration and the
@@ -344,7 +344,7 @@ runs after every step has already decided
 | Phase | What it delivers | Status |
 |---|---|---|
 | 0 | Repository baseline: hygiene files, secret scanning, CI that lints a repo with no code | **Done** |
-| 1 | `docs/SPEC.md` and 35 scenarios as data — the contract, before any agent code | **Done** (32 at Phase 1; 35 after the Spanish additions) |
+| 1 | `docs/SPEC.md` and 36 scenarios as data — the contract, before any agent code | **Done** (32 at Phase 1; 35 after the Spanish additions; 36 with den-007) |
 | 2 | Skeleton: AppHost, agent service, ServiceDefaults, OpenTelemetry end to end, mock tools | **Done** |
 | 3 | The agent loop: intent → dates → leave types → conflicts → draft → **confirmation gate** → execute | **Done** |
 | 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | **Done** |
@@ -387,7 +387,7 @@ docs/
 evals/
   schema/           the scenario contract, as strict JSON Schema
   fixtures/         shared fictional worlds; scenarios write only the delta
-  scenarios/        35 scenarios across five classes
+  scenarios/        36 scenarios across five classes
   rubrics/          versioned judge prompt and rubrics, with the model pinned
   baselines/        recorded pass state a regression is measured against
 prompts/            the agent's prompts, as files a change-coupling check watches

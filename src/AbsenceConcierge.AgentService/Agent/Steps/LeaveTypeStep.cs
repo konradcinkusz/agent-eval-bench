@@ -37,6 +37,22 @@ public sealed class LeaveTypeStep(IWorkforceTools tools, IOptions<AgentOptions> 
     {
         ArgumentNullException.ThrowIfNull(context);
 
+        // C-2, the same check ResolvePersonStep makes for directory:read and
+        // ScopeGuardStep for timeoff:request. The constraint is about the call
+        // being *made* — "the agent never calls a tool whose required permission is
+        // absent" — so the backend refusing it afterwards is a backstop, not
+        // compliance. Without this the refusal arrives as a failed tool result and
+        // the step below reports a backend problem, which tells a user whose actor
+        // simply lacks the permission that leave types could not be retrieved. A
+        // missing permission is not an outage, and sending them to support for it
+        // wastes somebody's afternoon.
+        if (context.Actor is { } actor
+            && !actor.Permissions.Contains(Permissions.TimeOffRead, StringComparer.Ordinal))
+        {
+            context.Refuse(AgentDiagnostics.RefusalRules.MissingCapability);
+            return StepSignal.Stop;
+        }
+
         var result = await tools.ListLeaveTypesAsync(cancellationToken).ConfigureAwait(false);
 
         if (!result.IsSuccess || result.Value is null)
