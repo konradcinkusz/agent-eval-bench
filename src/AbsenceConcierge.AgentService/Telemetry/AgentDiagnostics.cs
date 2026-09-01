@@ -186,6 +186,7 @@ public static class AgentDiagnostics
         public const string PayrollBelongsToHr = "O-5";
         public const string NoMedicalJudgement = "O-6";
         public const string MissingCapability = "O-7";
+        public const string ExceedsMaximumLength = "O-8";
     }
 
     /// <summary>Values for <see cref="Attributes.ConfirmationConflictCheck"/>.</summary>
