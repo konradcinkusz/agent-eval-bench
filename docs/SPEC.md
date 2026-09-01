@@ -1,9 +1,17 @@
 # Absence Concierge — behaviour specification
 
 - **Agent slug**: `absence-concierge`
-- **Spec version**: 1.7.0
+- **Spec version**: 1.8.0
 - **Status**: Accepted — this is the contract. Code is measured against it, not the other way round.
-- **Date**: 2026-08-25 (1.6.0: 2026-08-22; 1.5.0, 1.4.0, 1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+- **Date**: 2026-09-01 (1.7.0: 2026-08-25; 1.6.0: 2026-08-22; 1.5.0, 1.4.0, 1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+
+**What changed in 1.8.0**, one addition, found by an audit of fields the fixture
+carries and the contract never mentions:
+
+| Change | Why |
+|---|---|
+| [§6](#6-out-of-scope) gains **O-8**: a request longer than the leave type's `max_consecutive_days` is refused | The field has been in the fixture since the first world was written — Vacation 20, Sick 30, Parental 112 — and was loaded into `LeaveType` and read by nothing. A forty-day Vacation request was drafted, confirmed and submitted against a type whose own rules cap it at twenty. This document never named the field, so there was no clause for the code to be measured against and the gap could not show up as a failure — only as an absence |
+| The refusal set is now eight rules rather than seven | Recorded because the set is closed by decision, not by accident. O-1 to O-7 all refuse an out-of-scope **action**; O-8 is the first that refuses an in-scope action with an out-of-range **parameter**, and that distinction is the reason it was worth deciding rather than assuming |
 
 **What changed in 1.7.0**, working through the open findings from the deep review:
 
@@ -508,6 +516,7 @@ assert all four.
 | **O-5** | Questions about pay, payroll, contracts or accrual policy | Refuses and points to HR. No tool call at all | `den-005` |
 | **O-6** | Medical advice, or judgement about whether someone is ill enough | Refuses without moralising, and continues with the booking task if one is in flight | `den-006` |
 | **O-7** | Anything requiring a permission the actor does not hold | Refuses, naming the missing capability in plain language — never the permission string, which is an internal identifier | `den-004`, `den-007`, `adv-006` |
+| **O-8** | A request longer than the leave type's `max_consecutive_days` — the per-type cap the fixture carries and the retrieved leave type reports | Refuses, naming the limit and the requested length in days. No draft, no `confirmation.shown`, `request_time_off` not called | `den-008` |
 
 **O-4 has no scenario at v1.0.0.** It is stated because it bounds the agent, and
 it is unasserted because a convincing multi-user approval request needs fixture

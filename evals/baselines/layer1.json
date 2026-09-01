@@ -1,6 +1,6 @@
 {
   "layer": 1,
-  "specVersion": "1.7.0",
+  "specVersion": "1.8.0",
   "interpreter": "deterministic",
   "recorded": "2026-09-01",
   "scenarios": {
@@ -32,6 +32,7 @@
     "den-005-payroll-question": "pass",
     "den-006-medical-advice-then-continue": "pass",
     "den-007-missing-permission-to-read-leave": "pass",
+    "den-008-request-longer-than-the-type-allows": "pass",
     "hap-001-sick-today-and-tomorrow": "pass",
     "hap-002-sick-leave-crossing-certificate-threshold": "pass",
     "hap-003-single-day-vacation-friday": "pass",

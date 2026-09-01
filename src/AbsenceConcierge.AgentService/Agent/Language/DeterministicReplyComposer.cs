@@ -87,8 +87,33 @@ public sealed class DeterministicReplyComposer : IReplyComposer
         AgentDiagnostics.RefusalRules.MissingCapability =>
             "Your account is not able to request time off. Your manager or HR can raise it for you.",
 
+        AgentDiagnostics.RefusalRules.ExceedsMaximumLength => ExceedsMaximumLength(context),
+
         _ => "That is not something I can do.",
     };
+
+    /// <summary>
+    /// O-8. Names the limit and the requested length, because "that is too long"
+    /// leaves the user to guess by how much and try again — the limit is the
+    /// actionable half.
+    /// </summary>
+    private static string ExceedsMaximumLength(AgentTurnContext context)
+    {
+        var leaveType = context.SelectedLeaveType;
+        var start = context.Dates?.Start;
+        var end = context.Dates?.End;
+
+        if (leaveType is null || start is null || end is null)
+        {
+            return "That is longer than this leave type allows in one request.";
+        }
+
+        var requested = end.Value.DayNumber - start.Value.DayNumber + 1;
+
+        return $"{DisplayText.Name(leaveType.Name)} allows at most {leaveType.MaxConsecutiveDays} consecutive "
+            + $"days in one request, and {Range(start.Value, end.Value)} is {requested}. "
+            + "Nothing has been submitted — tell me a shorter span and I will draft it.";
+    }
 
     private static string Cancellation(AgentTurnContext context)
     {
