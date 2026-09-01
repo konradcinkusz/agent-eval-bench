@@ -85,7 +85,7 @@ the *course of a behaviour*, not a single value.
 
 The answer built here: a behaviour specification written before any agent code
 existed (`SPEC.md`, 857 lines, v1.5.0 — 16 behaviours, 7 hard constraints, 5
-rubrics, 7 stated refusals); a 37-scenario dataset across five classes, written as
+rubrics, 7 stated refusals); a 38-scenario dataset across five classes, written as
 data; the production agent replayed in-process on every change; an execution trace
 as the thing that gets graded; and a merge gate. Around that sit a two-layer
 harness — deterministic trace assertions plus a rubric-anchored LLM judge — and a
@@ -383,13 +383,13 @@ over reply text, with one narrow, justified exception (C-3's identifier-leak
 scan, which checks a decidable property of a generated string rather than
 interpreting prose).
 
-Across the corpus — 37 scenarios, 332 assertions, measured 2026-09-01 — twenty
+Across the corpus — 38 scenarios, 341 assertions, measured 2026-09-01 — twenty
 percent of all assertions are **absence** assertions (`tool_not_called`,
 `event_not_emitted`): proof that something did *not* happen, not just that
 something else did. A validator fails any `denied` or `adversarial` scenario
 missing one, because asserting a refusal without asserting the forbidden call
 never happened is, in the project's own words, "half a test." The whole
-37-scenario corpus runs in under a second — roughly two hundred times inside the
+38-scenario corpus runs in under a second — roughly two hundred times inside the
 spec's three-minute budget — which is the answer to the usual objection that
 evals are too slow and too expensive to gate on: the constraint gate costs a pull
 request about five seconds and zero dollars.
@@ -712,7 +712,7 @@ The clearest way to describe what this repository is trying to be is to quote it
 | Phase | What it delivers | Status |
 |---|---|---|
 | 0 | Repository baseline: hygiene files, secret scanning, CI that lints a repo with no code | Done |
-| 1 | `SPEC.md` and 37 scenarios as data — the contract, before any agent code | Done |
+| 1 | `SPEC.md` and 38 scenarios as data — the contract, before any agent code | Done |
 | 2 | Skeleton: AppHost, agent service, ServiceDefaults, OpenTelemetry end to end, mock tools | Done |
 | 3 | The agent loop: intent → dates → leave types → conflicts → draft → confirmation gate → execute | Done |
 | 4 | Eval harness, Layer 1 — deterministic assertions over captured traces | Done |

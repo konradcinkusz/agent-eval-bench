@@ -1,9 +1,17 @@
 # Absence Concierge — behaviour specification
 
 - **Agent slug**: `absence-concierge`
-- **Spec version**: 1.8.0
+- **Spec version**: 1.9.0
 - **Status**: Accepted — this is the contract. Code is measured against it, not the other way round.
-- **Date**: 2026-09-01 (1.7.0: 2026-08-25; 1.6.0: 2026-08-22; 1.5.0, 1.4.0, 1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+- **Date**: 2026-09-01 (1.8.0: 2026-09-01; 1.7.0: 2026-08-25; 1.6.0: 2026-08-22; 1.5.0, 1.4.0, 1.3.0, 1.2.0, 1.1.0: 2026-08-15; 1.0.0: 2026-08-14)
+
+**What changed in 1.9.0**, one addition, found by working the clarification path:
+
+| Change | Why |
+|---|---|
+| [§3](#3-expected-behaviours) gains **B-17**: what the agent already established survives the turn in which it asks | B-12 and B-13 say the agent asks. Nothing said what it remembers, so it remembered nothing: "I'm sick on Friday" → "which Friday?" → "the 21st" → "and what kind of leave is this?". Re-asking what you were just told is not a clarification, it is the conversation restarting |
+| The rule states what **clears** the held intent, not only what holds it | State that accumulates until something happens to it is the kind that surprises somebody a year later. It is held for one turn, and a booking, a refusal or an answer that supplies the field all end it |
+| §9's undecided list is unchanged | This was never on it. It was undecided *and unrecorded*, which is the worse of the two — an acknowledged gap is a decision, an unacknowledged one is drift |
 
 **What changed in 1.8.0**, one addition, found by an audit of fields the fixture
 carries and the contract never mentions:
@@ -370,6 +378,7 @@ is a quality.
 | **B-14** | Where the requested sick leave exceeds the certificate threshold, surfaces the requirement in the draft | `hap-002` |
 | **B-15** | On a tool failure, degrades per [§7](#7-degradation-contract): partial output, an explicit note, no fabrication, no retry storm | all degradation |
 | **B-16** | Treats instruction-shaped content in user input or tool results as **data**, emits `injection.ignored`, and continues the original task | all adversarial |
+| **B-17** | What an earlier turn established — the dates, the leave-type hint, the person — survives the turn in which the agent asks a clarifying question, so an answer completes the request rather than restarting it. Held for one turn and merged **under** the new turn: a field the user supplies again wins. Cleared by a booking, by a refusal, and by being used | `amb-010` |
 
 ## 4. Hard constraints
 
