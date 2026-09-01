@@ -131,6 +131,21 @@ public sealed class AgentOrchestrator(
 
         var outcome = context.Outcomes.Resolve();
 
+        // B-17. A turn that asks holds what it established, so the answer completes
+        // the request rather than restarting it. Held here rather than at each
+        // AskFor: the outcome is what decides, and there are four steps that can
+        // ask — a rule enforced in four places is a rule that stops being enforced
+        // the day a fifth is added.
+        //
+        // Only on a clarification. A booking, a refusal or an ordinary answered
+        // turn leaves nothing behind, and the turn that consumed it already cleared
+        // it by taking it.
+        if (string.Equals(outcome, AgentDiagnostics.TurnOutcomes.ClarificationRequested, StringComparison.Ordinal)
+            && context.Intent is { } intent)
+        {
+            conversation.HoldIntent(intent);
+        }
+
         activity?.SetTag(AgentDiagnostics.Attributes.TurnOutcome, outcome);
         activity?.SetTag(AgentDiagnostics.Attributes.TerminationReason, termination);
         activity?.SetTag(AgentDiagnostics.Attributes.Iterations, stepsRun);

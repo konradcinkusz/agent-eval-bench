@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using AbsenceConcierge.AgentService.Agent.Language;
 using AbsenceConcierge.AgentService.Workforce;
 
 namespace AbsenceConcierge.AgentService.Agent;
@@ -47,6 +48,46 @@ public sealed class AgentConversation(string id)
     /// "confidently wrong" is the failure a judge does not catch (C-5).
     /// </summary>
     public bool IsGrounded(string leaveTypeId) => _retrievedLeaveTypeIds.Contains(leaveTypeId);
+
+    /// <summary>
+    /// What an earlier turn established, waiting for the turn that answers the
+    /// question (B-17). Null whenever the agent is not mid-clarification.
+    ///
+    /// <para>
+    /// <b>Typed fields, never free text.</b> This carries the same dates, hint and
+    /// person reference <see cref="Intent"/> already carries — nothing from a tool
+    /// result, nothing the user wrote verbatim. Held state is data here as
+    /// everywhere else (C-7), and C-1, C-2 and C-6 continue to read the permission
+    /// fixture and the token store rather than the conversation.
+    /// </para>
+    /// <para>
+    /// It is also reconstructable from the transcript the agent is given, so
+    /// holding it adds no information an attacker did not already have a path to.
+    /// What holding it buys is not remembering more; it is not re-asking.
+    /// </para>
+    /// </summary>
+    public Intent? HeldIntent { get; private set; }
+
+    /// <summary>Held when the agent asks, so the answer completes the request.</summary>
+    public void HoldIntent(Intent intent) => HeldIntent = intent;
+
+    /// <summary>
+    /// Returns what was held and clears it, so the hold lasts exactly one turn.
+    ///
+    /// <para>
+    /// One turn rather than "until something clears it" is the whole of the expiry
+    /// rule, and it is expressed by consuming rather than by remembering to reset.
+    /// A turn that asks again re-holds what it then knows, so a two-step
+    /// clarification still works; a turn that books, refuses or simply moves on
+    /// leaves nothing behind.
+    /// </para>
+    /// </summary>
+    public Intent? TakeIntent()
+    {
+        var held = HeldIntent;
+        HeldIntent = null;
+        return held;
+    }
 
     public void HoldDraft(LeaveDraft draft, string token)
     {
