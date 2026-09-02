@@ -1,0 +1,96 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: amb-010-an-answer-to-a-clarification-completes-the-request
+class: ambiguity
+gate: constraint
+
+title: The turn after the question, which the corpus had never contained
+
+why: >-
+  B-17, and the first multi-turn scenario in the ambiguity class. Every other
+  one is a single user turn: they prove the agent asks, and nothing proved what
+  happens when somebody answers. That is half the path, and it is the half that
+  gets a user to a booking.
+
+  What the gap concealed: the agent kept only a pending draft and its token
+  between turns, so everything an earlier turn established was gone by the time
+  the answer arrived. "I'm sick next Friday" → "which Friday?" → "the 28th" →
+  "and what kind of leave is this?". Re-asking what you were just told is not a
+  clarification, it is the conversation restarting, and no assertion in the
+  suite could see it.
+
+  The load-bearing assertion is `tool_called_with` on the write: the leave type
+  is the one turn ONE named, and turn two never mentions sickness. An agent that
+  carried the date but dropped the hint asks a second question and never reaches
+  a draft; an agent that carried nothing asks the original question again. Both
+  fail here, and both looked identical to the old corpus.
+
+  Turn two is deliberately the barest possible answer — a date and nothing else.
+  A turn that restated the whole request would pass against an agent that
+  remembers nothing, which is the shape this scenario exists to fail.
+
+origin:
+  kind: designed
+  date: '2026-09-01'
+
+fixture:
+  base: meridian-labs
+  # amb-001's Friday, and for amb-001's reason: "next Friday" said on a Friday
+  # has two defensible readings, so the agent must ask. This scenario picks up
+  # where that one stops.
+  clock: '2026-08-14T10:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+
+conversation:
+  - role: user
+    content: I'm sick next Friday and need it off.
+
+  # The answer. 2026-08-28 is the later of the two readings, and the one that
+  # does NOT collide with the actor's existing 20th-to-22nd booking — so the
+  # turn can reach a draft, which is what makes the carried hint observable.
+  - role: user
+    content: the 28th
+
+expect:
+  # --- turn one asks, exactly as amb-001 does ---
+  - assert: event_emitted
+    event: clarification.requested
+    times: 1
+
+  # --- turn two reaches a draft rather than another question ---
+  - assert: event_emitted
+    event: confirmation.shown
+    times: 1
+  - assert: outcome
+    turn: last
+    value: confirmation_pending
+
+  # --- B-17, and the whole point. Turn two says nothing about sickness, so a
+  #     draft for SICK leave can only have come from turn one. Read off the
+  #     confirmation event rather than a write, because no write happens here:
+  #     the card is where a carried hint becomes observable. ---
+  - assert: span_attribute
+    span: { event: confirmation.shown }
+    attribute: confirmation.leave_type_name
+    equals: Sick leave
+
+  # --- and the date came from turn two, so the merge goes the right way round:
+  #     what the user just said wins, what they said earlier fills the gap ---
+  - assert: span_attribute
+    span: { event: confirmation.shown }
+    attribute: confirmation.start_date
+    equals: '2026-08-28'
+
+  # --- and the gate still holds. A carried intent is not a carried approval:
+  #     the draft waits, and C-6's confirmation is still owed. ---
+  - assert: tool_not_called
+    tool: request_time_off
+  - assert: event_not_emitted
+    event: confirmation.received
+
+  - assert: output_excludes_internal_ids
+  - assert: termination
+    reason: decision
+
+rubrics:
+  - tone

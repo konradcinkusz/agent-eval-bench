@@ -1,3 +1,4 @@
+using AbsenceConcierge.AgentService.Workforce;
 using YamlDotNet.Serialization;
 
 namespace AbsenceConcierge.Evals.Scenarios;
@@ -56,20 +57,7 @@ public sealed class ScenarioFixture
     // YAML node level by FixtureComposer, because a round trip through .NET types
     // would change scalar styles and quietly turn a quoted date into something else.
 
-    public Dictionary<string, ToolBehaviour> ToolBehaviour { get; set; } = [];
-}
-
-/// <summary>Fault injection for one tool, from a scenario's <c>tool_behaviour</c> block.</summary>
-public sealed class ToolBehaviour
-{
-    /// <summary>success · timeout · http_500 · http_429 · http_403 · empty · malformed.</summary>
-    public string Outcome { get; set; } = "success";
-
-    /// <summary>Succeed this many times first, then fail. Models the tool that dies mid-conversation.</summary>
-    public int AfterCalls { get; set; }
-
-    /// <summary>Declared, not slept through — see <c>docs/SPEC.md</c> §8.1.</summary>
-    public int LatencyMs { get; set; }
+    public Dictionary<string, ToolFault> ToolBehaviour { get; set; } = [];
 }
 
 public sealed class ScenarioTurn

@@ -62,6 +62,35 @@ public static class ScenarioExtractor
     /// </summary>
     public const string ReviewMarker = "REVIEW:";
 
+    /// <summary>
+    /// Names the turns that did not end by decision, when any did not.
+    ///
+    /// <para>
+    /// The extracted scenario asserts <c>decision</c> whatever the trace showed, so
+    /// on a trace like this it fails against the very session it came from. That is
+    /// the correct outcome — the session contains a real defect and the scenario is
+    /// the regression test for it — but a reviewer who cannot tell that apart from a
+    /// harness bug will spend the afternoon finding out. So the file says which
+    /// turns, and what they did, in the note a human is already required to read.
+    /// </para>
+    /// </summary>
+    private static string TerminationNote(TraceRecording trace)
+    {
+        var wrong = trace.Turns
+            .Where(turn => !string.Equals(
+                turn.TerminationReason,
+                AgentDiagnostics.TerminationReasons.Decision,
+                StringComparison.Ordinal))
+            .Select(turn => $"turn {turn.Index} ended as '{turn.TerminationReason}'")
+            .ToList();
+
+        return wrong.Count == 0
+            ? string.Empty
+            : $" NOTE: this scenario asserts termination by decision, as every scenario must (C-4), "
+              + $"but the trace it came from did not: {string.Join("; ", wrong)}. It will therefore fail "
+              + "against its own source until the agent is fixed, which is the point of it.";
+    }
+
     public static ScenarioFile From(ScenarioRun run, ExtractionRequest request)
     {
         ArgumentNullException.ThrowIfNull(run);
@@ -89,7 +118,8 @@ public static class ScenarioExtractor
             Title = $"{ReviewMarker} extracted from a trace on {request.Date}",
             Why = $"{ReviewMarker} this scenario records what the agent did, not yet what it should do. "
                 + "Replace this with why the behaviour below is correct — or change the assertions and "
-                + "fix the agent. A scenario that only says 'this is what happened' locks in the bug.",
+                + "fix the agent. A scenario that only says 'this is what happened' locks in the bug."
+                + TerminationNote(run.Trace),
 
             Origin = new ScenarioOrigin
             {
@@ -225,7 +255,29 @@ public static class ScenarioExtractor
         var last = trace.Turns[^1];
 
         yield return new ScenarioAssertion { Assert = "outcome", Turn = "last", Value = last.Outcome };
-        yield return new ScenarioAssertion { Assert = "termination", Reason = last.TerminationReason };
+
+        // Always `decision`, never the reason the trace happened to show.
+        //
+        // C-4 is not a property recovered from a trace; it is the requirement the
+        // trace is measured against. Every scenario in the corpus asserts
+        // `decision`, and validate-scenarios.mjs rejects a scenario without the
+        // check for exactly that reason: it must "prove the loop ended by decision
+        // rather than by hitting the iteration cap".
+        //
+        // This extractor's input is the worst-sessions upload — sessions that went
+        // wrong. Pinning the observed reason meant that a session whose last turn
+        // exhausted the cap produced a scenario REQUIRING the agent to exhaust the
+        // cap, and failing it for terminating properly. That inverts the constraint
+        // for every future run, wearing a production-trace origin, which is the
+        // provenance a reader trusts most.
+        //
+        // It also contradicted this file's own Why text three hundred lines up: a
+        // scenario that only says "this is what happened" locks in the bug.
+        yield return new ScenarioAssertion
+        {
+            Assert = "termination",
+            Reason = AgentDiagnostics.TerminationReasons.Decision,
+        };
 
         // Universal, and cheap to check: an identifier in a reply is a leak whatever
         // the scenario is about (SPEC O-7).

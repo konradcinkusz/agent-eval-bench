@@ -1,3 +1,4 @@
+using AbsenceConcierge.Evals.Scenarios;
 using AbsenceConcierge.Evals.Reporting;
 
 namespace AbsenceConcierge.Evals;
@@ -108,6 +109,19 @@ public sealed class Layer1GateTests
             string.Equals(baseline.Interpreter, report.Interpreter, StringComparison.Ordinal),
             $"The baseline was recorded with the '{baseline.Interpreter}' interpreter and this run used "
             + $"'{report.Interpreter}'. The two are not comparable (ADR-0004).");
+
+        // The version above is a promise that something changed; this is proof of
+        // what. evals/scenarios/ is in neither of check-change-coupling's rules, so
+        // an `expect` block could be weakened with no bump at all and the harness
+        // would compare the new measurement against the old number.
+        var digest = Baseline.DigestOf(Layer1Run.Corpus);
+
+        Assert.True(
+            string.Equals(baseline.CorpusDigest, digest, StringComparison.Ordinal),
+            $"The baseline was recorded against corpus {baseline.CorpusDigest ?? "(none)"} and this run "
+            + $"measured {digest}. A scenario's fixture, conversation or assertions moved, so the two "
+            + "numbers are not comparable. Re-record evals/baselines/layer1.json in the same pull "
+            + "request as the change.");
     }
 
     [Fact]
@@ -174,4 +188,64 @@ public sealed class Layer1GateTests
 
         Assert.True(true, "reporting only");
     }
+    [Fact]
+    public void The_corpus_digest_moves_when_an_assertion_moves()
+    {
+        // The half that makes the field worth having. Without this the digest could
+        // be a constant and every run would agree with it.
+        var before = Baseline.DigestOf(Layer1Run.Corpus);
+
+        var weakened = Layer1Run.Corpus
+            .Select(loaded => loaded.Id == Layer1Run.Corpus[0].Id ? Weaken(loaded) : loaded)
+            .ToList();
+
+        Assert.NotEqual(before, Baseline.DigestOf(weakened));
+    }
+
+    [Fact]
+    public void The_corpus_digest_ignores_prose()
+    {
+        // And the half that keeps it usable. A digest over raw YAML would move when
+        // somebody reworded a `why`, and a guard that fires on prose edits trains
+        // people to re-record without reading — which is the failure it exists to
+        // prevent, arrived at from the other side.
+        var before = Baseline.DigestOf(Layer1Run.Corpus);
+
+        var reworded = Layer1Run.Corpus
+            .Select(loaded => loaded.Id == Layer1Run.Corpus[0].Id ? Reword(loaded) : loaded)
+            .ToList();
+
+        Assert.Equal(before, Baseline.DigestOf(reworded));
+    }
+
+    private static LoadedScenario Weaken(LoadedScenario loaded)
+    {
+        var copy = Clone(loaded.Scenario);
+        copy.Expect = [.. copy.Expect.Skip(1)];
+        return loaded with { Scenario = copy };
+    }
+
+    private static LoadedScenario Reword(LoadedScenario loaded)
+    {
+        var copy = Clone(loaded.Scenario);
+        copy.Why = "Entirely different prose, saying nothing about what is measured.";
+        copy.Title = "A different title.";
+        return loaded with { Scenario = copy };
+    }
+
+    private static ScenarioFile Clone(ScenarioFile scenario) => new()
+    {
+        Id = scenario.Id,
+        Class = scenario.Class,
+        Title = scenario.Title,
+        Why = scenario.Why,
+        Gate = scenario.Gate,
+        Origin = scenario.Origin,
+        Fixture = scenario.Fixture,
+        Conversation = [.. scenario.Conversation],
+        Expect = [.. scenario.Expect],
+        Rubrics = [.. scenario.Rubrics],
+        Skip = scenario.Skip,
+    };
+
 }

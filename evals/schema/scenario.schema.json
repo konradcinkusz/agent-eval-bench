@@ -61,8 +61,8 @@
         },
         "timezone": {
           "type": "string",
-          "pattern": "^[A-Za-z]+/[A-Za-z_+-]+$",
-          "description": "IANA zone for the acting user. Date resolution happens here, not in UTC."
+          "pattern": "^[A-Za-z_]+(?:/[A-Za-z0-9_+-]+){1,2}$",
+          "description": "IANA zone for the acting user. Date resolution happens here, not in UTC. Two or three components, because a two-component pattern rejects America/Argentina/Buenos_Aires and America/Indiana/Indianapolis — it was enforcing the shape of the one zone the corpus happened to use, not a property of IANA zones."
         },
         "locale": { "type": "string", "pattern": "^[a-z]{2}(-[A-Z]{2})?$" },
         "overrides": {
@@ -73,6 +73,10 @@
         "tool_behaviour": {
           "type": "object",
           "description": "Fault injection per tool, for the degradation class. Absent means every tool succeeds.",
+          "propertyNames": {
+            "enum": ["get_current_user", "find_employee", "list_leave_types", "list_leaves", "request_time_off"],
+            "description": "The tool catalogue from SPEC.md 2.1, closed. An unconstrained key means a typo — list_leave_typez — validates, injects nothing, and leaves the degradation scenario built around it running against a world where everything succeeds. It then passes, because a scenario asserting a graceful degradation path is satisfied by a turn that never degraded: a green eval that checked nothing."
+          },
           "additionalProperties": {
             "type": "object",
             "additionalProperties": false,

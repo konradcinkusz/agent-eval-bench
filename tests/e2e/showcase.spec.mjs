@@ -12,6 +12,8 @@
 
 import { test, expect } from '@playwright/test';
 
+import { faultBaseURL } from './playwright.config.mjs';
+
 // The hostile leave type name the e2e fixture carries, verbatim. The YAML
 // folds its two source lines with a single space (>- scalar).
 const HOSTILE_NAME =
@@ -340,5 +342,73 @@ test.describe('the response itself', () => {
     // the sentence, not a blank.
     await send(page, 'one more');
     await expect(page.locator('#turns li').last()).toContainText('Too many requests');
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+//  The two card states that only exist when a tool has failed.
+//
+//  These were the remainder recorded on #63: "the degradation note and the
+//  NOT-CHECKED conflict state still need fault injection the demo service does
+//  not expose." Both are rendered by app.js and, until the seam existed, neither
+//  had ever been through a browser — so the CSS-versus-`hidden` defect that F-12
+//  found on the excluded and certificate rows could have been sitting in this
+//  one the whole time and no backend test could have seen it.
+//
+//  Against the second server, whose only difference is that `list_leaves` fails.
+//  One turn produces both rows, because the conflict check is the phase that
+//  breaks: the lookup that would have found an overlap is the lookup that failed.
+// ─────────────────────────────────────────────────────────────────────────────
+test.describe('the card when a tool has failed', () => {
+  test.use({ baseURL: faultBaseURL });
+
+  test('a failed conflict lookup shows the degradation note and says the overlap is unknown', async ({ page }) => {
+    await page.goto('/');
+    await send(page, "I'm sick today and probably tomorrow");
+
+    await expect(page.locator('#card')).toBeVisible();
+
+    // NOT-CHECKED, shown rather than hidden. The wording matters more than the
+    // state name: "an overlap is unknown" is the honest thing to put in front of
+    // somebody about to approve, and "Checked — nothing overlaps" would be a
+    // false statement produced by a lookup that never ran.
+    await expect(page.locator('#card-conflicts')).toHaveText(/NOT CHECKED/);
+    await expect(page.locator('#card-conflicts')).toHaveText(/overlap is unknown/);
+
+    // The degradation note, shown, naming the phase rather than apologising
+    // generally. B-15 and §7: partial output with an explicit note.
+    const degraded = page.locator('#card-degraded');
+    await expect(degraded).toBeVisible();
+    await expect(degraded).toHaveText(/Drafted without/);
+
+    // And the gate still holds while it says all that: a degraded draft is
+    // still a draft, and the card is still waiting to be answered.
+    await expect(page.locator('#approve')).toBeVisible();
+  });
+
+  test('the degraded card is still approvable, and approving writes exactly once', async ({ page }) => {
+    await page.goto('/');
+    await send(page, "I'm sick today and probably tomorrow");
+
+    await expect(page.locator('#card-degraded')).toBeVisible();
+
+    const [response] = await Promise.all([
+      page.waitForResponse((r) => r.url().includes('/agent/turn')),
+      page.click('#approve'),
+    ]);
+
+    // The point of surfacing a degradation rather than refusing: the user gets
+    // to decide with the gap in front of them. C-6 is a confirmation, not a
+    // promise that everything was checkable.
+    //
+    // `completed` is only reachable through ExecuteWriteStep against a redeemed
+    // token, so it is the write's receipt. Read from the turn rather than from
+    // /workforce/leaves, because that inspection route reads the same tool this
+    // server is failing — asking it here would be asking the broken thing
+    // whether it worked.
+    const { turn } = await response.json();
+    expect(turn.outcome).toBe('completed');
+
+    await expect(page.locator('#card')).toBeHidden();
   });
 });

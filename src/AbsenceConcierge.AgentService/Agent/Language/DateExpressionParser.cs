@@ -104,12 +104,19 @@ public static partial class DateExpressionParser
 
         // A bare number is only a day of the month when the sentence gives some
         // other reason to read it as one — an ordinal suffix somewhere, or a named
-        // month. "I need 2 days off" must not become the 2nd.
-        var bareNumbersAllowed = OrdinalPattern().IsMatch(utterance) || ContainsEnglishMonthName(utterance);
+        // month. The reason has to be allowed to travel: "19 to 21 August" names
+        // the month once, and the 19th is a date only because of a word that comes
+        // after the 21st (amb-007).
+        var bareNumbersAllowed = OrdinalPattern().IsMatch(utterance) || MonthNamePattern().IsMatch(utterance);
 
         foreach (Match match in DayOfMonthPattern().Matches(utterance))
         {
-            if (match.Groups["suffix"].Value.Length == 0 && !bareNumbersAllowed)
+            // ...but a number that counts something is a quantity whatever else the
+            // sentence says. Without this, "I need 2 days off starting the 5th"
+            // reads the 5th's ordinal as licence for the 2, and books two dates.
+            // This is positive evidence about *this* number, which is the thing a
+            // sentence-wide gate cannot express.
+            if (match.Groups["suffix"].Value.Length == 0 && (!bareNumbersAllowed || CountsSomething(utterance, match)))
             {
                 continue;
             }
@@ -345,8 +352,9 @@ public static partial class DateExpressionParser
         "july", "august", "september", "october", "november", "december",
     ];
 
-    private static bool ContainsEnglishMonthName(string utterance) =>
-        EnglishMonthNames.Any(month => utterance.Contains(month, StringComparison.OrdinalIgnoreCase));
+    // True when this number is counting rather than dating: "2 days", "3 weeks".
+    private static bool CountsSomething(string utterance, Match match) =>
+        DurationNounPattern().IsMatch(utterance.AsSpan(match.Index + match.Length));
 
     private static DayOfWeek EnglishWeekday(string name) =>
         (DayOfWeek)Array.FindIndex(
@@ -447,6 +455,17 @@ public static partial class DateExpressionParser
 
     [GeneratedRegex(@"\b\d{1,2}(st|nd|rd|th)\b", RegexOptions.IgnoreCase)]
     private static partial Regex OrdinalPattern();
+
+    // Word boundaries, not Contains: "may" is a month and "maybe" is not, "march"
+    // is a month and "marching" is not. A substring scan armed the bare-number
+    // gate on both, and read "I need 2 days off, maybe next week" as the 2nd.
+    [GeneratedRegex($@"\b(?:{Months})\b", RegexOptions.IgnoreCase)]
+    private static partial Regex MonthNamePattern();
+
+    // Anchored at the start of what follows the number, so it asks "does this
+    // number count days?" rather than "does the sentence mention days anywhere?".
+    [GeneratedRegex(@"^\s+(?:days?|weeks?|months?|hours?)\b", RegexOptions.IgnoreCase)]
+    private static partial Regex DurationNounPattern();
 
     [GeneratedRegex($@"\b(?<day>{Weekdays})\b", RegexOptions.IgnoreCase)]
     private static partial Regex WeekdayPattern();

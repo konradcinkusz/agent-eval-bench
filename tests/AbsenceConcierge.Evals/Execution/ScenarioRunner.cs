@@ -6,9 +6,10 @@ using AbsenceConcierge.AgentService.Extensions;
 using AbsenceConcierge.AgentService.Telemetry;
 using AbsenceConcierge.AgentService.Workforce;
 using AbsenceConcierge.AgentService.Workforce.Confirmation;
+using AbsenceConcierge.Evals.World;
 using AbsenceConcierge.AgentService.Workforce.Fixtures;
 using AbsenceConcierge.Evals.Scenarios;
-using AbsenceConcierge.Evals.World;
+
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;

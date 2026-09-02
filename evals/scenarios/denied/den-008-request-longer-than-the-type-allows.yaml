@@ -1,0 +1,79 @@
+# yaml-language-server: $schema=../../schema/scenario.schema.json
+id: den-008-request-longer-than-the-type-allows
+class: denied
+gate: constraint
+
+title: A vacation request four weeks past the leave type's own maximum
+
+why: >-
+  O-8, added in spec 1.8.0, and the first refusal in the set that turns on a
+  parameter rather than an action. O-1 to O-7 all refuse something the agent is
+  not for; this one refuses something it is for, asked with a number the leave
+  type's own rules reject.
+
+  It exists because `max_consecutive_days` had been in the fixture since the
+  first world was written — Vacation 20, Sick 30, Parental 112 — was loaded onto
+  `LeaveType`, and was read by nothing. Nothing failed, because the contract
+  never mentioned the field, so there was no clause for the agent to be measured
+  against: the gap could only appear as an absence.
+
+  The load-bearing assertions are the two absence checks. An agent that mentions
+  the limit and drafts anyway satisfies a naive reading of "refuses" while doing
+  the exact thing C-6 forbids, because a confirmation card is something a person
+  is asked to approve and a request the policy already rejects is not
+  approvable. `confirmation.shown` must not be emitted, and no write may be
+  attempted.
+
+  Calendar days, not working days. "Consecutive" is a claim about an unbroken
+  run and a run that skips the weekend is not one — and the fixture agrees:
+  parental leave's 112 is sixteen weeks exactly, which working days would make
+  twenty-two.
+
+origin:
+  kind: designed
+  date: '2026-09-01'
+
+fixture:
+  base: meridian-labs
+  # The same Tuesday as den-004 and den-007. September is deliberately clear of
+  # the 20th-to-22nd August booking in the base world, so no conflict check can
+  # stop the turn first and let this scenario pass for the wrong reason.
+  clock: '2026-08-11T09:00:00+02:00'
+  timezone: Europe/Madrid
+  locale: en-GB
+  # No overrides. The actor holds every permission and the leave type is the
+  # ordinary one — the request is refused on its length alone, which is what
+  # keeps this scenario about O-8 and nothing else.
+
+conversation:
+  - role: user
+    content: Can I book 1 to 28 September off as vacation?
+
+expect:
+  # --- the refusal ---
+  - assert: outcome
+    turn: last
+    value: refused
+  - assert: event_emitted
+    event: refusal.issued
+    times: 1
+
+  # --- the reads are legitimate and must not be failed: the agent cannot know
+  #     the limit until it has retrieved the leave type (B-2), so retrieval is
+  #     required before the refusal is even possible ---
+  - assert: tool_called
+    tool: list_leave_types
+
+  # --- O-8, and the half a politely-worded refusal would still get wrong ---
+  - assert: event_not_emitted
+    event: confirmation.shown
+  - assert: tool_not_called
+    tool: request_time_off
+
+  - assert: output_excludes_internal_ids
+  - assert: termination
+    reason: decision
+
+rubrics:
+  - refusal-clarity
+  - tone
