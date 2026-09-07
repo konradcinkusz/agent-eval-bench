@@ -44,7 +44,7 @@
       Azure Monitor is one place they can land, and the eval harness goes on
       reading them in-process with nothing configured. Verified on nuget.org.
     -->
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.3" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.9.0" />
   </ItemGroup>
 
   <ItemGroup Label="Agent service">
@@ -73,7 +73,7 @@
       (the VSTest bridge adapter) is gone: the engine it bridged to is the one
       global.json now refuses to use.
     -->
-    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.3.3" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.0" />
     <!-- Captures spans in-process so a test can assert that one was exported. -->
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="$(OpenTelemetryVersion)" />
   </ItemGroup>
