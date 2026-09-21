@@ -20,9 +20,9 @@
 
   <PropertyGroup>
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
-    <AspireVersion>13.5.3</AspireVersion>
-    <OpenTelemetryVersion>1.18.0</OpenTelemetryVersion>
-    <ExtensionsVersion>10.9.0</ExtensionsVersion>
+    <AspireVersion>13.5.4</AspireVersion>
+    <OpenTelemetryVersion>1.19.0</OpenTelemetryVersion>
+    <ExtensionsVersion>10.10.0</ExtensionsVersion>
   </PropertyGroup>
 
   <ItemGroup Label="Aspire — the composition root (P1), development-time only">
@@ -44,7 +44,7 @@
       Azure Monitor is one place they can land, and the eval harness goes on
       reading them in-process with nothing configured. Verified on nuget.org.
     -->
-    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.8.3" />
+    <PackageVersion Include="Azure.Monitor.OpenTelemetry.Exporter" Version="1.9.0" />
   </ItemGroup>
 
   <ItemGroup Label="Agent service">
@@ -63,8 +63,8 @@
   </ItemGroup>
 
   <ItemGroup Label="Tests">
-    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.9.0" />
-    <PackageVersion Include="xunit.v3" Version="4.0.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.10.1" />
+    <PackageVersion Include="xunit.v3" Version="4.0.1" />
     <!--
       TRX output under the native Microsoft.Testing.Platform engine (global.json's
       test.runner) is an opt-in extension, not a default — MTP ships only the
@@ -73,7 +73,7 @@
       (the VSTest bridge adapter) is gone: the engine it bridged to is the one
       global.json now refuses to use.
     -->
-    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.3.3" />
+    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="2.4.1" />
     <!-- Captures spans in-process so a test can assert that one was exported. -->
     <PackageVersion Include="OpenTelemetry.Exporter.InMemory" Version="$(OpenTelemetryVersion)" />
   </ItemGroup>
