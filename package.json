@@ -21,11 +21,11 @@
     "test:e2e": "playwright test --config tests/e2e/playwright.config.mjs"
   },
   "devDependencies": {
-    "@mermaid-js/mermaid-cli": "11.16.0",
-    "@playwright/test": "^1.62.1",
+    "@mermaid-js/mermaid-cli": "12.0.0",
+    "@playwright/test": "^1.63.0",
     "ajv": "^8.20.0",
     "ajv-formats": "^3.0.1",
-    "markdownlint-cli2": "0.23.2",
-    "yaml": "^2.9.0"
+    "markdownlint-cli2": "0.23.3",
+    "yaml": "^2.9.1"
   }
 }
