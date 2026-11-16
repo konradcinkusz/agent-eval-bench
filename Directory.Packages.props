@@ -22,7 +22,7 @@
     <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
     <AspireVersion>13.5.3</AspireVersion>
     <OpenTelemetryVersion>1.18.0</OpenTelemetryVersion>
-    <ExtensionsVersion>10.9.0</ExtensionsVersion>
+    <ExtensionsVersion>11.0.0</ExtensionsVersion>
   </PropertyGroup>
 
   <ItemGroup Label="Aspire — the composition root (P1), development-time only">
